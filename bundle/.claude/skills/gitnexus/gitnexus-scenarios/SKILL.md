@@ -28,7 +28,7 @@ Cross-module flows / architecture questions → also read **`gitnexus-imaging`**
 - [ ] Review changed_symbols + affected_processes
 - [ ] Unexpected cross-region hits? → split commit or hand off profile
 - [ ] Risk CRITICAL/HIGH → run broader test suite before commit
-- [ ] Commit (pre-commit hook refreshes index via npm run gitnexus:refresh)
+- [ ] Commit (pre-commit hook refreshes index via `gitnexus:refresh`; agents use `gitnexus:agent-refresh` when stale mid-session)
 ```
 
 ## 3. PR / branch review

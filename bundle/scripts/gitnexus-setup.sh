@@ -66,11 +66,9 @@ semver_ge() {
   " "$1" "$2"
 }
 
-REPO_DISPLAY="${GITNEXUS_REPO_NAME:-$(basename "$ROOT")}"
-
 echo ""
 echo "╔══════════════════════════════════════════════════════════════╗"
-printf "║  %-58s ║\n" "${REPO_DISPLAY} — GitNexus team setup"
+echo "║  __GITNEXUS_REPO__ — GitNexus team setup                    ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo ""
 
@@ -216,7 +214,7 @@ if [[ "$SKIP_INDEX" == false ]]; then
   npm run gitnexus:status 2>/dev/null && ok "Index status OK" || warn "Status check failed"
 fi
 
-"${GITNEXUS_CLI[@]}" list 2>/dev/null | grep -q "${REPO_DISPLAY}" \
+"${GITNEXUS_CLI[@]}" list 2>/dev/null | grep -q __GITNEXUS_REPO__ \
   && ok "Registered in GitNexus" || warn "Not in registry — run gitnexus:refresh"
 
 # ── 9. onboarding ─────────────────────────────────────────────────────────────
@@ -236,8 +234,9 @@ cat <<'ONBOARD'
   │ Prompt router: architecture questions → gitnexus-imaging nudge              │
   │                                                              │
   │ TEACHING                                                     │
-  │   • Always-on rules:  .cursor/rules/gitnexus*.mdc            │
-  │   • Agent hooks:      nudge before Grep; after git commit    │
+  │   • North-star rule:  00-gitnexus-enforcement.mdc (always) │
+  │   • Reference rules:  gitnexus.mdc + gitnexus-first (on demand) │
+  │   • Agent hooks:      block lazy patterns; session refresh   │
   │   • Master skill:     gitnexus-workspace                     │
   │   • Playbooks:        gitnexus-scenarios, pr-review, etc.    │
   │   • Area skills:      .cursor/skills/generated/<area>/       │

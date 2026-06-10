@@ -68,8 +68,8 @@ Grep **is** correct for: preset JSON, log strings, comments, exact config keys i
 
 Installed by `npm run gitnexus:setup`:
 
-- **Enforcement rule** — `.cursor/rules/00-gitnexus-enforcement.mdc` (hook-backed gates)
-- **Rules** — `.cursor/rules/gitnexus.mdc` + `gitnexus-first.mdc` (`alwaysApply: true`)
+- **Enforcement rule** — `.cursor/rules/00-gitnexus-enforcement.mdc` (only `alwaysApply: true` contract)
+- **Reference rules** — `.cursor/rules/gitnexus.mdc` + `gitnexus-first.mdc` (load on demand)
 - **Hooks** — GN-first when fresh; **classical fallback when stale**; scoped Grep after suspicious GN
 - **Skills** — synced to `.cursor/skills/` from this repo's `.claude/skills/`
 - **MCP** — `gitnexus` in `.cursor/mcp.json`

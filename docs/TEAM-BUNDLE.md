@@ -2,6 +2,8 @@
 
 Portable **rules + hooks + skills + scripts** for graph-first Cursor agents. Built for this repo; reusable on other projects with one rename step.
 
+> **Standalone installer:** [`cursor-gitnexus-kit`](https://github.com/ReidenXerx/cursor-gitnexus-kit) — `install` / `update` / `uninstall` scripts for any repo (upstream for this teaching bundle).
+
 ## What's in the bundle
 
 | Included | Purpose |

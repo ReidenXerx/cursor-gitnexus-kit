@@ -50,7 +50,7 @@ Always tell the user in one sentence when bypassing graph-first imaging.
 READ gitnexus://repo/__GITNEXUS_REPO__/context   → staleness first
 ```
 
-If stale → `npm run gitnexus:refresh` (hooks block runtime edits until fresh).
+If stale → **Cursor agents:** `npm run gitnexus:agent-refresh` autonomously. **Humans/CI:** `npm run gitnexus:refresh`. Hooks block runtime edits until fresh.
 
 ---
 
