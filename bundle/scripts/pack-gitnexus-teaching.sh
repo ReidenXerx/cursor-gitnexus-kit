@@ -97,14 +97,17 @@ node scripts/gitnexus-teaching/merge-package-scripts.mjs --snippet > "$BUNDLE_RO
 
 # gitignore snippet
 cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
-# GitNexus teaching bundle (generated locally)
+# GitNexus + cursor-gitnexus-kit generated local state (safe to remove via gn-kit uninstall)
+.gitnexus/
+.tmp-agent/
 .cursor/skills/
 .cursor/gitnexus-teaching-bundle.json
+.cursor/gn-kit-manifest.json
+.cursor/.gitnexus-session-edits.flag
 .cursor/.gitnexus-session-primed.flag
 .cursor/.gitnexus-prompt-hint.json
 .cursor/.gitnexus-refresh-pending.flag
 .cursor/.gitnexus-mcp-used.flag
-.gitnexus/
 SNIP
 
 node <<NODE > "$BUNDLE_ROOT/MANIFEST.json"
