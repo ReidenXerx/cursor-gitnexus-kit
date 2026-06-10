@@ -1,0 +1,93 @@
+---
+description: North-star contract — graph-first reasoning, autonomous refresh when stale, classical fallback when GN fails.
+alwaysApply: true
+---
+
+# GitNexus enforcement (hooks + contract)
+
+## North star
+
+> **Prefer the knowledge graph for all code reasoning when the index is fresh. Refresh autonomously when it is not. Fall back to grep/read/search only when GitNexus is stale, failing, or demonstrably wrong — and say why in one sentence.**
+
+Graph tools are for **reasoning**, not only the first lookup: flows, callers, blast radius, change scope, and mid-task “what does this connect to?” → `query` / `context` / `impact` / `detect_changes` / process traces.
+
+## When index is fresh (hooks block lazy patterns)
+
+| Action | Use instead |
+| --- | --- |
+| Symbol / function grep | `gitnexus_context({name, repo: "__GITNEXUS_REPO__"})` |
+| SemanticSearch | `gitnexus_query({query, task_context, goal, repo: "__GITNEXUS_REPO__"})` |
+| Broad Glob on `src/` | `gitnexus_query` → processes + symbols |
+| Full Read of large `src/future/**` (>60 lines, no offset) | `query` → `context` → Read with offset/limit |
+
+**Mid-session reasoning:** after any code-structure question, reach for graph tools again — do not switch to grep because you already ran `context` once.
+
+## Autonomous refresh (agent runs Shell — never ask user)
+
+| Command | When |
+| --- | --- |
+| `npm run gitnexus:agent-status` | Session start / before trusting graph |
+| `npm run gitnexus:agent-refresh` | Stale, refresh failed, wrong callers, post-merge |
+
+Pre-approved via hooks. Use `required_permissions: ["all"]` if sandbox blocks npx.
+
+**NEVER** tell the user to run `npx gitnexus analyze` or `npm run gitnexus:refresh` — that is agent work (`agent-refresh` wraps both).
+
+## Classical fallback (GN untrustworthy)
+
+Use Grep / Read / SemanticSearch when you have a **stated reason**:
+
+| Trigger | Action |
+| --- | --- |
+| Index stale | Classical OK for investigation; refresh autonomously; edits on `src/future` + `tests` blocked until fresh |
+| Refresh failed (ENOSPC, MCP down, analyze error) | Classical OK; warn user; retry `agent-refresh` once if feasible |
+| `context` returns 0 callers on a known hub | Retry with `uid` once → scoped Grep in GN-named file |
+| Graph contradicts reality / missing symbols | Scoped Grep/Read; mention GN drift |
+| MCP unreachable | Warn user; classical OK |
+
+**Required:** one sentence to the user explaining the bypass.
+
+Scoped Grep in one `src/future/**` file is allowed **only after** at least one GitNexus MCP call this session (or when index is stale).
+
+## Allowed without graph tools
+
+- Grep in `research/presets/**`, JSON/YAML/MD, docs, string literals, config keys
+- Read with `offset`/`limit` (citations, exact edit lines)
+- Read small files, tests, `.cursor/skills/`, config files
+
+## Mandatory gates
+
+```
+1. status OR READ context          — session start (autonomous)
+2. query → context → process       — understand / reason about code
+3. impact upstream                 — before editing symbols in src/, tests/, apps/, scripts/
+4. detect_changes                  — before commit / saying done
+```
+
+HIGH/CRITICAL impact → warn before proceeding.
+
+## Tool routing
+
+| Intent | Tool | NOT |
+| --- | --- | --- |
+| How does X work? / reasoning about flows | `query` + `process/{name}` + **gitnexus-imaging** | Grep, SemanticSearch |
+| What calls X? | `context` | Grep |
+| Safe to change X? | `impact` upstream | guessing from Read |
+| What did I break? | `detect_changes` | git diff |
+| Rename X | `rename` dry_run | find-and-replace |
+| Research API route | **gitnexus-api-routes** skill | `api_impact` |
+| Preset JSON field | Grep | context |
+
+## Subagent / Task tool
+
+Include in prompts:
+> Graph-first for all code reasoning when index is fresh. Refresh autonomously if stale. Classical fallback when GN fails — say why. Repo: __GITNEXUS_REPO__.
+
+## If a hook blocks you
+
+1. Use the GitNexus tool from `agent_message`.
+2. GN empty/wrong after one `uid` retry → classical fallback + tell user why.
+3. Index stale → classical auto-allowed; refresh before edits.
+4. Do not retry the same blocked call without a reason.
+
+Reference (load on demand): `gitnexus-workspace`, `gitnexus-imaging`, `gitnexus-enforcement`, `gitnexus-scenarios` skills. Full tool surface: `gitnexus.mdc` (not always-on).

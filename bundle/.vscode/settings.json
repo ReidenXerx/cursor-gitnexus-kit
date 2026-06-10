@@ -1,0 +1,8 @@
+{
+  "npm.autoDetect": "on",
+  "npm.packageManager": "npm",
+  "npm.scriptExplorerExclude": [
+    "gitnexus:wiki",
+    "gitnexus:wiki-force"
+  ]
+}

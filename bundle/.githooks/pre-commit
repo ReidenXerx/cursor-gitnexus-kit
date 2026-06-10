@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Refresh GitNexus knowledge graph before each commit (team default).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+npm run gitnexus:refresh

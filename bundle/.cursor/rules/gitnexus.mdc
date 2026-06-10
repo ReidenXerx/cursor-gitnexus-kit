@@ -1,0 +1,151 @@
+---
+description: GitNexus full reference — tools, resources, playbooks. Load on demand; north-star contract is 00-gitnexus-enforcement.mdc.
+alwaysApply: false
+---
+
+# GitNexus is the primary navigation tool
+
+This repo is indexed by GitNexus as **__GITNEXUS_REPO__**. Check live stats: `READ gitnexus://repo/__GITNEXUS_REPO__/context`. Use graph tools BEFORE Grep / Glob / Read / SemanticSearch for **all code reasoning** (not only the first lookup).
+
+## Mandatory workflow chain
+
+Run tools in this order — do not skip steps:
+
+```
+1. READ gitnexus://repo/__GITNEXUS_REPO__/context     → staleness check (always first)
+2. gitnexus_query({query, task_context, goal})         → orient by concept / execution flow
+3. gitnexus_context({name}) or context({uid})          → deep dive on one symbol
+4. gitnexus_impact({target, direction: "upstream"})    → BEFORE editing any symbol
+5. gitnexus_detect_changes({scope})                    → BEFORE committing / PR review
+```
+
+> **Cursor agents:** stale index → `npm run gitnexus:agent-refresh` autonomously. Humans/CI: `npm run gitnexus:refresh`.
+
+## First move (intent routing)
+
+| Intent / user phrasing | First-move tool |
+| --- | --- |
+| "how does X work?" / fuzzy concept / trace a flow | `query({query, task_context, goal})` |
+| "what calls X?" / 360° view of one symbol | `context({name})` — use `uid` if ambiguous |
+| "what breaks if I change X?" / pre-edit safety | `impact({target, direction: "upstream"})` |
+| "what did my edits affect?" / pre-commit | `detect_changes({scope: "unstaged"})` |
+| "review this PR / branch diff" | `detect_changes({scope: "compare", base_ref: "main"})` |
+| "rename X to Y" | `rename({symbol_name, new_name, dry_run: true})` |
+| "readers/writers of field foo" | `cypher` with `ACCESSES` |
+| "what's the codebase shape?" | READ `gitnexus://repo/__GITNEXUS_REPO__/clusters` |
+| "trace execution of flow" | READ `gitnexus://repo/__GITNEXUS_REPO__/processes` then process URI |
+| Reviewing a PR (deep) | `detect_changes(compare)` then `impact` per high-risk changed symbol |
+
+### This repo: custom HTTP server (NOT Express)
+
+`api_impact` / `route_map` / `shape_check` return **no routes** here — the research API uses a hand-rolled router (`handleRequest` + `isKnownApiPath` in `researchApiServer.js`).
+
+For Server / API work instead:
+
+1. Read `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md`
+2. `context({name: "handleRequest"})` and `context({name: "isKnownApiPath"})`
+3. `query({query: "research API endpoint", task_context: "server change"})`
+4. Pair every payload change with Dashboard `researchApi.ts` (see `docs/AGENT-PROFILES.md`)
+
+## When Grep / Glob / SemanticSearch ARE correct
+
+- String literals, comments, log messages
+- Raw text in JSON / YAML / Markdown (presets under `research/presets/**`)
+- Config keys not modeled in the graph
+- Exact unique string where you already know the file
+
+A `preToolUse` hook fires before Grep/Glob/SemanticSearch — double-check intent.
+
+## Anti-patterns — STOP
+
+- `Grep("functionName")` for structure → use `context`
+- `Read` entire file to understand behavior → use `query` then `context`
+- `git diff | grep` for change scope → use `detect_changes`
+- find-and-replace rename → use `rename` dry_run first
+- Skip `impact` before editing → workspace contract forbids it
+- Multiple symbol candidates → re-call with `uid` / `target_uid`; never guess
+- `api_impact` on this repo's research server → use custom-router playbook above
+
+## Scenario playbooks
+
+Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. Quick map:
+
+| Scenario | Playbook |
+| --- | --- |
+| Pre-edit any symbol | `impact` upstream → report d=1 + risk → warn HIGH/CRITICAL |
+| Pre-commit | `detect_changes` → list affected processes → run region tests |
+| PR review | `detect_changes(compare, main)` → impact on changed entry points |
+| Bug / failure | `query(symptom)` → `context(suspect)` → READ process trace |
+| Refactor / rename | `impact` → `rename` dry_run → apply → `detect_changes(all)` |
+| Cross-region change | `detect_changes` + check border table in `docs/AGENT-PROFILES.md` |
+| Preset / matrix JSON | Grep is fine; validate with `tests/examples` |
+| Region-bound agent | Seed profile card → read `.claude/skills/generated/<area>/SKILL.md` → stay in owned paths |
+| Custom HTTP route change | `gitnexus-api-routes` skill → `handleRequest` context → Dashboard hand-off |
+
+## Tools (full surface)
+
+| Tool | Killer use case |
+| --- | --- |
+| `query` | Hybrid BM25 + vector (RRF). Pass `task_context` + `goal`. Fuzzy concepts beat keyword grep. |
+| `context` | 360° view: CALLS, IMPORTS, EXTENDS, HAS_METHOD, ACCESSES, processes. Use `uid` for zero ambiguity. |
+| `impact` | Blast radius d=1/2/3 + risk + affected processes/modules. Widen with `relationTypes: ["CALLS","IMPORTS","ACCESSES"]`. |
+| `detect_changes` | Diff → symbols → processes → risk. Scopes: unstaged, staged, all, compare. |
+| `rename` | Graph + text_search edits. Always `dry_run: true` first. |
+| `cypher` | ACCESSES, HAS_METHOD, STEP_IN_PROCESS, METHOD_OVERRIDES. READ schema first. |
+| `api_impact` | Express-style routes only — **not indexed in this repo**. |
+| `route_map` / `shape_check` | Same limitation here. |
+| `tool_map` | MCP/RPC tool definitions. |
+| `list_repos` | Registry + staleness + embedding counts. |
+| `group_list` / `group_sync` | Cross-repo groups: `repo: "@<groupName>"`. |
+
+## Resources (lightweight — read before heavy tools)
+
+| URI | Content |
+| --- | --- |
+| `gitnexus://repos` | All indexed repos |
+| `gitnexus://repo/__GITNEXUS_REPO__/context` | Stats + **staleness** |
+| `gitnexus://repo/__GITNEXUS_REPO__/clusters` | Functional areas + cohesion |
+| `gitnexus://repo/__GITNEXUS_REPO__/cluster/<name>` | Area members |
+| `gitnexus://repo/__GITNEXUS_REPO__/processes` | All 300 execution flows |
+| `gitnexus://repo/__GITNEXUS_REPO__/process/<name>` | Step-by-step trace |
+| `gitnexus://repo/__GITNEXUS_REPO__/schema` | Cypher schema |
+
+## MCP prompts (underused but useful)
+
+- `detect_impact` — guided pre-commit analysis
+- `generate_map` — architecture doc + mermaid from the graph
+
+## Index freshness
+
+- After meaningful code changes: `npm run gitnexus:refresh`
+- Pre-commit hook runs incremental refresh when hooks installed (`npm run hooks:install`)
+- Embeddings preserved on refresh; `--drop-embeddings` only when rebuilding vectors intentionally
+- If MCP says stale after refresh, restart Cursor to reload the MCP server
+
+## MCP unreachable — warn immediately
+
+If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/detect_changes/graph queries unavailable. Falling back to Grep/Read without structural safety checks."_ Do NOT silently fall back.
+
+## Workspace contract (non-negotiable)
+
+- `impact` BEFORE editing any function / class / method — report blast radius
+- `detect_changes` BEFORE committing
+- Warn on HIGH / CRITICAL risk before proceeding
+- NEVER find-and-replace renames — use `rename`
+
+## Skill files
+
+| Task | Skill |
+| --- | --- |
+| **Start any code task** | `.claude/skills/gitnexus-workspace/SKILL.md` (master index) |
+| Architecture / explore | `.claude/skills/gitnexus/gitnexus-exploring/SKILL.md` |
+| Blast radius | `.claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md` |
+| Debugging | `.claude/skills/gitnexus/gitnexus-debugging/SKILL.md` |
+| Refactoring | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
+| Scenario playbooks | `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` |
+| PR review | `.claude/skills/gitnexus/gitnexus-pr-review/SKILL.md` |
+| Custom HTTP routes (this repo) | `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md` |
+| CLI / index / wiki | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
+| Tool reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
+| Region-bound agents | `docs/AGENT-PROFILES.md` |
+| Per-area entry points | `.claude/skills/generated/<area>/SKILL.md` |

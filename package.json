@@ -1,0 +1,23 @@
+{
+  "name": "cursor-gitnexus-kit",
+  "version": "1.0.0",
+  "description": "Portable Cursor + GitNexus enforcement bundle — install, update, uninstall for any repo",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "gn-kit-install": "./bin/install.sh",
+    "gn-kit-update": "./bin/update.sh",
+    "gn-kit-uninstall": "./bin/uninstall.sh"
+  },
+  "engines": {
+    "node": ">=22.9.0"
+  },
+  "scripts": {
+    "install:target": "./bin/install.sh",
+    "update:target": "./bin/update.sh",
+    "uninstall:target": "./bin/uninstall.sh",
+    "test": "node --test lib/kit.test.mjs"
+  },
+  "keywords": ["cursor", "gitnexus", "agent", "hooks", "mcp"],
+  "license": "ISC"
+}

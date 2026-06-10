@@ -1,0 +1,8 @@
+# GitNexus-only ignores (gitignore syntax). Complements .gitignore for index speed.
+# See: npx gitnexus analyze --help (reads .gitignore + .gitnexusignore)
+
+# Local OHLCV candle shards (~thousands of JSON files) — not source code
+data/candles/
+
+# Research run outputs (large JSON/CSV artifacts)
+reports/
