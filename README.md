@@ -22,8 +22,21 @@ Per-target repo (not bundled): `.gitnexus/` index, `.cursor/skills/generated/` a
 
 - **Node.js** ≥ 22.9.0
 - **git**
+- **bash** (macOS/Linux; WSL on Windows)
 - **Cursor** with Hooks + MCP enabled
 - Target repo should eventually run `npm run gitnexus:refresh` (or install without `--quick`)
+
+## First install checklist
+
+1. Clone this kit repo (or download a release).
+2. Ensure the **target repo is a git worktree** (`git init` if needed).
+3. Run `./bin/install.sh /path/to/repo` (full) or `--quick` (hooks/skills only).
+4. **Restart Cursor** on the target — MCP + hooks do not load until restart.
+5. If you used `--quick`, run `npm run gitnexus:agent-refresh` before graph tools work.
+6. Optional: customize `docs/AGENT-PROFILES.md` (seeded from stub on first install only).
+7. Kit install skips global `~/.cursor/mcp.json` changes — project `.cursor/mcp.json` is sufficient.
+
+**Note:** Install overwrites `.cursor/hooks.json` (backup at `.cursor/hooks.json.gn-kit.bak` if one existed). Existing custom hooks are not merged.
 
 ## Install into any repo
 
@@ -101,6 +114,7 @@ npm test                    # kit unit tests
 bundle/
 ├── .cursor/rules hooks.json hooks/
 ├── .claude/skills/
+├── docs/                    # GITNEXUS-TEAM-BUNDLE.md + AGENT-PROFILES.stub.md
 ├── scripts/
 ├── .githooks/
 ├── .vscode/

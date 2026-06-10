@@ -21,7 +21,7 @@ cp -a "$SRC/.cursor/hooks" "$KIT_ROOT/bundle/.cursor/"
 cp -a "$SRC/.claude/skills/gitnexus" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-workspace" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-enforcement" "$KIT_ROOT/bundle/.claude/skills/"
-mkdir -p "$KIT_ROOT/bundle/.githooks" "$KIT_ROOT/bundle/.vscode" "$KIT_ROOT/bundle/scripts/lib" "$KIT_ROOT/bundle/scripts/gitnexus-teaching"
+mkdir -p "$KIT_ROOT/bundle/.githooks" "$KIT_ROOT/bundle/.vscode" "$KIT_ROOT/bundle/scripts/lib" "$KIT_ROOT/bundle/scripts/gitnexus-teaching" "$KIT_ROOT/bundle/docs"
 cp "$SRC/.githooks/pre-commit" "$KIT_ROOT/bundle/.githooks/"
 cp "$SRC/.vscode/settings.json" "$KIT_ROOT/bundle/.vscode/"
 cp "$SRC/.gitnexusignore" "$KIT_ROOT/bundle/"
@@ -30,7 +30,13 @@ for f in gitnexus-setup.sh sync-cursor-gitnexus-teaching.sh pack-gitnexus-teachi
 done
 cp "$SRC/scripts/lib/project-tmp.mjs" "$KIT_ROOT/bundle/scripts/lib/"
 cp "$SRC/scripts/gitnexus-teaching/"* "$KIT_ROOT/bundle/scripts/gitnexus-teaching/"
-cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
+if [[ -f "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
+  cp "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
+elif [[ -f "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
+  cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md"
+  cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
+fi
+# AGENT-PROFILES.stub.md is kit-owned (not overwritten from source — projects customize AGENT-PROFILES.md)
 
 find "$KIT_ROOT/bundle" -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' -o -name '*.md' \) -print0 \
   | xargs -0 sed -i '' 's/crypto-trading-bot/__GITNEXUS_REPO__/g'

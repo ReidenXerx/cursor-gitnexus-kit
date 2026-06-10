@@ -140,11 +140,16 @@ TEACHING_SOURCES=(
   ".claude/skills/gitnexus/gitnexus-debugging/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-refactoring/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-cli/SKILL.md"
-  "docs/AGENT-PROFILES.md"
 )
 
 for f in "${TEACHING_SOURCES[@]}"; do require_file "$f"; done
 ok "${#TEACHING_SOURCES[@]} teaching source files present"
+
+if [[ -f docs/AGENT-PROFILES.md ]]; then
+  ok "docs/AGENT-PROFILES.md present (region-bound agent profiles)"
+else
+  warn "docs/AGENT-PROFILES.md missing — optional; customize for region-bound agents (see stub in kit bundle)"
+fi
 
 # ── 4. install Cursor teaching bundle (rules + hooks + skills sync) ──────────
 
