@@ -21,6 +21,7 @@ cp -a "$SRC/.cursor/hooks" "$KIT_ROOT/bundle/.cursor/"
 cp -a "$SRC/.claude/skills/gitnexus" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-workspace" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-enforcement" "$KIT_ROOT/bundle/.claude/skills/"
+[[ -d "$SRC/.claude/skills/agent-region" ]] && cp -a "$SRC/.claude/skills/agent-region" "$KIT_ROOT/bundle/.claude/skills/"
 mkdir -p "$KIT_ROOT/bundle/.githooks" "$KIT_ROOT/bundle/.vscode" "$KIT_ROOT/bundle/scripts/lib" "$KIT_ROOT/bundle/scripts/gitnexus-teaching" "$KIT_ROOT/bundle/docs"
 cp "$SRC/.githooks/pre-commit" "$KIT_ROOT/bundle/.githooks/"
 cp "$SRC/.vscode/settings.json" "$KIT_ROOT/bundle/.vscode/"
@@ -36,7 +37,10 @@ elif [[ -f "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
   cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md"
   cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
 fi
-# AGENT-PROFILES.stub.md is kit-owned (not overwritten from source — projects customize AGENT-PROFILES.md)
+for stub in regions.overlay.stub.json AGENT-PROFILES.stub.md; do
+  [[ -f "$SRC/docs/$stub" ]] && cp "$SRC/docs/$stub" "$KIT_ROOT/bundle/docs/$stub"
+done
+# docs/regions.overlay.json is per-project — never copy from source (crypto keeps its own)
 
 find "$KIT_ROOT/bundle" -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' -o -name '*.md' \) -print0 \
   | xargs -0 sed -i '' 's/crypto-trading-bot/__GITNEXUS_REPO__/g'

@@ -21,14 +21,9 @@ if grep -rq '__GITNEXUS_REPO__' .cursor/rules .cursor/hooks .claude/skills/gitne
   warn "  GITNEXUS_REPO_NAME=$REPO_NAME bash scripts/gitnexus-teaching/install-from-bundle.sh"
   if [[ "${GITNEXUS_SKIP_RENAME:-}" != "1" ]]; then
     info "Replacing __GITNEXUS_REPO__ → $REPO_NAME in rules/hooks/skills"
-    if sed --version 2>/dev/null | grep -q GNU; then
-      SED_INPLACE=(-i)
-    else
-      SED_INPLACE=(-i '')
-    fi
     find .cursor/rules .cursor/hooks .claude/skills/gitnexus-workspace .claude/skills/gitnexus-enforcement .claude/skills/gitnexus \
       -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' \) \
-      -exec sed "${SED_INPLACE[@]}" "s/__GITNEXUS_REPO__/$REPO_NAME/g" {} +
+      -exec sed -i "s/__GITNEXUS_REPO__/$REPO_NAME/g" {} +
     ok "Repo name substituted"
   fi
 fi

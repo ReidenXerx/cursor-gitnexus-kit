@@ -13,6 +13,7 @@ export function sessionPaths(root) {
     promptHint: path.join(cursorDir, '.gitnexus-prompt-hint.json'),
     refreshPendingFlag: path.join(cursorDir, '.gitnexus-refresh-pending.flag'),
     mcpUsedFlag: path.join(cursorDir, '.gitnexus-mcp-used.flag'),
+    regionState: path.join(cursorDir, '.agent-region.json'),
   };
 }
 
@@ -96,6 +97,18 @@ export function firstToolNudge(root, stale) {
   if (hint.reasoning) {
     parts.push(
       'Code-reasoning prompt — prefer gitnexus_query/context/impact throughout the task, not grep. Re-query when the question shifts.'
+    );
+  }
+
+  if (hint.regionCard) {
+    parts.push(hint.regionCard);
+    parts.push(
+      'REGION RULE: READ anywhere in the repo for reasoning. WRITE only within region owns (partial border fixes limited). Significant cross-region edits → ask user to open another region chat or Superchat.'
+    );
+  } else if (hint.regionPicker) {
+    parts.push(hint.regionPicker);
+    parts.push(
+      'Ask the user to pick a region (number, id, or "superchat") before structural edits. Reads anywhere are allowed once work begins.'
     );
   }
 

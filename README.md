@@ -9,8 +9,8 @@ Extracted from production use in [crypto-trading-bot](https://github.com/ReidenX
 | Component | Purpose |
 |-----------|---------|
 | `.cursor/rules/00-gitnexus-enforcement.mdc` | North-star agent contract (only always-on rule) |
-| `.cursor/hooks.json` + hooks | Block lazy grep/read; staleness gate; session auto-refresh |
-| `.claude/skills/gitnexus*` | Playbooks (imaging, enforcement, scenarios, PR review, …) |
+| `.cursor/hooks.json` + hooks | Block lazy grep/read; staleness gate; session auto-refresh; **region picker** |
+| `.claude/skills/gitnexus*` + `agent-region` | Playbooks + region responsibility areas |
 | `scripts/gitnexus-*.sh` | Setup, sync, agent CLI, pack, git hooks |
 | `.githooks/pre-commit` | Optional index refresh on commit |
 | `.cursor/mcp.json` | Merges `gitnexus` MCP server |
@@ -33,8 +33,28 @@ Per-target repo (not bundled): `.gitnexus/` index, `.cursor/skills/generated/` a
 3. Run `./bin/install.sh /path/to/repo` (full) or `--quick` (hooks/skills only).
 4. **Restart Cursor** on the target — MCP + hooks do not load until restart.
 5. If you used `--quick`, run `npm run gitnexus:agent-refresh` before graph tools work.
-6. Optional: customize `docs/AGENT-PROFILES.md` (seeded from stub on first install only).
-7. Kit install skips global `~/.cursor/mcp.json` changes — project `.cursor/mcp.json` is sufficient.
+6. **First Agent chat:** pick a region (`1`–`N`, region id, or `superchat`).
+7. Optional: customize `docs/regions.overlay.json` + `docs/AGENT-PROFILES.md` (seeded from stubs on first install).
+8. Kit install skips global `~/.cursor/mcp.json` changes — project `.cursor/mcp.json` is sufficient.
+
+## New user flow
+
+```
+install.sh → copy bundle + seed stubs → gitnexus-setup → generate-regions
+    → restart Cursor → new Agent chat → pick region → work
+         READ: anywhere | WRITE: region owns only | Superchat: unbounded
+```
+
+| Step | What happens |
+|------|----------------|
+| **Install** | `./bin/install.sh /path/to/repo` copies hooks, rules, skills; seeds `docs/regions.overlay.json` from stub |
+| **Setup** | `gitnexus-setup.sh` syncs skills, runs `generate-regions` → `.cursor/regions.manifest.json` |
+| **Restart** | Cursor loads MCP + hooks |
+| **New chat** | Session shows numbered regions + Superchat; reply `3` or `adapters` or `superchat` |
+| **Work** | Read any file for reasoning; writes blocked outside region `owns` (2 partial border writes allowed) |
+| **After --quick** | `npm run gitnexus:agent-refresh` then customize overlay for your architecture |
+
+See `bundle/docs/GITNEXUS-TEAM-BUNDLE.md` for the full diagram.
 
 **Note:** Install overwrites `.cursor/hooks.json` (backup at `.cursor/hooks.json.gn-kit.bak` if one existed). Existing custom hooks are not merged.
 
@@ -93,6 +113,7 @@ Removes all kit-managed files, `gitnexus:*` npm scripts, gitignore snippet, and 
 npm run gitnexus:agent-status     # staleness check
 npm run gitnexus:agent-refresh    # agent-autonomous re-index
 npm run gitnexus:sync-teaching    # after pulling kit updates into repo
+npm run gitnexus:generate-regions # rebuild region manifest from overlay + skills
 npm run gitnexus:setup -- --quick # hooks/skills only
 ```
 
@@ -114,7 +135,7 @@ npm test                    # kit unit tests
 bundle/
 ├── .cursor/rules hooks.json hooks/
 ├── .claude/skills/
-├── docs/                    # GITNEXUS-TEAM-BUNDLE.md + AGENT-PROFILES.stub.md
+├── docs/                    # TEAM-BUNDLE, regions.overlay.stub.json, AGENT-PROFILES.stub.md
 ├── scripts/
 ├── .githooks/
 ├── .vscode/

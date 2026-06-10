@@ -18,6 +18,7 @@ const WRAP = 'bash scripts/run-with-project-tmp.sh';
 export const GITNEXUS_NPM_SCRIPTS = {
   'gitnexus:setup': 'bash scripts/gitnexus-setup.sh',
   'gitnexus:sync-teaching': 'bash scripts/sync-cursor-gitnexus-teaching.sh',
+  'gitnexus:generate-regions': 'node scripts/gitnexus-teaching/generate-regions.mjs --write',
   'gitnexus:pack': 'bash scripts/pack-gitnexus-teaching.sh',
   'gitnexus:refresh': `${WRAP} npx gitnexus@latest analyze --embeddings --skills`,
   'gitnexus:full': `${WRAP} npx gitnexus@latest analyze --force --embeddings --skills`,

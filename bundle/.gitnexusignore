@@ -1,9 +1,8 @@
 # GitNexus-only ignores (gitignore syntax). Complements .gitignore for index speed.
 # See: npx gitnexus analyze --help (reads .gitignore + .gitnexusignore)
-#
-# Add paths here when analyze is slow due to large non-source trees, e.g.:
-#   data/
-#   build/
-#   dist/
-#   reports/
-#   node_modules/   (usually already in .gitignore)
+
+# Local OHLCV candle shards (~thousands of JSON files) — not source code
+data/candles/
+
+# Research run outputs (large JSON/CSV artifacts)
+reports/

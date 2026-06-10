@@ -32,6 +32,36 @@ const { writePromptHint } = await import(
   pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
 );
 
+const regionLib = pathToFileURL(path.join(root, '.cursor/hooks/lib/region-session.mjs')).href;
+const {
+  loadManifest,
+  loadRegionState,
+  saveRegionState,
+  parseRegionSelection,
+  buildRegionCard,
+  buildRegionPickerText,
+} = await import(regionLib);
+
+const manifest = loadManifest(root);
+let regionState = loadRegionState(root);
+let regionCard;
+let regionPicker;
+
+if (manifest) {
+  if (!regionState) {
+    const picked = parseRegionSelection(prompt, manifest);
+    if (picked) {
+      saveRegionState(root, picked);
+      regionState = loadRegionState(root);
+      regionCard = buildRegionCard(root, picked, manifest);
+    } else {
+      regionPicker = buildRegionPickerText(manifest);
+    }
+  } else {
+    regionCard = buildRegionCard(root, regionState, manifest);
+  }
+}
+
 writePromptHint(root, {
   architecture: architecture || explore,
   explore,
@@ -41,6 +71,8 @@ writePromptHint(root, {
       prompt
     ),
   snippet: prompt.slice(0, 200),
+  regionCard,
+  regionPicker,
 });
 
 process.stdout.write(JSON.stringify({ continue: true }));

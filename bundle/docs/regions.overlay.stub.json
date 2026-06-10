@@ -1,0 +1,45 @@
+{
+  "mode": "replace",
+  "partialOverflowWrites": 2,
+  "superchat": {
+    "id": "superchat",
+    "label": "Superchat (unbounded)",
+    "warning": "No write boundaries — use a capable model. Context drift is likely; prefer region chats for focused work."
+  },
+  "regions": [
+    {
+      "id": "application",
+      "label": "Application code",
+      "mission": "Main application source",
+      "owns": ["src/**"],
+      "reads": ["**"],
+      "anchorSkill": ".cursor/skills/generated/cluster-11/SKILL.md",
+      "definitionOfDone": "relevant tests green"
+    },
+    {
+      "id": "tests",
+      "label": "Tests",
+      "mission": "Test suites and fixtures",
+      "owns": ["tests/**", "test/**", "__tests__/**"],
+      "reads": ["**"],
+      "definitionOfDone": "test suite green"
+    },
+    {
+      "id": "scripts",
+      "label": "Scripts & tooling",
+      "mission": "CLI scripts, build tooling, automation",
+      "owns": ["scripts/**", "bin/**"],
+      "reads": ["**"],
+      "anchorSkill": ".cursor/skills/generated/scripts/SKILL.md",
+      "definitionOfDone": "scripts run without error"
+    },
+    {
+      "id": "docs",
+      "label": "Documentation",
+      "mission": "Docs and README — describe, do not change runtime behavior",
+      "owns": ["docs/**", "README.md", "AGENTS.md", "CLAUDE.md"],
+      "reads": ["**"],
+      "definitionOfDone": "links and paths accurate"
+    }
+  ]
+}

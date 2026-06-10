@@ -35,6 +35,8 @@ elif [[ "$IS_FRESH" != "true" ]]; then
   REFRESH_CONTEXT="GitNexus index is stale (GITNEXUS_SKIP_SESSION_REFRESH=1). Agent MUST run npm run gitnexus:agent-refresh autonomously before structural edits — never ask the user."
 fi
 
+REGION_CONTEXT="$(node "$ROOT/.cursor/hooks/lib/region-picker-context.mjs" "$ROOT" 2>/dev/null || true)"
+
 cat <<JSON
 {
   "env": {
@@ -42,6 +44,6 @@ cat <<JSON
     "GITNEXUS_WORKFLOW": "context→query→context→impact→detect_changes",
     "GITNEXUS_AGENT_REFRESH": "npm run gitnexus:agent-refresh"
   },
-  "additional_context": "__GITNEXUS_REPO__ GitNexus north star: prefer graph tools for ALL code reasoning when index is fresh (not only first lookup); refresh autonomously when stale; classical Grep/Read/Search only when GN is stale/failing/wrong — say why. (1) agent-status OR READ context — autonomous. (2) stale → agent-refresh (required_permissions all) — never ask user to run analyze. (3) query/context/impact/detect_changes throughout tasks. (4) Classical fallback when stale or GN broken. ${REFRESH_CONTEXT}"
+  "additional_context": "__GITNEXUS_REPO__ GitNexus north star: prefer graph tools for ALL code reasoning when index is fresh (not only first lookup); refresh autonomously when stale; classical Grep/Read/Search only when GN is stale/failing/wrong — say why. (1) agent-status OR READ context — autonomous. (2) stale → agent-refresh (required_permissions all) — never ask user to run analyze. (3) query/context/impact/detect_changes throughout tasks. (4) Classical fallback when stale or GN broken. ${REFRESH_CONTEXT}${REGION_CONTEXT}"
 }
 JSON

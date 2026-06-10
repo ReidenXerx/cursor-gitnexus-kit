@@ -7,6 +7,7 @@ export GITNEXUS_HOOK_INPUT="$(cat)"
 export GITNEXUS_STALENESS="$(node "$ROOT/.cursor/hooks/lib/load-staleness.mjs" "$ROOT" 2>/dev/null || echo '{"fresh":false,"reason":"check_failed"}')"
 export GITNEXUS_FIRST_NUDGE="$(node "$ROOT/.cursor/hooks/lib/first-nudge.mjs" "$ROOT" 2>/dev/null || true)"
 export GITNEXUS_STALENESS_MODE="${GITNEXUS_STALENESS_MODE:-block}"
+export GITNEXUS_ROOT="$ROOT"
 
 node <<'NODE'
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
@@ -63,12 +64,44 @@ if (!stale.fresh && isGraphSensitive) {
   process.exit(0);
 }
 
+let writeCheck;
+if (filePath) {
+  const { spawnSync } = require('node:child_process');
+  const path = require('node:path');
+  const regionRoot = process.env.GITNEXUS_ROOT || process.cwd();
+  const rc = spawnSync(
+    process.execPath,
+    [path.join(regionRoot, '.cursor/hooks/lib/region-edit-check.mjs'), filePath],
+    { encoding: 'utf8', env: process.env }
+  );
+  try {
+    writeCheck = JSON.parse(rc.stdout.trim() || '{}');
+  } catch {
+    writeCheck = { skip: true };
+  }
+  if (writeCheck.permission === 'deny') {
+    out({
+      permission: 'deny',
+      agent_message: withNudge(
+        'REGION WRITE GATE: ' +
+          writeCheck.reason +
+          ' You may READ any path for reasoning. For significant cross-region work, ask the user to open another region chat or Superchat (S).'
+      ),
+      user_message: 'Edit outside agent region owns — open the owning region chat or Superchat.',
+    });
+    process.exit(0);
+  }
+}
+
 let agent_message;
 if (isGraphSensitive) {
   agent_message =
     'CODE EDIT GATE: You MUST have run gitnexus_impact({target, direction: "upstream", repo: "__GITNEXUS_REPO__"}) on the symbol you are changing BEFORE this edit. ' +
     'Use graph tools for reasoning about the change, not grep. If not impacted yet, STOP — run impact, report blast radius, then retry. ' +
     'Before commit or saying done: gitnexus_detect_changes (run it yourself).';
+  if (writeCheck?.partial) {
+    agent_message += ' REGION PARTIAL OVERFLOW: ' + writeCheck.reason;
+  }
 } else if (!stale.fresh) {
   agent_message = 'STALENESS NOTE: ' + staleDetail();
 }

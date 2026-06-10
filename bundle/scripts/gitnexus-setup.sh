@@ -114,6 +114,9 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/first-nudge.mjs"
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
+  ".cursor/hooks/lib/region-session.mjs"
+  ".cursor/hooks/lib/region-picker-context.mjs"
+  ".cursor/hooks/lib/region-edit-check.mjs"
   ".vscode/settings.json"
   ".githooks/pre-commit"
   "scripts/gitnexus-setup.sh"
@@ -126,7 +129,9 @@ TEACHING_SOURCES=(
   "scripts/lib/project-tmp.mjs"
   "scripts/gitnexus-teaching/install-from-bundle.sh"
   "scripts/gitnexus-teaching/merge-package-scripts.mjs"
+  "scripts/gitnexus-teaching/generate-regions.mjs"
   "docs/GITNEXUS-TEAM-BUNDLE.md"
+  "docs/regions.overlay.stub.json"
   ".gitnexusignore"
   ".claude/skills/gitnexus-workspace/SKILL.md"
   ".claude/skills/gitnexus-enforcement/SKILL.md"
@@ -140,15 +145,25 @@ TEACHING_SOURCES=(
   ".claude/skills/gitnexus/gitnexus-debugging/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-refactoring/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-cli/SKILL.md"
+  ".claude/skills/agent-region/SKILL.md"
 )
 
 for f in "${TEACHING_SOURCES[@]}"; do require_file "$f"; done
 ok "${#TEACHING_SOURCES[@]} teaching source files present"
 
-if [[ -f docs/AGENT-PROFILES.md ]]; then
-  ok "docs/AGENT-PROFILES.md present (region-bound agent profiles)"
+if [[ -f docs/regions.overlay.json ]]; then
+  ok "docs/regions.overlay.json present (region boundaries)"
+elif [[ -f docs/regions.overlay.stub.json ]]; then
+  cp docs/regions.overlay.stub.json docs/regions.overlay.json
+  ok "Seeded docs/regions.overlay.json from stub"
 else
-  warn "docs/AGENT-PROFILES.md missing — optional; customize for region-bound agents (see stub in kit bundle)"
+  warn "docs/regions.overlay.json missing — run npm run gitnexus:generate-regions after refresh"
+fi
+
+if [[ -f docs/AGENT-PROFILES.md ]]; then
+  ok "docs/AGENT-PROFILES.md present (region narrative)"
+else
+  warn "docs/AGENT-PROFILES.md missing — optional; see docs/AGENT-PROFILES.stub.md"
 fi
 
 # ── 4. install Cursor teaching bundle (rules + hooks + skills sync) ──────────
