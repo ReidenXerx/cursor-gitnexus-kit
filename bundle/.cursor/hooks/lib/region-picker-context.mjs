@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** Emit region picker text for sessionStart additional_context (stdout). */
+/** Emit region user guide for sessionStart additional_context (stdout). */
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,8 +9,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const {
   loadManifest,
   loadRegionState,
-  buildRegionPickerText,
   buildRegionCard,
+  buildSessionStartUserGuide,
 } = await import(pathToFileURL(path.join(here, 'region-session.mjs')).href);
 
 const manifest = loadManifest(root);
@@ -22,9 +22,8 @@ if (!manifest?.regions?.length) {
 const state = loadRegionState(root);
 if (state) {
   const card = buildRegionCard(root, state, manifest);
-  process.stdout.write(` Agent region: ${state.label ?? state.id}. ${card.replace(/\n/g, ' ')}`);
+  process.stdout.write(` ${card.replace(/\n/g, ' ')}`);
   process.exit(0);
 }
 
-const picker = buildRegionPickerText(manifest);
-process.stdout.write(` ${picker.replace(/\n/g, ' | ')}`);
+process.stdout.write(` ${buildSessionStartUserGuide(manifest)}`);

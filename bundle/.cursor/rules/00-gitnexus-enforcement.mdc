@@ -57,7 +57,7 @@ Scoped Grep in one `src/future/**` file is allowed **only after** at least one G
 
 ## Agent regions (one chat = one responsibility area)
 
-On session start, pick a region from the numbered list (or **Superchat**). Skill: `agent-region`.
+**User guide:** `docs/AGENT-REGIONS-GUIDE.md`. Describe task in plain English → area auto-picked → wrong? `region: <id>` or `superchat`. Agent must tell user which area. No code edits until area is set. Skill: `agent-region`.
 
 | Mode | Reads | Writes |
 | --- | --- | --- |

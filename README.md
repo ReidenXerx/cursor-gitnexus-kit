@@ -1,6 +1,6 @@
 # cursor-gitnexus-kit
 
-Portable **Cursor + GitNexus enforcement** for any repository: graph-first agent reasoning, autonomous index refresh, classical fallback when the graph is stale or broken.
+Portable **Cursor + GitNexus enforcement** for any repository: graph-first agent reasoning, autonomous index refresh, and **region-bound agent chats** so AI stays in one area per session.
 
 Extracted from production use in [crypto-trading-bot](https://github.com/ReidenXerx/crypto-trading-bot).
 
@@ -9,54 +9,51 @@ Extracted from production use in [crypto-trading-bot](https://github.com/ReidenX
 | Component | Purpose |
 |-----------|---------|
 | `.cursor/rules/00-gitnexus-enforcement.mdc` | North-star agent contract (only always-on rule) |
-| `.cursor/hooks.json` + hooks | Block lazy grep/read; staleness gate; session auto-refresh; **region picker** |
+| `.cursor/hooks.json` + hooks | Block lazy grep/read; staleness gate; session auto-refresh; **auto region detection** |
 | `.claude/skills/gitnexus*` + `agent-region` | Playbooks + region responsibility areas |
 | `scripts/gitnexus-*.sh` | Setup, sync, agent CLI, pack, git hooks |
+| `docs/AGENT-REGIONS-GUIDE.md` | Plain-language user guide (give this to your team) |
 | `.githooks/pre-commit` | Optional index refresh on commit |
 | `.cursor/mcp.json` | Merges `gitnexus` MCP server |
-| `package.json` scripts | `gitnexus:setup`, `gitnexus:agent-refresh`, … |
+| `package.json` scripts | `gitnexus:setup`, `gitnexus:agent-refresh`, `gitnexus:generate-regions`, … |
 
-Per-target repo (not bundled): `.gitnexus/` index, `.cursor/skills/generated/` area skills — built by `gitnexus analyze` on that codebase.
+Per-target repo (built locally): `.gitnexus/` index, `.cursor/skills/generated/` area skills, `.cursor/regions.manifest.json`.
 
 ## Prerequisites
 
 - **Node.js** ≥ 22.9.0
 - **git**
 - **bash** (macOS/Linux; WSL on Windows)
-- **Cursor** with Hooks + MCP enabled
-- Target repo should eventually run `npm run gitnexus:refresh` (or install without `--quick`)
+- **Cursor** with **Hooks** and **MCP** enabled
+- After `--quick` install: run `npm run gitnexus:agent-refresh` before graph tools work
 
-## First install checklist
+## First install (checklist)
 
-1. Clone this kit repo (or download a release).
-2. Ensure the **target repo is a git worktree** (`git init` if needed).
-3. Run `./bin/install.sh /path/to/repo` (full) or `--quick` (hooks/skills only).
-4. **Restart Cursor** on the target — MCP + hooks do not load until restart.
-5. If you used `--quick`, run `npm run gitnexus:agent-refresh` before graph tools work.
-6. **First Agent chat:** pick a region (`1`–`N`, region id, or `superchat`).
-7. Optional: customize `docs/regions.overlay.json` + `docs/AGENT-PROFILES.md` (seeded from stubs on first install).
-8. Kit install skips global `~/.cursor/mcp.json` changes — project `.cursor/mcp.json` is sufficient.
+1. Clone this repo (or download a release).
+2. Target repo must be a **git worktree** (`git init` if needed).
+3. Run `./bin/install.sh /path/to/repo` (full) or `--quick` (hooks only).
+4. **Restart Cursor** on the target project — MCP + hooks do not load until restart.
+5. Open a **new Agent chat** and follow the 3-step flow below.
 
-## New user flow
+**Note:** Install overwrites `.cursor/hooks.json` (backup at `.cursor/hooks.json.gn-kit.bak` if one existed). Kit skips global `~/.cursor/mcp.json` changes.
 
-```
-install.sh → copy bundle + seed stubs → gitnexus-setup → generate-regions
-    → restart Cursor → new Agent chat → pick region → work
-         READ: anywhere | WRITE: region owns only | Superchat: unbounded
-```
+## Every new Agent chat (for your team)
 
-| Step | What happens |
-|------|----------------|
-| **Install** | `./bin/install.sh /path/to/repo` copies hooks, rules, skills; seeds `docs/regions.overlay.json` from stub |
-| **Setup** | `gitnexus-setup.sh` syncs skills, runs `generate-regions` → `.cursor/regions.manifest.json` |
-| **Restart** | Cursor loads MCP + hooks |
-| **New chat** | Session shows numbered regions + Superchat; reply `3` or `adapters` or `superchat` |
-| **Work** | Read any file for reasoning; writes blocked outside region `owns` (2 partial border writes allowed) |
-| **After --quick** | `npm run gitnexus:agent-refresh` then customize overlay for your architecture |
+Share **`docs/AGENT-REGIONS-GUIDE.md`** with anyone using Cursor on the repo.
 
-See `bundle/docs/GITNEXUS-TEAM-BUNDLE.md` for the full diagram.
+| Step | What the user does |
+|------|-------------------|
+| **1** | Describe the task in plain English. Include a file path if possible. Example: `fix login in src/api/auth.js` |
+| **2** | Area is **auto-picked** from the message — agent announces it |
+| **3** | Wrong area? Reply exactly: `region: <id>` or `superchat` |
 
-**Note:** Install overwrites `.cursor/hooks.json` (backup at `.cursor/hooks.json.gn-kit.bak` if one existed). Existing custom hooks are not merged.
+| Rule | Detail |
+|------|--------|
+| **Read** | Entire repo — always OK |
+| **Write** | Only the picked area (2 small border fixes allowed) |
+| **Superchat** | `superchat` — whole repo, no limits; strong model only |
+
+Code edits are **blocked** until the user describes a task (or picks `region: …`).
 
 ## Install into any repo
 
@@ -67,14 +64,14 @@ cd cursor-gitnexus-kit
 # Full install + index build (can take a few minutes)
 ./bin/install.sh /path/to/your-repo
 
-# Or hooks/skills only — index later
+# Hooks/skills only — index later
 ./bin/install.sh /path/to/your-repo --quick
 
 # Copy files only — skip gitnexus-setup
 ./bin/install.sh /path/to/your-repo --no-setup
 ```
 
-Custom repo name (if folder basename ≠ GitNexus registry name):
+Custom repo name (folder basename ≠ GitNexus registry name):
 
 ```bash
 ./bin/install.sh /path/to/your-repo --repo-name my-registered-repo-name
@@ -82,25 +79,34 @@ Custom repo name (if folder basename ≠ GitNexus registry name):
 
 Then **restart Cursor** on the target project.
 
-## Update
+## What happens during install
 
-Re-copy the latest bundle and re-sync teaching (default: `--quick`, skips full re-index):
+```
+install.sh
+  → copy bundle (rules, hooks, skills, scripts)
+  → merge package.json gitnexus:* scripts + .cursor/mcp.json
+  → gitnexus-setup.sh (--skip-global-mcp)
+      → sync .cursor/skills/
+      → generate-regions → .cursor/regions.manifest.json
+         (from GitNexus skills after refresh, OR filesystem scan on --quick)
+  → restart Cursor → new Agent chat → auto region from first message
+```
+
+Regions are **not** generic placeholders — `generate-regions` scans `src/`, `apps/`, `packages/`, `scripts/`, `tests/`, `docs/`. Customize later with `docs/regions.overlay.json` (`mode: enrich` or `replace`).
+
+## Update
 
 ```bash
 ./bin/update.sh /path/to/your-repo
 ```
 
-After updating kit rules/hooks, restart Cursor on the target.
+Default: `--quick` (skips full re-index). Restart Cursor after updating.
 
 ## Uninstall
 
-Removes all kit-managed files, `gitnexus:*` npm scripts, gitignore snippet, and restores `.cursor/hooks.json` / `.cursor/mcp.json` backups if they existed before install.
-
 ```bash
 ./bin/uninstall.sh /path/to/your-repo
-
-# Also remove local graph index + temp dir
-./bin/uninstall.sh /path/to/your-repo --remove-index
+./bin/uninstall.sh /path/to/your-repo --remove-index   # also remove .gitnexus/
 ```
 
 ## North star (agent contract)
@@ -110,12 +116,22 @@ Removes all kit-managed files, `gitnexus:*` npm scripts, gitignore snippet, and 
 ## Target repo daily commands
 
 ```bash
-npm run gitnexus:agent-status     # staleness check
-npm run gitnexus:agent-refresh    # agent-autonomous re-index
-npm run gitnexus:sync-teaching    # after pulling kit updates into repo
-npm run gitnexus:generate-regions # rebuild region manifest from overlay + skills
-npm run gitnexus:setup -- --quick # hooks/skills only
+npm run gitnexus:agent-status      # staleness (agents run this autonomously)
+npm run gitnexus:agent-refresh     # re-index when stale
+npm run gitnexus:generate-regions  # rebuild region manifest
+npm run gitnexus:sync-teaching     # after pulling kit/rule updates
+npm run gitnexus:setup -- --quick  # hooks/skills only
 ```
+
+## Customize regions (optional)
+
+| File | When |
+|------|------|
+| `docs/regions.overlay.stub.json` | Reference template (`mode: enrich`) |
+| `docs/regions.overlay.json` | Your boundaries — copy stub and edit, or hand-author |
+| `docs/AGENT-PROFILES.md` | Narrative + border contracts (seeded from stub on first install) |
+
+After editing overlay: `npm run gitnexus:generate-regions`
 
 ## Manifest
 
@@ -124,8 +140,8 @@ Install writes `.cursor/gn-kit-manifest.json` in the target repo (gitignored). U
 ## Development
 
 ```bash
-npm test                    # kit unit tests
-# Edit bundle/ then test on a scratch repo:
+npm test                              # kit unit tests
+./scripts/refresh-bundle-from-source.sh ../crypto-trading-bot
 ./bin/update.sh ../some-repo --quick
 ```
 
@@ -134,8 +150,8 @@ npm test                    # kit unit tests
 ```
 bundle/
 ├── .cursor/rules hooks.json hooks/
-├── .claude/skills/
-├── docs/                    # TEAM-BUNDLE, regions.overlay.stub.json, AGENT-PROFILES.stub.md
+├── .claude/skills/          # gitnexus*, agent-region
+├── docs/                    # AGENT-REGIONS-GUIDE, TEAM-BUNDLE, stubs
 ├── scripts/
 ├── .githooks/
 ├── .vscode/

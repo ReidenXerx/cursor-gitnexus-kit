@@ -33,29 +33,33 @@ const { writePromptHint } = await import(
 );
 
 const regionLib = pathToFileURL(path.join(root, '.cursor/hooks/lib/region-session.mjs')).href;
+const guideLib = pathToFileURL(path.join(root, '.cursor/hooks/lib/region-user-guide.mjs')).href;
 const {
   loadManifest,
   loadRegionState,
   saveRegionState,
-  parseRegionSelection,
+  resolveRegionFromPrompt,
   buildRegionCard,
   buildRegionPickerText,
 } = await import(regionLib);
+const { buildAmbiguousUserScript } = await import(guideLib);
 
 const manifest = loadManifest(root);
 let regionState = loadRegionState(root);
 let regionCard;
 let regionPicker;
+let regionAmbiguous;
 
 if (manifest) {
   if (!regionState) {
-    const picked = parseRegionSelection(prompt, manifest);
-    if (picked) {
-      saveRegionState(root, picked);
+    const { region, inferred } = resolveRegionFromPrompt(prompt, manifest);
+    if (region) {
+      saveRegionState(root, region);
       regionState = loadRegionState(root);
-      regionCard = buildRegionCard(root, picked, manifest);
+      regionCard = buildRegionCard(root, regionState, manifest);
     } else {
       regionPicker = buildRegionPickerText(manifest);
+      regionAmbiguous = buildAmbiguousUserScript(inferred, manifest);
     }
   } else {
     regionCard = buildRegionCard(root, regionState, manifest);
@@ -73,6 +77,7 @@ writePromptHint(root, {
   snippet: prompt.slice(0, 200),
   regionCard,
   regionPicker,
+  regionAmbiguous,
 });
 
 process.stdout.write(JSON.stringify({ continue: true }));

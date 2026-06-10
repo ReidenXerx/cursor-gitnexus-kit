@@ -4,6 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { repoName } from './region-session.mjs';
 
 export function sessionPaths(root) {
   const cursorDir = path.join(root, '.cursor');
@@ -83,8 +84,9 @@ export function firstToolNudge(root, stale) {
         'Run it yourself — NEVER tell the user to run npx gitnexus analyze or gitnexus:refresh. Gitnexus npm scripts are hook pre-approved. Then retry graph tools.'
     );
   } else {
+    const repo = repoName(root);
     parts.push(
-      'GITNEXUS SESSION: Before structural work, READ gitnexus://repo/__GITNEXUS_REPO__/context OR run npm run gitnexus:agent-status (autonomous, no user ask).'
+      `GITNEXUS SESSION: Before structural work, READ gitnexus://repo/${repo}/context OR run npm run gitnexus:agent-status (autonomous, no user ask).`
     );
   }
 
@@ -100,16 +102,12 @@ export function firstToolNudge(root, stale) {
     );
   }
 
+  if (hint.regionAmbiguous) parts.push(hint.regionAmbiguous);
   if (hint.regionCard) {
     parts.push(hint.regionCard);
-    parts.push(
-      'REGION RULE: READ anywhere in the repo for reasoning. WRITE only within region owns (partial border fixes limited). Significant cross-region edits → ask user to open another region chat or Superchat.'
-    );
   } else if (hint.regionPicker) {
     parts.push(hint.regionPicker);
-    parts.push(
-      'Ask the user to pick a region (number, id, or "superchat") before structural edits. Reads anywhere are allowed once work begins.'
-    );
+    parts.push('BLOCK EDITS until user describes task or picks region: region: <id> or superchat.');
   }
 
   return parts.join('\n');

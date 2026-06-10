@@ -80,20 +80,38 @@ if (filePath) {
     writeCheck = { skip: true };
   }
   if (writeCheck.permission === 'deny') {
+    const userMsg = writeCheck.noRegion
+      ? 'Describe your task in one sentence so we can pick your work area (or say region: adapters).'
+      : 'Edit outside agent region owns — open the owning region chat or Superchat.';
     out({
       permission: 'deny',
       agent_message: withNudge(
-        'REGION WRITE GATE: ' +
+        (writeCheck.noRegion ? 'REGION REQUIRED: ' : 'REGION WRITE GATE: ') +
           writeCheck.reason +
-          ' You may READ any path for reasoning. For significant cross-region work, ask the user to open another region chat or Superchat (S).'
+          (writeCheck.noRegion
+            ? ' Ask the user using the exact words from region-user-guide. Do NOT edit until region is set.'
+            : ' You may READ any path for reasoning. For significant cross-region work, ask the user to open another region chat or Superchat (S).')
       ),
-      user_message: 'Edit outside agent region owns — open the owning region chat or Superchat.',
+      user_message: userMsg,
     });
     process.exit(0);
   }
 }
 
 let agent_message;
+if (writeCheck?.noRegion && isGraphSensitive) {
+  out({
+    permission: 'deny',
+    agent_message: withNudge(
+      'REGION REQUIRED: ' +
+        writeCheck.reason +
+        ' Ask the user using the exact words from docs/AGENT-REGIONS-GUIDE.md. Do NOT edit code until region is set.'
+    ),
+    user_message: 'Describe your task in one sentence so we can pick your work area.',
+  });
+  process.exit(0);
+}
+
 if (isGraphSensitive) {
   agent_message =
     'CODE EDIT GATE: You MUST have run gitnexus_impact({target, direction: "upstream", repo: "__GITNEXUS_REPO__"}) on the symbol you are changing BEFORE this edit. ' +

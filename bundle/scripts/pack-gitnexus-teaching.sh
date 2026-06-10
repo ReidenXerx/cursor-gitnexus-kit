@@ -61,9 +61,15 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/first-nudge.mjs
   .cursor/hooks/lib/clear-session.mjs
   .cursor/hooks/lib/set-refresh-pending.mjs
+  .cursor/hooks/lib/region-session.mjs
+  .cursor/hooks/lib/region-infer.mjs
+  .cursor/hooks/lib/region-picker-context.mjs
+  .cursor/hooks/lib/region-edit-check.mjs
+  .cursor/hooks/lib/region-user-guide.mjs
   .claude/skills/gitnexus
   .claude/skills/gitnexus-workspace
   .claude/skills/gitnexus-enforcement
+  .claude/skills/agent-region
   .githooks/pre-commit
   .vscode/settings.json
   scripts/gitnexus-setup.sh
@@ -76,7 +82,11 @@ BUNDLE_PATHS=(
   scripts/lib/project-tmp.mjs
   scripts/gitnexus-teaching/install-from-bundle.sh
   scripts/gitnexus-teaching/merge-package-scripts.mjs
+  scripts/gitnexus-teaching/generate-regions.mjs
   docs/GITNEXUS-TEAM-BUNDLE.md
+  docs/regions.overlay.stub.json
+  docs/AGENT-PROFILES.stub.md
+  docs/AGENT-REGIONS-GUIDE.md
   .gitnexusignore
 )
 
@@ -108,6 +118,8 @@ cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
 .cursor/.gitnexus-prompt-hint.json
 .cursor/.gitnexus-refresh-pending.flag
 .cursor/.gitnexus-mcp-used.flag
+.cursor/.agent-region.json
+.cursor/regions.manifest.json
 SNIP
 
 node <<NODE > "$BUNDLE_ROOT/MANIFEST.json"

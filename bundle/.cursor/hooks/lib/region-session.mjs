@@ -5,6 +5,22 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { inferRegionFromPrompt } from './region-infer.mjs';
+import {
+  buildSessionStartUserGuide,
+  buildInferredUserAnnouncement,
+  buildAmbiguousUserScript,
+  buildWaitingForTaskGuide,
+  buildRegionListCompact,
+  buildNoRegionEditWarning,
+} from './region-user-guide.mjs';
+
+export {
+  buildSessionStartUserGuide,
+  buildInferredUserAnnouncement,
+  buildAmbiguousUserScript,
+  buildNoRegionEditWarning,
+};
 
 export const REGION_STATE_FILE = '.cursor/.agent-region.json';
 export const MANIFEST_FILE = '.cursor/regions.manifest.json';
@@ -88,7 +104,7 @@ export function clearRegionState(root) {
 
 /**
  * @param {string} root
- * @param {{ id: string, mode: 'region'|'superchat', label?: string }} selection
+ * @param {{ id: string, mode: 'region'|'superchat', label?: string, method?: string, confidence?: number, reasons?: string[] }} selection
  */
 export function saveRegionState(root, selection) {
   const p = regionStatePath(root);
@@ -102,6 +118,9 @@ export function saveRegionState(root, selection) {
         id: selection.id,
         mode: selection.mode,
         label: selection.label,
+        method: selection.method ?? prev.method ?? 'explicit',
+        confidence: selection.confidence,
+        reasons: selection.reasons,
         selectedAt: new Date().toISOString(),
         overflowWriteCount: 0,
       },
@@ -109,6 +128,44 @@ export function saveRegionState(root, selection) {
       2
     ) + '\n'
   );
+}
+
+/** @param {string} root */
+export function repoName(root) {
+  if (process.env.GITNEXUS_REPO) return process.env.GITNEXUS_REPO;
+  const m = loadManifest(root);
+  if (m?.repo) return m.repo;
+  return path.basename(root);
+}
+
+/**
+ * Explicit pick (number/id) or heuristic inference from task text.
+ * @param {string} prompt
+ * @param {object} manifest
+ */
+export function resolveRegionFromPrompt(prompt, manifest) {
+  const explicit = parseRegionSelection(prompt, manifest);
+  if (explicit) {
+    return {
+      region: { ...explicit, method: 'explicit', confidence: 1 },
+      inferred: null,
+    };
+  }
+
+  const inferred = inferRegionFromPrompt(prompt, manifest);
+  if (inferred.region && inferred.method !== 'ambiguous') {
+    return {
+      region: {
+        ...inferred.region,
+        method: inferred.method,
+        confidence: inferred.confidence,
+        reasons: inferred.reasons,
+      },
+      inferred,
+    };
+  }
+
+  return { region: null, inferred };
 }
 
 /** @param {string} root */
@@ -147,6 +204,16 @@ export function parseRegionSelection(prompt, manifest) {
     };
   }
 
+  const regionColon = lower.match(/^region\s*:\s*([a-z0-9_-]+)$/);
+  if (regionColon) {
+    const id = regionColon[1];
+    const hit = manifest.regions?.find((r) => r.id.toLowerCase() === id);
+    if (hit) return { id: hit.id, mode: 'region', label: hit.label };
+    if (id === 'superchat') {
+      return { id: 'superchat', mode: 'superchat', label: manifest.superchat?.label ?? 'Superchat' };
+    }
+  }
+
   const numMatch = lower.match(/^(?:region\s*[:#]?\s*)?(\d{1,2})$/);
   if (numMatch) {
     const idx = Number(numMatch[1]) - 1;
@@ -177,53 +244,27 @@ export function parseRegionSelection(prompt, manifest) {
 export function buildRegionPickerText(manifest) {
   if (!manifest?.regions?.length) return '';
 
-  const lines = [
-    'AGENT REGION — pick responsibility area for this chat (reply with number, region id, or "superchat"):',
-    '',
-    'You may READ any file in the repo for reasoning. Writes are limited to your region owns (partial border fixes allowed; large cross-region work → new chat).',
-    '',
-  ];
-
-  manifest.regions.forEach((r, i) => {
-    const mission = r.mission ? ` — ${r.mission}` : '';
-    lines.push(`${i + 1}. ${r.label} (${r.id})${mission}`);
-  });
-
-  const sc = manifest.superchat ?? {};
-  lines.push('');
-  lines.push(
-    `S. ${sc.label ?? 'Superchat'} — no write boundaries; ${sc.warning ?? 'use a capable model; context drift risk'}`
-  );
-
-  return lines.join('\n');
+  return buildWaitingForTaskGuide(manifest) + '\n' + buildRegionListCompact(manifest);
 }
 
 /** @param {string} root @param {object} region @param {object} manifest */
 export function buildRegionCard(root, region, manifest) {
+  const announce = buildInferredUserAnnouncement(region, manifest);
   if (!region || region.mode === 'superchat') {
-    const sc = manifest?.superchat ?? {};
-    return [
-      `REGION: Superchat (unbounded)`,
-      sc.warning ?? 'Use a capable model. Context drift is likely if the task spans many areas.',
-      'GitNexus graph-first rules still apply.',
-    ].join('\n');
+    return announce;
   }
 
   const r = findRegion(manifest, region.id);
-  if (!r) return `REGION: ${region.label ?? region.id}`;
+  if (!r) return announce || `REGION: ${region.label ?? region.id}`;
 
-  const parts = [
-    `REGION: ${r.label} (${r.id})`,
-    r.mission ? `Mission: ${r.mission}` : '',
-    r.owns?.length ? `Writes (owns): ${r.owns.join(', ')}` : '',
-    'Reads: entire repository (cross-region read allowed for reasoning)',
-    r.neverTouches?.length ? `Never write: ${r.neverTouches.join(', ')}` : '',
-    r.anchorSkill ? `Anchor skill: ${r.anchorSkill}` : '',
-    r.definitionOfDone ? `Done: ${r.definitionOfDone}` : '',
-    'Partial overflow: small border fixes OK in this chat; significant cross-region edits → hand off to another region chat.',
-  ].filter(Boolean);
-
-  return parts.join('\n');
+  return [
+    announce,
+    r.owns?.length ? `Agent writes only: ${r.owns.join(', ')}` : '',
+    'Agent reads: entire repo.',
+    r.anchorSkill ? `Load skill: ${r.anchorSkill}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 }
 
 /**
@@ -236,7 +277,17 @@ export function checkWriteAllowed(root, filePath) {
   const state = loadRegionState(root);
   const manifest = loadManifest(root);
 
-  if (!state || !manifest) return { allowed: true };
+  if (!manifest) return { allowed: true };
+
+  if (!state && manifest.regions?.length) {
+    return {
+      allowed: true,
+      noRegion: true,
+      reason: buildNoRegionEditWarning(manifest),
+    };
+  }
+
+  if (!state) return { allowed: true };
 
   if (state.mode === 'superchat') return { allowed: true };
 

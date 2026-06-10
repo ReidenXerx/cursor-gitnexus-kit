@@ -80,11 +80,19 @@ Or after extract, merge scripts manually and run:
 npm run gitnexus:setup
 ```
 
+## Agent regions (new user flow)
+
+1. **Install** → `npm run gitnexus:setup` or cursor-gitnexus-kit `install.sh`
+2. **Restart Cursor**
+3. **New Agent chat** → pick region (`1`–`N`, id, or `superchat`)
+4. **Work** → READ anywhere; WRITE only in region `owns`
+5. **Customize** → `docs/regions.overlay.json` (`npm run gitnexus:generate-regions`)
+
 ## After install (every dev)
 
 1. **Restart Cursor** (MCP + hooks)
 2. `npm run gitnexus:agent-status` — index fresh?
-3. Start Agent chats with: *"Read gitnexus-workspace skill, then …"*
+3. Start Agent chats with: *"Read gitnexus-workspace skill, then …"* — pick a region on first message
 
 **Auto-refresh:** On Agent session start, hooks run `npm run gitnexus:agent-refresh` if the index is behind HEAD (skip with `GITNEXUS_SKIP_SESSION_REFRESH=1`). While stale, a shell guard blocks non-gitnexus commands until refresh succeeds — agents must not tell users to run analyze manually.
 

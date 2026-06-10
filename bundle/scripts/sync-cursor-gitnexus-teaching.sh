@@ -33,6 +33,8 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/region-session.mjs"
+  ".cursor/hooks/lib/region-infer.mjs"
+  ".cursor/hooks/lib/region-user-guide.mjs"
   ".cursor/hooks/lib/region-picker-context.mjs"
   ".cursor/hooks/lib/region-edit-check.mjs"
   "scripts/gitnexus-agent.mjs"

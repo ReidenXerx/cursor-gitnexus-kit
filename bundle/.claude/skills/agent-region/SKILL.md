@@ -1,53 +1,43 @@
 ---
 name: agent-region
-description: "Region-bound agent responsibility — session picker, read-anywhere reasoning, write boundaries, Superchat mode."
+description: "Region-bound agent areas — auto-detect from user task, plain-language user guidance, write boundaries."
 ---
 
-# Agent Region (responsibility areas)
+# Agent Region
 
-One chat = one functional region. Keeps cheaper models focused and reduces context drift.
+## AGENT: first reply checklist
 
-## Session start
+When a region is assigned (auto or explicit), **your first reply MUST include**:
 
-1. If no region is set, the user must pick from the numbered list (or reply `superchat`).
-2. After selection, load `.cursor/regions.manifest.json` and the region's **anchor skill**.
-3. **Reads:** entire repository — cross-region Read, `query`, `context`, and `impact` are always allowed for reasoning.
-4. **Writes:** only paths in this region's `owns` (hooks enforce; 2 partial overflow writes allowed).
+1. Tell the user which area they are in (use the `=== TELL THE USER ===` block from hooks).
+2. One sentence: what you will and will not edit.
+3. If wrong: `region: <id>` or `superchat`.
 
-## Modes
+**If region is unclear** — use the `=== REGION UNCLEAR ===` block verbatim. **Do not edit code** until the user answers.
 
-| Mode | Writes | When |
-|------|--------|------|
-| **Region** | `owns` only (+ 2 partial border writes) | Default — focused work |
-| **Superchat** | Unbounded | Large cross-cutting tasks; warn: use capable model |
+**If no region yet** — use `=== NO REGION YET ===`. **Do not edit code.**
 
-## Overflow policy
+## User guide
 
-| Situation | Action |
-|-----------|--------|
-| Small border fix (import, mirror test) | Stay in chat; partial overflow counter increments |
-| Significant cross-region feature | Tell user: *"Open a new chat for region X (or Superchat)"* |
-| Read-only investigation elsewhere | Always OK |
+Point confused users to **`docs/AGENT-REGIONS-GUIDE.md`** (plain English, copy-paste commands).
 
-## Commands
+## Rules
 
-```bash
-npm run gitnexus:generate-regions   # rebuild manifest from skills + docs/regions.overlay.json
-```
+| | Region chat | Superchat |
+|---|-------------|-----------|
+| Read | Entire repo | Entire repo |
+| Write | `owns` only (+2 border files) | Unbounded |
 
-## Files
+## Override phrases (user copies)
 
-| File | Role |
-|------|------|
-| `.cursor/regions.manifest.json` | Generated region cards |
-| `docs/regions.overlay.json` | Project-specific overrides (`mode: replace` for crypto) |
-| `.cursor/.agent-region.json` | This session's selection (gitignored) |
-| `docs/AGENT-PROFILES.md` | Human narrative + border contracts (crypto) |
+- `region: adapters` — switch area
+- `superchat` — no limits (warn: strong model)
 
-## Hand-off template
+## Hand-off (say this to user)
 
 ```
-This change spans [other region]. Please open a new Agent chat and pick:
-  N. [Region label] — [mission]
-Or use Superchat (S) with a capable model.
+This touches [OTHER AREA]. Open a new Agent chat and type:
+  region: <id>
+Example: region: server
+Or type superchat for a large cross-repo change (strong model only).
 ```

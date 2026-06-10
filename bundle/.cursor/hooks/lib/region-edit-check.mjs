@@ -23,6 +23,18 @@ if (!writeCheck.allowed) {
     JSON.stringify({
       permission: 'deny',
       reason: writeCheck.reason,
+      noRegion: !!writeCheck.noRegion,
+    })
+  );
+  process.exit(0);
+}
+
+if (writeCheck.noRegion) {
+  process.stdout.write(
+    JSON.stringify({
+      permission: 'allow',
+      noRegion: true,
+      reason: writeCheck.reason,
     })
   );
   process.exit(0);

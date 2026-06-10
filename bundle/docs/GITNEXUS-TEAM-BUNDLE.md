@@ -1,100 +1,112 @@
 # GitNexus Cursor teaching bundle — team install
 
-Portable **rules + hooks + skills + scripts** for graph-first Cursor agents. Installed via [`cursor-gitnexus-kit`](https://github.com/ReidenXerx/cursor-gitnexus-kit).
+Portable **rules + hooks + skills + scripts** for graph-first Cursor agents. Built for this repo; reusable on other projects with one rename step.
+
+> **Standalone installer:** [`cursor-gitnexus-kit`](https://github.com/ReidenXerx/cursor-gitnexus-kit) — `install` / `update` / `uninstall` scripts for any repo (upstream for this teaching bundle).
 
 ## What's in the bundle
 
 | Included | Purpose |
 | --- | --- |
-| `.cursor/rules/00-gitnexus-enforcement.mdc` | North-star agent contract (only always-on rule) |
-| `.cursor/hooks.json` + hooks | Grep/read guards, staleness gate, **agent region picker** |
-| `.claude/skills/gitnexus*` + `agent-region` | Playbooks + region responsibility skill |
+| `.cursor/rules/gitnexus*.mdc` | Always-on agent contract |
+| `.cursor/hooks.json` + `.cursor/hooks/**` | Block grep-first; staleness gate; **auto-refresh on session start** |
+| `.claude/skills/gitnexus*` | Playbooks (imaging, enforcement, scenarios, …) |
 | `scripts/gitnexus-setup.sh` | One-shot team installer |
-| `docs/regions.overlay.stub.json` | Generic region boundaries (seeded on first install) |
+| `scripts/sync-cursor-gitnexus-teaching.sh` | Re-sync after pull |
+| `scripts/gitnexus-agent.mjs` | Agent CLI (`agent-status` / `agent-refresh`) |
+| `scripts/install-git-hooks.sh` + `.githooks/pre-commit` | Index refresh on commit |
+| `.vscode/settings.json` | npm task settings (optional) |
+| `.gitnexusignore` | GitNexus-only excludes (large caches) |
+| `package.json.scripts.snippet.json` | npm scripts to merge |
 
-## New user flow (end-to-end)
+**Automatic:** `install-from-bundle.sh` and `gitnexus:setup` run `merge-package-scripts.mjs --write`, which **adds or overwrites** all `gitnexus:*` and `hooks:install` scripts in `package.json` (creates `package.json` if missing).
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ 1. INSTALL (once per repo)                                      │
-│    git clone cursor-gitnexus-kit                                │
-│    ./bin/install.sh /path/to/repo        # full (+ index)       │
-│    ./bin/install.sh /path/to/repo --quick  # hooks only         │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 2. KIT COPIES bundle → target repo                              │
-│    • rules, hooks, skills, scripts                              │
-│    • seeds docs/regions.overlay.json from stub (if missing)     │
-│    • seeds docs/AGENT-PROFILES.md from stub (if missing)        │
-│    • merges package.json gitnexus:* scripts + .cursor/mcp.json  │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 3. gitnexus-setup.sh (unless --no-setup)                        │
-│    • verify teaching files                                      │
-│    • sync .cursor/skills/                                       │
-│    • npm run gitnexus:generate-regions → regions.manifest.json  │
-│    • optional: full index (skip with --quick)                   │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 4. RESTART CURSOR (required)                                    │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 5. NEW AGENT CHAT — region picker                               │
-│    Session shows numbered regions + Superchat (S)               │
-│    User replies: 2 | adapters | superchat                       │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 6. WORK IN CHAT                                                 │
-│    READ:  anywhere (cross-region reasoning OK)                  │
-│    WRITE: region owns only (+ 2 partial border writes)          │
-│    Superchat: unbounded writes, warn about capable model        │
-└────────────────────────────┬────────────────────────────────────┘
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│ 7. AFTER --quick OR PULL                                        │
-│    npm run gitnexus:agent-refresh   # index + area skills       │
-│    npm run gitnexus:generate-regions  # refresh region manifest │
-│    Customize docs/regions.overlay.json for your architecture    │
-└─────────────────────────────────────────────────────────────────┘
+## NOT included (per-target repo)
+
+| Excluded | Why |
+| --- | --- |
+| `.gitnexus/` index | Built locally via `npm run gitnexus:refresh` |
+| `.claude/skills/generated/` | Area skills from `gitnexus analyze --skills` on **that** codebase |
+| `.cursor/skills/` | Generated by `gitnexus:sync-teaching` |
+| `docs/AGENT-PROFILES.md` | Project-specific region boundaries |
+
+## Large generated caches (recommended)
+
+If the repo has thousands of non-source files (e.g. OHLCV candle shards, backtest reports), add them to **both**:
+
+- **`.gitignore`** — keep git clean
+- **`.gitnexusignore`** — same gitignore syntax; keeps `gitnexus analyze` fast
+
+This repo ignores `data/candles/` and `reports/` in both files. After changing ignores, re-index:
+
+```bash
+npm run gitnexus:agent-refresh
 ```
 
-## Agent regions policy
+## /tmp full (tmpfs ENOSPC)
 
-| | Region chat | Superchat |
-|---|-------------|-----------|
-| **Reads** | Entire repo | Entire repo |
-| **Writes** | `owns` paths only | Unbounded |
-| **Best for** | Cheaper models, focused tasks | Cross-cutting refactors |
+On Linux, `/tmp` is often a **tmpfs** (RAM disk, ~7–8G). When it hits 100%, `gitnexus analyze` fails with ENOSPC even if your NVMe has hundreds of GB free.
 
-Manifest: `.cursor/regions.manifest.json` (generated, gitignored).  
-Overlay: `docs/regions.overlay.json` (project-specific; stub seeded on install).
+All `gitnexus:*` npm scripts route temp files to **`.tmp-agent/`** on the project disk (override: `GITNEXUS_TMPDIR`).
 
-## First install checklist
+If refresh still fails:
 
-1. **Prerequisites:** Node.js ≥ 22.9.0, git, bash, Cursor with Hooks + MCP enabled.
-2. **Install:** `./bin/install.sh /path/to/repo` (or `--quick`).
-3. **Restart Cursor** on the target project.
-4. **If `--quick`:** `npm run gitnexus:agent-refresh` before graph tools work.
-5. **First Agent chat:** pick a region when prompted.
-6. **Customize:** `docs/regions.overlay.json` for your codebase layout.
+```bash
+df -h /tmp
+sudo du -sh /tmp/* 2>/dev/null | sort -hr | head -10
+rm -rf /tmp/cursor-sandbox-cache/*    # often safe
+npm run gitnexus:clean-tmp            # project temp only
+npm run gitnexus:agent-refresh
+```
+
+## Pack (this repo)
+
+```bash
+npm run gitnexus:pack
+# → gitnexus-cursor-teaching-v2-YYYYMMDDTHHMMSSZ.tar.gz
+```
+
+## Install (another repo)
+
+```bash
+tar -xzf gitnexus-cursor-teaching-*.tar.gz -C /path/to/their-repo --strip-components=1
+cd /path/to/their-repo
+GITNEXUS_REPO_NAME=their-repo-name bash scripts/gitnexus-teaching/install-from-bundle.sh
+```
+
+Or after extract, merge scripts manually and run:
+
+```bash
+npm run gitnexus:setup
+```
+
+## Agent regions (new user flow)
+
+1. **Install** → `npm run gitnexus:setup` or cursor-gitnexus-kit `install.sh`
+2. **Restart Cursor**
+3. **New Agent chat** → pick region (`1`–`N`, id, or `superchat`)
+4. **Work** → READ anywhere; WRITE only in region `owns`
+5. **Customize** → `docs/regions.overlay.json` (`npm run gitnexus:generate-regions`)
+
+## After install (every dev)
+
+1. **Restart Cursor** (MCP + hooks)
+2. `npm run gitnexus:agent-status` — index fresh?
+3. Start Agent chats with: *"Read gitnexus-workspace skill, then …"* — pick a region on first message
+
+**Auto-refresh:** On Agent session start, hooks run `npm run gitnexus:agent-refresh` if the index is behind HEAD (skip with `GITNEXUS_SKIP_SESSION_REFRESH=1`). While stale, a shell guard blocks non-gitnexus commands until refresh succeeds — agents must not tell users to run analyze manually.
 
 ## Daily commands
 
 ```bash
-npm run gitnexus:agent-status
-npm run gitnexus:agent-refresh
-npm run gitnexus:generate-regions
-npm run gitnexus:sync-teaching
+npm run gitnexus:agent-status    # staleness (agent runs autonomously)
+npm run gitnexus:agent-refresh   # re-index when stale
+npm run gitnexus:sync-teaching   # after pulling rule/skill updates
+npm run gitnexus:setup -- --quick  # hooks/skills only, skip index
 ```
 
 ## Prerequisites
 
 - Node.js >= 22.9.0
 - git
-- bash (macOS/Linux; WSL on Windows)
 - Cursor with Hooks + MCP enabled

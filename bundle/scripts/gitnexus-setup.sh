@@ -115,6 +115,9 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/region-session.mjs"
+  ".cursor/hooks/lib/region-infer.mjs"
+  ".cursor/hooks/lib/region-user-guide.mjs"
+  "docs/AGENT-REGIONS-GUIDE.md"
   ".cursor/hooks/lib/region-picker-context.mjs"
   ".cursor/hooks/lib/region-edit-check.mjs"
   ".vscode/settings.json"
@@ -153,11 +156,8 @@ ok "${#TEACHING_SOURCES[@]} teaching source files present"
 
 if [[ -f docs/regions.overlay.json ]]; then
   ok "docs/regions.overlay.json present (region boundaries)"
-elif [[ -f docs/regions.overlay.stub.json ]]; then
-  cp docs/regions.overlay.stub.json docs/regions.overlay.json
-  ok "Seeded docs/regions.overlay.json from stub"
 else
-  warn "docs/regions.overlay.json missing — run npm run gitnexus:generate-regions after refresh"
+  warn "docs/regions.overlay.json missing — generate-regions will use skills/filesystem scan (optional: copy docs/regions.overlay.stub.json and customize)"
 fi
 
 if [[ -f docs/AGENT-PROFILES.md ]]; then
@@ -274,8 +274,11 @@ cat <<'ONBOARD'
   Start a new Agent chat with:
     "Read gitnexus-workspace skill, then help me with …"
 
-  Region-bound work:
-    docs/AGENT-PROFILES.md + .cursor/skills/generated/<area>/SKILL.md
+  AGENT REGIONS (every new chat):
+    1. Describe your task in plain English (include a file path if you can).
+    2. We auto-pick your work area — AI tells you which one.
+    3. Wrong area? Reply: region: <id>  or  superchat
+    User guide: docs/AGENT-REGIONS-GUIDE.md
 
   Daily / agent autonomous:
     npm run gitnexus:agent-status   staleness (agent runs at session start)

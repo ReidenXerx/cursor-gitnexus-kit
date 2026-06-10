@@ -1,11 +1,19 @@
 ---
 name: gitnexus-api-routes
-description: "Use when changing the research HTTP API in this repo. api_impact/route_map do NOT work here — custom hand-rolled router. Examples: \"add API endpoint\", \"change research server route\", \"what does /api/... do?\""
+description: "HTTP API route changes. Use api_impact on Express/Fastify repos; use this skill when the project has a custom hand-rolled router (no indexed Route nodes). Examples: add endpoint, change server route, trace handler."
 ---
 
-# Research API Routes (__GITNEXUS_REPO__)
+# API Routes
 
-## Why api_impact doesn't work here
+## Generic repos (Express / Fastify / framework router)
+
+If `gitnexus api_impact` or `route_map` returns routes for your repo, **use those tools first** — standard playbook.
+
+## Custom hand-rolled router (this repo: research API)
+
+Skip `api_impact` / `route_map` when GitNexus indexes **zero Route nodes**. Use graph tools on dispatcher symbols instead.
+
+### Why api_impact doesn't work here
 
 GitNexus indexes Express/Fastify-style `Route` nodes. This project's research server uses a **custom router**:
 
