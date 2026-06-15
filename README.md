@@ -45,12 +45,13 @@ Share **`docs/AGENT-REGIONS-GUIDE.md`** with anyone using Cursor on the repo.
 |------|-------------------|
 | **1** | Describe the task in plain English. Include a file path if possible. Example: `fix login in src/api/auth.js` |
 | **2** | Area is **auto-picked** from the message — agent announces it |
-| **3** | Wrong area? Reply exactly: `region: <id>` or `superchat` |
+| **3** | Wrong area? Reply exactly: `region: <id>` or `region: <id1>, <id2>` or `region+: <id>` or `superchat` |
 
 | Rule | Detail |
 |------|--------|
 | **Read** | Entire repo — always OK |
-| **Write** | Only the picked area (2 small border fixes allowed) |
+| **Write** | Only the picked area(s) — union of their `owns` (2 small border fixes allowed) |
+| **Multi-area** | `region: adapters, server` — one chat, multiple write boundaries |
 | **Superchat** | `superchat` — whole repo, no limits; strong model only |
 
 Code edits are **blocked** until the user describes a task (or picks `region: …`).

@@ -40,8 +40,9 @@ function tokenize(text) {
  * @param {object} manifest
  * @returns {{
  *   region: { id: string, mode: 'region'|'superchat', label: string } | null,
+ *   regions?: { id: string, mode: 'region'|'superchat', label: string }[],
  *   confidence: number,
- *   method: 'explicit'|'inferred'|'ambiguous'|'superchat',
+ *   method: 'explicit'|'inferred'|'inferred-multi'|'ambiguous'|'superchat',
  *   reasons: string[],
  *   alternatives?: { id: string, label: string, score: number }[]
  * }}
@@ -77,10 +78,12 @@ export function inferRegionFromPrompt(prompt, manifest) {
   for (const r of regions) {
     let score = 0;
     const reasons = [];
+    let pathOwned = false;
 
     for (const p of paths) {
       if (r.owns?.some((g) => globMatch(p, g))) {
         score += 5;
+        pathOwned = true;
         reasons.push(`path ${p} ∈ owns`);
       } else if (r.owns?.some((g) => globMatch(p, g.replace(/\/[^/]+$/, '/**')))) {
         score += 3;
@@ -124,10 +127,41 @@ export function inferRegionFromPrompt(prompt, manifest) {
       }
     }
 
-    scores.push({ region: r, score, reasons });
+    scores.push({ region: r, score, reasons, pathOwned });
   }
 
   scores.sort((a, b) => b.score - a.score);
+
+  const MIN_SCORE = 4;
+  const MIN_MARGIN = 2;
+
+  if (paths.length >= 2) {
+    const pathOwners = scores.filter((s) => s.pathOwned && s.score >= MIN_SCORE);
+    const uniqueIds = [...new Set(pathOwners.map((s) => s.region.id))];
+    if (uniqueIds.length >= 2) {
+      const picked = pathOwners.filter(
+        (s, i, arr) => arr.findIndex((x) => x.region.id === s.region.id) === i
+      );
+      const avgScore = picked.reduce((n, s) => n + s.score, 0) / picked.length;
+      return {
+        region: null,
+        regions: picked.map((s) => ({
+          id: s.region.id,
+          mode: 'region',
+          label: s.region.label,
+        })),
+        confidence: Math.min(0.95, 0.5 + avgScore * 0.04),
+        method: 'inferred-multi',
+        reasons: picked.flatMap((s) => s.reasons.slice(0, 2)),
+        alternatives: picked.map((s) => ({
+          id: s.region.id,
+          label: s.region.label,
+          score: s.score,
+        })),
+      };
+    }
+  }
+
   const top = scores[0];
   const second = scores[1];
   const margin = top && second ? top.score - second.score : top?.score ?? 0;
@@ -136,9 +170,6 @@ export function inferRegionFromPrompt(prompt, manifest) {
     .filter((s) => s.score > 0)
     .slice(0, 3)
     .map((s) => ({ id: s.region.id, label: s.region.label, score: s.score }));
-
-  const MIN_SCORE = 4;
-  const MIN_MARGIN = 2;
 
   if (!top || top.score < MIN_SCORE) {
     return {
@@ -163,6 +194,7 @@ export function inferRegionFromPrompt(prompt, manifest) {
   const confidence = Math.min(0.98, 0.45 + top.score * 0.05 + margin * 0.03);
   return {
     region: { id: top.region.id, mode: 'region', label: top.region.label },
+    regions: [{ id: top.region.id, mode: 'region', label: top.region.label }],
     confidence,
     method: 'inferred',
     reasons: top.reasons.slice(0, 6),

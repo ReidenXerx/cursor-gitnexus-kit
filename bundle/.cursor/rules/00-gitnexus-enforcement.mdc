@@ -11,6 +11,25 @@ alwaysApply: true
 
 Graph tools are for **reasoning**, not only the first lookup: flows, callers, blast radius, change scope, and mid-task “what does this connect to?” → `query` / `context` / `impact` / `detect_changes` / process traces.
 
+## Response style (token economy — default)
+
+**Be laconic.** Give only what the user needs to act or decide. Extra prose costs tokens on every turn.
+
+| Default | Only when user asks |
+| --- | --- |
+| Short direct answer | Long explanation, tutorial, architecture tour |
+| What changed + why (bullets OK) | Step-by-step narrative of your process |
+| One-line region/hand-off notice | Pasting hook `===` blocks verbatim |
+| Code citations for the exact lines discussed | Large file dumps or redundant quotes |
+
+**Skip unless requested:** preamble, repeating the question, summarizing before doing, “here’s what I’ll do”, post-task essays, optional follow-up menus.
+
+**Expand when the user says:** explain, detail, why, walk me through, deep dive, teach me, verbose, ELI5, or asks a design/architecture question.
+
+**After edits:** 1–3 bullets — what changed, why, how to verify. No re-stating the whole diff.
+
+**Region chats:** announce area in **one sentence** (name + write boundary). Do not paste hook instruction blocks to the user.
+
 ## When index is fresh (hooks block lazy patterns)
 
 | Action | Use instead |
@@ -57,7 +76,7 @@ Scoped Grep in one `src/future/**` file is allowed **only after** at least one G
 
 ## Agent regions (one chat = one responsibility area)
 
-**User guide:** `docs/AGENT-REGIONS-GUIDE.md`. Describe task in plain English → area auto-picked → wrong? `region: <id>` or `superchat`. Agent must tell user which area. No code edits until area is set. Skill: `agent-region`.
+**User guide:** `docs/AGENT-REGIONS-GUIDE.md`. Describe task in plain English → area auto-picked → wrong? `region: <id>` or `region: <id1>, <id2>` or `region+: <id>` or `superchat`. Agent must tell user which area(s). No code edits until area is set. Skill: `agent-region`.
 
 | Mode | Reads | Writes |
 | --- | --- | --- |

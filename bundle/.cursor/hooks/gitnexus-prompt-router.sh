@@ -51,7 +51,12 @@ let regionPicker;
 let regionAmbiguous;
 
 if (manifest) {
-  if (!regionState) {
+  const { region: explicit } = resolveRegionFromPrompt(prompt, manifest, regionState);
+  if (explicit) {
+    saveRegionState(root, explicit);
+    regionState = loadRegionState(root);
+    regionCard = buildRegionCard(root, regionState, manifest);
+  } else if (!regionState) {
     const { region, inferred } = resolveRegionFromPrompt(prompt, manifest);
     if (region) {
       saveRegionState(root, region);

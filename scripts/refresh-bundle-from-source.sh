@@ -38,6 +38,7 @@ elif [[ -f "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
   cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
 fi
 for stub in regions.overlay.stub.json AGENT-PROFILES.stub.md; do
+[[ -f "$SRC/docs/AGENT-REGIONS-GUIDE.md" ]] && cp "$SRC/docs/AGENT-REGIONS-GUIDE.md" "$KIT_ROOT/bundle/docs/AGENT-REGIONS-GUIDE.md"
   [[ -f "$SRC/docs/$stub" ]] && cp "$SRC/docs/$stub" "$KIT_ROOT/bundle/docs/$stub"
 done
 # docs/regions.overlay.json is per-project — never copy from source (crypto keeps its own)

@@ -14,6 +14,14 @@ disable-model-invocation: false
 
 Graph tools are for **reasoning throughout the task**, not only the first lookup.
 
+## Response style (token economy)
+
+Default **laconic**: essential answer only — no preamble, no process narration, no post-task essays, no optional follow-up menus.
+
+Expand only when the user asks (explain, detail, walk me through, deep dive, verbose, ELI5).
+
+After code edits: 1–3 bullets (what / why / verify). Region notice: one sentence — never paste hook `===` blocks to the user.
+
 ## Decision tree (follow in order)
 
 ```

@@ -7,17 +7,17 @@ description: "Region-bound agent areas — auto-detect from user task, plain-lan
 
 ## AGENT: first reply checklist
 
-When a region is assigned (auto or explicit), **your first reply MUST include**:
+When a region is assigned (auto or explicit), **say in one sentence**: which area(s) + what you will/won’t edit. If wrong: `region: <id>` / `region+: <id>` / `superchat`.
 
-1. Tell the user which area they are in (use the `=== TELL THE USER ===` block from hooks).
-2. One sentence: what you will and will not edit.
-3. If wrong: `region: <id>` or `superchat`.
+**Do not** paste hook `=== TELL THE USER ===` blocks — they are internal hints; paraphrase in ≤2 sentences.
 
-**If region is unclear** — use the `=== REGION UNCLEAR ===` block verbatim. **Do not edit code** until the user answers.
+**If region is unclear** — ask which area in one short question. **Do not edit code** until set.
 
-**If no region yet** — use `=== NO REGION YET ===`. **Do not edit code.**
+**If no region yet** — ask for a one-sentence task (path helps). **Do not edit code.**
 
-## User guide
+## Communication
+
+Laconic by default. User did not ask for a lecture — answer the question, do the work, report results briefly.
 
 Point confused users to **`docs/AGENT-REGIONS-GUIDE.md`** (plain English, copy-paste commands).
 
@@ -26,18 +26,21 @@ Point confused users to **`docs/AGENT-REGIONS-GUIDE.md`** (plain English, copy-p
 | | Region chat | Superchat |
 |---|-------------|-----------|
 | Read | Entire repo | Entire repo |
-| Write | `owns` only (+2 border files) | Unbounded |
+| Write | `owns` of picked area(s) (+2 border files) | Unbounded |
 
 ## Override phrases (user copies)
 
-- `region: adapters` — switch area
+- `region: adapters` — switch to one area
+- `region: adapters, server` — this chat owns multiple areas
+- `region+: dashboard` — add another area without losing current ones
 - `superchat` — no limits (warn: strong model)
 
 ## Hand-off (say this to user)
 
 ```
-This touches [OTHER AREA]. Open a new Agent chat and type:
-  region: <id>
-Example: region: server
-Or type superchat for a large cross-repo change (strong model only).
+This touches [OTHER AREA]. Add it to this chat:
+  region+: <id>
+Example: region+: server
+Or set all areas at once: region: adapters, server
+For repo-wide refactors only: superchat (strong model).
 ```

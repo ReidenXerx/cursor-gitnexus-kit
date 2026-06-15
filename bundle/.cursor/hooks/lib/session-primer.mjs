@@ -80,26 +80,19 @@ export function firstToolNudge(root, stale) {
 
   if (!stale?.fresh) {
     parts.push(
-      'GITNEXUS AUTONOMOUS MAINTENANCE (MANDATORY): Index is stale. Your NEXT Shell call MUST be: npm run gitnexus:agent-refresh with required_permissions: ["all"]. ' +
-        'Run it yourself — NEVER tell the user to run npx gitnexus analyze or gitnexus:refresh. Gitnexus npm scripts are hook pre-approved. Then retry graph tools.'
+      'STALE INDEX: next Shell MUST be npm run gitnexus:agent-refresh (required_permissions: ["all"]). Run yourself — never ask user to analyze.'
     );
   } else {
     const repo = repoName(root);
-    parts.push(
-      `GITNEXUS SESSION: Before structural work, READ gitnexus://repo/${repo}/context OR run npm run gitnexus:agent-status (autonomous, no user ask).`
-    );
+    parts.push(`SESSION: READ gitnexus://repo/${repo}/context or npm run gitnexus:agent-status before structural work.`);
   }
 
   if (hint.architecture || hint.explore) {
-    parts.push(
-      'Explore/reason prompt detected — read gitnexus-imaging skill; chain: query(+task_context,goal) → READ process/{name} → context(uid) → targeted Read. Keep using graph tools for mid-task reasoning, not only the first lookup.'
-    );
+    parts.push('Explore prompt: gitnexus-imaging → query → process → context → targeted Read.');
   }
 
   if (hint.reasoning) {
-    parts.push(
-      'Code-reasoning prompt — prefer gitnexus_query/context/impact throughout the task, not grep. Re-query when the question shifts.'
-    );
+    parts.push('Reasoning prompt: query/context/impact — not grep.');
   }
 
   if (hint.regionAmbiguous) parts.push(hint.regionAmbiguous);
@@ -107,7 +100,7 @@ export function firstToolNudge(root, stale) {
     parts.push(hint.regionCard);
   } else if (hint.regionPicker) {
     parts.push(hint.regionPicker);
-    parts.push('BLOCK EDITS until user describes task or picks region: region: <id> or superchat.');
+    parts.push('Block edits until region set.');
   }
 
   return parts.join('\n');

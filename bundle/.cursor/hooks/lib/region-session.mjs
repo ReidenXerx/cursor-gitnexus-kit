@@ -103,26 +103,79 @@ export function clearRegionState(root) {
 }
 
 /**
+ * @param {object | null} state
+ * @returns {string[]}
+ */
+export function getRegionIds(state) {
+  if (!state) return [];
+  if (state.mode === 'superchat') return ['superchat'];
+  if (Array.isArray(state.ids) && state.ids.length) return state.ids;
+  if (state.id) return [state.id];
+  return [];
+}
+
+/**
+ * @param {object} manifest
+ * @param {string[]} ids
+ */
+export function findRegions(manifest, ids) {
+  if (!manifest || !ids?.length) return [];
+  return ids.map((id) => findRegion(manifest, id)).filter(Boolean);
+}
+
+/**
+ * @param {object} manifest
+ * @param {string[]} ids
+ */
+export function regionLabelFromIds(manifest, ids) {
+  const regions = findRegions(manifest, ids);
+  if (!regions.length) return ids.join(' + ');
+  return regions.map((r) => r.label).join(' + ');
+}
+
+/**
  * @param {string} root
- * @param {{ id: string, mode: 'region'|'superchat', label?: string, method?: string, confidence?: number, reasons?: string[] }} selection
+ * @param {{ id?: string, ids?: string[], mode: 'region'|'superchat', label?: string, method?: string, confidence?: number, reasons?: string[], append?: boolean }} selection
  */
 export function saveRegionState(root, selection) {
   const p = regionStatePath(root);
   fs.mkdirSync(path.dirname(p), { recursive: true });
   const prev = loadRegionState(root) ?? {};
+  const manifest = loadManifest(root);
+
+  let ids;
+  if (selection.mode === 'superchat') {
+    ids = ['superchat'];
+  } else if (selection.append && prev.mode === 'region') {
+    const base = getRegionIds(prev).filter((id) => id !== 'superchat');
+    const add = selection.ids ?? (selection.id ? [selection.id] : []);
+    ids = [...new Set([...base, ...add])];
+  } else {
+    ids = selection.ids ?? (selection.id ? [selection.id] : []);
+  }
+
+  const label =
+    selection.label ??
+    (selection.mode === 'superchat'
+      ? manifest?.superchat?.label ?? 'Superchat'
+      : regionLabelFromIds(manifest, ids));
+
+  const resetOverflow = selection.append ? prev.overflowWriteCount ?? 0 : 0;
+
   fs.writeFileSync(
     p,
     JSON.stringify(
       {
         ...prev,
-        id: selection.id,
+        id: ids[0] ?? selection.id,
+        ids,
         mode: selection.mode,
-        label: selection.label,
-        method: selection.method ?? prev.method ?? 'explicit',
+        label,
+        method: selection.method ?? (selection.append ? 'append' : prev.method ?? 'explicit'),
         confidence: selection.confidence,
         reasons: selection.reasons,
         selectedAt: new Date().toISOString(),
-        overflowWriteCount: 0,
+        overflowWriteCount: resetOverflow,
       },
       null,
       2
@@ -143,20 +196,37 @@ export function repoName(root) {
  * @param {string} prompt
  * @param {object} manifest
  */
-export function resolveRegionFromPrompt(prompt, manifest) {
-  const explicit = parseRegionSelection(prompt, manifest);
+export function resolveRegionFromPrompt(prompt, manifest, existingState = null) {
+  const explicit = parseRegionSelection(prompt, manifest, existingState);
   if (explicit) {
     return {
-      region: { ...explicit, method: 'explicit', confidence: 1 },
+      region: { ...explicit, method: explicit.append ? 'append' : 'explicit', confidence: 1 },
       inferred: null,
     };
   }
 
   const inferred = inferRegionFromPrompt(prompt, manifest);
+  if (inferred.regions?.length && inferred.method === 'inferred-multi') {
+    const ids = inferred.regions.map((r) => r.id);
+    return {
+      region: {
+        ids,
+        id: ids[0],
+        mode: 'region',
+        label: regionLabelFromIds(manifest, ids),
+        method: 'inferred-multi',
+        confidence: inferred.confidence,
+        reasons: inferred.reasons,
+      },
+      inferred,
+    };
+  }
+
   if (inferred.region && inferred.method !== 'ambiguous') {
     return {
       region: {
         ...inferred.region,
+        ids: [inferred.region.id],
         method: inferred.method,
         confidence: inferred.confidence,
         reasons: inferred.reasons,
@@ -184,12 +254,40 @@ export function findRegion(manifest, id) {
   return manifest.regions?.find((r) => r.id === id) ?? null;
 }
 
+/** @param {string} token @param {object} manifest */
+function resolveRegionToken(token, manifest) {
+  const t = (token ?? '').trim().toLowerCase();
+  if (!t) return null;
+  if (t === 'superchat' || t === 's') {
+    return { id: 'superchat', mode: 'superchat', label: manifest.superchat?.label ?? 'Superchat' };
+  }
+  const hit = manifest.regions?.find((r) => r.id.toLowerCase() === t);
+  if (hit) return { id: hit.id, mode: 'region', label: hit.label };
+  return null;
+}
+
+/** @param {string} raw @param {object} manifest */
+function parseRegionIdList(raw, manifest) {
+  const tokens = raw
+    .split(/[,;+]|(?:\band\b)/i)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const hits = [];
+  for (const tok of tokens) {
+    const hit = resolveRegionToken(tok, manifest);
+    if (hit && hit.mode === 'region') hits.push(hit);
+    if (hit?.mode === 'superchat' && tokens.length === 1) return { superchat: hit };
+  }
+  return { regions: hits };
+}
+
 /**
  * @param {string} prompt
  * @param {object} manifest
- * @returns {{ id: string, mode: 'region'|'superchat', label: string } | null}
+ * @param {object | null} [existingState]
+ * @returns {{ id?: string, ids?: string[], mode: 'region'|'superchat', label: string, append?: boolean } | null}
  */
-export function parseRegionSelection(prompt, manifest) {
+export function parseRegionSelection(prompt, manifest, existingState = null) {
   if (!manifest) return null;
   const text = (prompt ?? '').trim();
   if (!text) return null;
@@ -199,18 +297,44 @@ export function parseRegionSelection(prompt, manifest) {
   if (/^(s|superchat|super\s*chat|unbounded|no\s*boundaries?)$/i.test(lower)) {
     return {
       id: 'superchat',
+      ids: ['superchat'],
       mode: 'superchat',
       label: manifest.superchat?.label ?? 'Superchat',
     };
   }
 
-  const regionColon = lower.match(/^region\s*:\s*([a-z0-9_-]+)$/);
+  const addMatch = lower.match(/^(?:add\s+)?regions?\s*\+\s*:\s*(.+)$/);
+  if (addMatch) {
+    const { regions, superchat } = parseRegionIdList(addMatch[1], manifest);
+    if (superchat) return { ...superchat, ids: ['superchat'] };
+    if (regions.length) {
+      const ids = regions.map((r) => r.id);
+      return {
+        ids,
+        id: ids[0],
+        mode: 'region',
+        label: regionLabelFromIds(manifest, ids),
+        append: true,
+      };
+    }
+  }
+
+  const regionColon = lower.match(/^regions?\s*:\s*(.+)$/);
   if (regionColon) {
-    const id = regionColon[1];
-    const hit = manifest.regions?.find((r) => r.id.toLowerCase() === id);
-    if (hit) return { id: hit.id, mode: 'region', label: hit.label };
-    if (id === 'superchat') {
-      return { id: 'superchat', mode: 'superchat', label: manifest.superchat?.label ?? 'Superchat' };
+    const { regions, superchat } = parseRegionIdList(regionColon[1], manifest);
+    if (superchat) return { ...superchat, ids: ['superchat'] };
+    if (regions.length === 1) {
+      const r = regions[0];
+      return { id: r.id, ids: [r.id], mode: 'region', label: r.label };
+    }
+    if (regions.length > 1) {
+      const ids = regions.map((r) => r.id);
+      return {
+        ids,
+        id: ids[0],
+        mode: 'region',
+        label: regionLabelFromIds(manifest, ids),
+      };
     }
   }
 
@@ -219,21 +343,26 @@ export function parseRegionSelection(prompt, manifest) {
     const idx = Number(numMatch[1]) - 1;
     const regions = manifest.regions ?? [];
     if (idx >= 0 && idx < regions.length) {
-      return { id: regions[idx].id, mode: 'region', label: regions[idx].label };
+      return {
+        id: regions[idx].id,
+        ids: [regions[idx].id],
+        mode: 'region',
+        label: regions[idx].label,
+      };
     }
   }
 
-  for (const r of manifest.regions ?? []) {
-    const id = r.id.toLowerCase();
-    const label = r.label.toLowerCase();
-    if (
-      lower === id ||
-      lower.includes(id) ||
-      lower === label ||
-      lower.includes(label) ||
-      new RegExp(`\\b${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(lower)
-    ) {
-      return { id: r.id, mode: 'region', label: r.label };
+  if (!existingState) {
+    for (const r of manifest.regions ?? []) {
+      const id = r.id.toLowerCase();
+      const label = r.label.toLowerCase();
+      if (
+        lower === id ||
+        lower === label ||
+        new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`).test(lower)
+      ) {
+        return { id: r.id, ids: [r.id], mode: 'region', label: r.label };
+      }
     }
   }
 
@@ -254,14 +383,18 @@ export function buildRegionCard(root, region, manifest) {
     return announce;
   }
 
-  const r = findRegion(manifest, region.id);
-  if (!r) return announce || `REGION: ${region.label ?? region.id}`;
+  const ids = getRegionIds(region);
+  const regions = findRegions(manifest, ids);
+  if (!regions.length) return announce || `REGION: ${region.label ?? region.id}`;
+
+  const owns = [...new Set(regions.flatMap((r) => r.owns ?? []))];
+  const skills = regions.map((r) => r.anchorSkill).filter(Boolean);
 
   return [
     announce,
-    r.owns?.length ? `Agent writes only: ${r.owns.join(', ')}` : '',
+    owns.length ? `Agent writes only: ${owns.join(', ')}` : '',
     'Agent reads: entire repo.',
-    r.anchorSkill ? `Load skill: ${r.anchorSkill}` : '',
+    skills.length ? `Load skills: ${skills.join(', ')}` : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -293,17 +426,24 @@ export function checkWriteAllowed(root, filePath) {
 
   if (matchesAnyGlob(norm, META_WRITE_GLOBS)) return { allowed: true };
 
-  const region = findRegion(manifest, state.id);
-  if (!region) return { allowed: true };
+  const ids = getRegionIds(state);
+  const regions = findRegions(manifest, ids);
+  if (!regions.length) return { allowed: true };
 
-  if (region.owns?.length && matchesAnyGlob(norm, region.owns)) {
+  const label = state.label ?? regionLabelFromIds(manifest, ids);
+  const allOwns = [...new Set(regions.flatMap((r) => r.owns ?? []))];
+
+  if (allOwns.length && matchesAnyGlob(norm, allOwns)) {
     return { allowed: true };
   }
 
-  if (region.neverTouches?.length && matchesAnyGlob(norm, region.neverTouches)) {
+  const neverHit = regions.find(
+    (r) => r.neverTouches?.length && matchesAnyGlob(norm, r.neverTouches)
+  );
+  if (neverHit) {
     return {
       allowed: false,
-      reason: `Write blocked: ${norm} is in neverTouches for region "${region.label}". Open a chat for the owning region.`,
+      reason: `Write blocked: ${norm} is in neverTouches for region "${neverHit.label}". Add the owning region (region: ${neverHit.id}) or use Superchat.`,
     };
   }
 
@@ -313,12 +453,12 @@ export function checkWriteAllowed(root, filePath) {
     return {
       allowed: true,
       partial: true,
-      reason: `Partial overflow write (${count + 1}/${maxPartial}): ${norm} is outside owns for "${region.label}". Prefer hand-off if more cross-region edits are needed.`,
+      reason: `Partial overflow write (${count + 1}/${maxPartial}): ${norm} is outside owns for "${label}". Add another region with region+: <id> or use Superchat if many cross-area edits are needed.`,
     };
   }
 
   return {
     allowed: false,
-    reason: `Write blocked: ${norm} is outside owns for region "${region.label}" (${region.owns?.join(', ') ?? 'none'}). Reads anywhere are fine; open another region chat or Superchat for this edit.`,
+    reason: `Write blocked: ${norm} is outside owns for "${label}" (${allOwns.join(', ') || 'none'}). Reads anywhere are fine; add region: <id1>, <id2> or Superchat for this edit.`,
   };
 }
