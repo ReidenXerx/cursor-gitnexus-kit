@@ -1,0 +1,254 @@
+#!/usr/bin/env node
+/**
+ * Shared GitNexus hook helpers: path rules, MCP copy-paste shortcuts, playbooks, guide mode.
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+
+export const CONFIG_FILE = '.cursor/gitnexus-hooks.json';
+
+/** @typedef {'enforce' | 'guide'} HookMode */
+/** @typedef {'none' | 'light' | 'medium' | 'full'} EditSensitivity */
+
+const DEFAULT_SOURCE_RES = [
+  /(?:^|\/)src(?:\/|$)/,
+  /(?:^|\/)lib(?:\/|$)/,
+  /(?:^|\/)apps(?:\/|$)/,
+  /(?:^|\/)packages(?:\/|$)/,
+];
+
+const DEFAULT_BROAD_GLOB_RES = [
+  /^\*\*\/\*\.(js|mjs|ts|tsx|jsx)$/,
+  /^\*\*\/src\//,
+  /^src\//,
+  /^\*\*\/lib\//,
+  /^lib\//,
+  /^\*\*\/apps\//,
+  /^apps\//,
+];
+
+/**
+ * @param {string} root
+ */
+export function loadHookConfig(root) {
+  const cfg = {
+    mode: hookModeFromEnv(),
+    readLineThreshold: 60,
+    graceCommitsBehind: 2,
+    sourcePathRes: DEFAULT_SOURCE_RES,
+    broadGlobRes: DEFAULT_BROAD_GLOB_RES,
+    sourceExtRe: /\.(js|mjs|ts|tsx|jsx)$/i,
+  };
+
+  const cfgPath = path.join(root, CONFIG_FILE);
+  if (!fs.existsSync(cfgPath)) return cfg;
+
+  try {
+    const file = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+    if (file.mode) cfg.mode = file.mode === 'guide' ? 'guide' : 'enforce';
+    if (typeof file.readLineThreshold === 'number') cfg.readLineThreshold = file.readLineThreshold;
+    if (typeof file.graceCommitsBehind === 'number') cfg.graceCommitsBehind = file.graceCommitsBehind;
+    if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
+      cfg.sourcePathRes = file.sourceGlobs.map((g) => globToRegExp(g));
+    }
+  } catch {
+    /* keep defaults */
+  }
+
+  return cfg;
+}
+
+function hookModeFromEnv() {
+  const m = (process.env.GITNEXUS_MODE || process.env.GITNEXUS_HOOK_MODE || 'enforce').toLowerCase();
+  return m === 'guide' ? 'guide' : 'enforce';
+}
+
+/**
+ * @param {string} glob
+ */
+function globToRegExp(glob) {
+  const norm = glob.replace(/\\/g, '/').replace(/^\.\//, '');
+  const re = norm
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*/g, '\0')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\0/g, '.*');
+  return new RegExp(`(?:^|/)${re}`);
+}
+
+/** @param {string} root */
+export function repoName(root) {
+  if (process.env.GITNEXUS_REPO) return process.env.GITNEXUS_REPO;
+  return path.basename(root);
+}
+
+/**
+ * @param {string} filePath
+ * @param {ReturnType<typeof loadHookConfig>} config
+ */
+export function isSourceCodePath(filePath, config) {
+  const norm = (filePath ?? '').replace(/\\/g, '/');
+  if (!config.sourceExtRe.test(norm)) return false;
+  return config.sourcePathRes.some((re) => re.test(norm));
+}
+
+/**
+ * @param {string} pattern
+ * @param {ReturnType<typeof loadHookConfig>} config
+ */
+export function isBroadSourceGlob(pattern, config) {
+  const norm = (pattern ?? '').replace(/\\/g, '/');
+  return config.broadGlobRes.some((re) => re.test(norm));
+}
+
+/**
+ * @param {string} filePath
+ * @param {ReturnType<typeof loadHookConfig>} config
+ * @returns {EditSensitivity}
+ */
+export function editSensitivity(filePath, config) {
+  const norm = (filePath ?? '').replace(/\\/g, '/');
+  if (!norm) return 'none';
+  if (/\.(md|mdc|json|yaml|yml|txt|gitignore)$/i.test(norm) || /(?:^|\/)docs\//.test(norm)) {
+    return 'light';
+  }
+  if (/\.cursor\/hooks\//.test(norm) || /(?:^|\/)bundle\//.test(norm)) return 'light';
+  if (/(?:^|\/)tests?\//.test(norm)) return 'medium';
+  if (/(?:^|\/)scripts\//.test(norm)) return 'medium';
+  if (isSourceCodePath(norm, config)) return 'full';
+  if (/(?:^|\/)apps\//.test(norm) && config.sourceExtRe.test(norm)) return 'full';
+  return 'none';
+}
+
+/** @param {string} repo */
+export function mcpContext(name, repo, opts = {}) {
+  const safe = String(name).replace(/"/g, '\\"');
+  const include = opts.include_content === true ? ', include_content: true' : ', include_content: false';
+  if (opts.uid) {
+    const uid = String(opts.uid).replace(/"/g, '\\"');
+    return `gitnexus_context({ uid: "${uid}", repo: "${repo}"${include} })`;
+  }
+  return `gitnexus_context({ name: "${safe}", repo: "${repo}"${include} })`;
+}
+
+/** @param {object} opts */
+export function mcpQuery({ query, taskContext = '', goal = '', repo, limit = 5, max_symbols = 12 }) {
+  const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return `gitnexus_query({ query: "${esc(query)}", task_context: "${esc(taskContext)}", goal: "${esc(goal)}", repo: "${repo}", limit: ${limit}, max_symbols: ${max_symbols} })`;
+}
+
+/**
+ * @param {string} target
+ * @param {string} repo
+ * @param {{ summaryOnly?: boolean }} [opts]
+ */
+export function mcpImpact(target, repo, opts = {}) {
+  const safe = String(target).replace(/"/g, '\\"');
+  const summaryOnly = opts.summaryOnly === true;
+  const extra = summaryOnly ? ', summaryOnly: true' : ', summaryOnly: false, limit: 100';
+  return `gitnexus_impact({ target: "${safe}", direction: "upstream", repo: "${repo}"${extra} })`;
+}
+
+/** @param {string} repo @param {string} [scope] */
+export function mcpDetectChanges(repo, scope = 'unstaged') {
+  return `gitnexus_detect_changes({ scope: "${scope}", repo: "${repo}" })`;
+}
+
+/** @param {string} repo */
+export function mcpReadContext(repo) {
+  return `READ gitnexus://repo/${repo}/context`;
+}
+
+/**
+ * One playbook line for first nudge.
+ * @param {object} hint
+ * @param {string} repo
+ */
+export function playbookForHint(hint, repo) {
+  const snippet = (hint.snippet ?? '').replace(/"/g, "'").slice(0, 80);
+
+  if (hint.codeTask) {
+    const topic = hint.fileHint
+      ? path.basename(hint.fileHint, path.extname(hint.fileHint))
+      : hint.symbolHint || '<symbol>';
+    return `PLAYBOOK: ${mcpImpact(topic, repo)} → edit → ${mcpDetectChanges(repo)}`;
+  }
+  if (hint.reasoning) {
+    const sym = hint.symbolHint || '<symbol>';
+    return `PLAYBOOK: ${mcpContext(sym, repo)} → ${mcpImpact(sym, repo)}`;
+  }
+  if (hint.architecture || hint.explore) {
+    return `PLAYBOOK: ${mcpQuery({ query: snippet || '<topic>', taskContext: snippet, goal: 'flows', repo })} → READ process/{name}`;
+  }
+  if (hint.symbolHint) {
+    return `PLAYBOOK: ${mcpContext(hint.symbolHint, repo)}`;
+  }
+  return '';
+}
+
+const DENY_CACHE_FILE = '.gitnexus-deny-cache.json';
+
+/** @param {string} root */
+function denyCachePath(root) {
+  return path.join(root, '.cursor', DENY_CACHE_FILE);
+}
+
+/** @param {string} root */
+export function clearDenyCache(root) {
+  try {
+    fs.unlinkSync(denyCachePath(root));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Hook agent_message — always full (local LLM; no repeat compaction).
+ * @param {string} _root
+ * @param {string} _cacheKey
+ * @param {string} full
+ * @param {string} [_compact]
+ */
+export function hookAgentMessage(_root, _cacheKey, full, _compact) {
+  return full;
+}
+
+/**
+ * @param {{ permission: 'allow' | 'deny', agent_message?: string, user_message?: string }} result
+ * @param {HookMode} mode
+ */
+export function applyHookMode(result, mode) {
+  if (mode === 'guide' && result.permission === 'deny') {
+    return {
+      permission: 'allow',
+      agent_message: `[GUIDE MODE — normally blocked]\n${result.agent_message ?? ''}`,
+      user_message: result.user_message,
+    };
+  }
+  return result;
+}
+
+/**
+ * @param {boolean} graphUsedThisSession
+ * @param {string} [root]
+ */
+export function midSessionGraphNudge(graphUsedThisSession, root = '') {
+  if (!graphUsedThisSession || !root) return '';
+  return hookAgentMessage(
+    root,
+    'mid-session-graph',
+    'MID-SESSION: use query (graph+embeddings) for explore; context/impact for symbols and edits.',
+    ''
+  );
+}
+
+/**
+ * @param {object} stale from check-staleness
+ * @param {ReturnType<typeof loadHookConfig>} config
+ */
+export function isGraceStale(stale, config) {
+  if (stale?.fresh) return false;
+  if (stale?.reason !== 'behind') return false;
+  const n = stale.commitsBehind ?? 0;
+  return n > 0 && n <= (config.graceCommitsBehind ?? 0);
+}

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# preToolUse Grep/Glob/SemanticSearch: block symbol-style searches when GN is fresh;
-# allow classical tools when index is stale or for scoped verification after GN use/suspicion.
+# preToolUse Grep/Glob/SemanticSearch: block symbol-style searches when GN is fresh.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -10,89 +9,79 @@ export GITNEXUS_STALENESS="$(node "$ROOT/.cursor/hooks/lib/load-staleness.mjs" "
 export GITNEXUS_FIRST_NUDGE="$(node "$ROOT/.cursor/hooks/lib/first-nudge.mjs" "$ROOT" 2>/dev/null || true)"
 
 node <<'NODE'
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const root = process.env.GITNEXUS_ROOT || '';
+const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
+const { appendNudge } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const nudge = process.env.GITNEXUS_FIRST_NUDGE || '';
-const root = process.env.GITNEXUS_ROOT || '';
 const tool = input.tool_name ?? '';
 const ti = input.tool_input ?? {};
 
-const mcpUsedFlag = path.join(root, '.cursor', '.gitnexus-mcp-used.flag');
-const graphUsedThisSession = root && fs.existsSync(mcpUsedFlag);
+const config = helpers.loadHookConfig(root);
+const repo = helpers.repoName(root);
+const mcpFlag = path.join(root, '.cursor/.gitnexus-mcp-used.flag');
+const graphUsedThisSession = fs.existsSync(mcpFlag);
 
-function out(obj) {
-  process.stdout.write(JSON.stringify(obj));
-}
-
-function withNudge(msg) {
-  if (!msg) return nudge || undefined;
-  return nudge ? `${nudge}\n\n${msg}` : msg;
-}
-
-function allow(msg) {
-  out({ permission: 'allow', agent_message: withNudge(msg) });
-}
-
-function deny(agentMsg, userMsg) {
-  out({
-    permission: 'deny',
-    agent_message: withNudge(agentMsg),
-    user_message: userMsg ?? 'GitNexus-first: use graph tools for code reasoning.',
-  });
+function emit(result) {
+  const applied = helpers.applyHookMode(result, config.mode);
+  if (applied.agent_message) {
+    applied.agent_message = appendNudge(applied.agent_message, nudge);
+  }
+  process.stdout.write(JSON.stringify(applied));
 }
 
 function staleFallbackMsg() {
-  return (
-    'GN FALLBACK (stale/untrusted index): ' +
-    (stale.detail || stale.reason || 'Index not fresh.') +
-    ' Classical Grep/Glob/SemanticSearch allowed for investigation. ' +
-    'Your NEXT Shell call MUST be npm run gitnexus:agent-refresh (required_permissions: ["all"]) — run it yourself.'
-  );
-}
-
-function isScopedSourceFile(p) {
-  const norm = (p ?? '').replace(/\\/g, '/');
-  return /(?:^|\/)src\/future\/.*\.(?:js|ts|tsx)$/.test(norm);
-}
-
-function isBroadSrcGlob(pattern) {
-  const norm = (pattern ?? '').replace(/\\/g, '/');
-  return (
-    /^\*\*\/\*\.(js|ts|tsx)$/.test(norm) ||
-    /^\*\*\/src\//.test(norm) ||
-    /^src\//.test(norm) ||
-    /^src\/future\//.test(norm)
+  return helpers.hookAgentMessage(
+    root,
+    'stale-fallback',
+    'GN FALLBACK (stale): classical Grep/Read OK. NEXT: npm run gitnexus:agent-refresh (required_permissions: ["all"]).',
+    'GN FALLBACK (stale): refresh autonomously.'
   );
 }
 
 if (!stale.fresh) {
-  allow(staleFallbackMsg());
+  emit({ permission: 'allow', agent_message: staleFallbackMsg() });
   process.exit(0);
 }
 
+const reNudge = helpers.midSessionGraphNudge(graphUsedThisSession, root);
+
 if (tool === 'Glob') {
   const pattern = ti.glob_pattern ?? ti.pattern ?? '';
-  if (isBroadSrcGlob(pattern)) {
-    deny(
-      `Glob("${pattern}") blocked — use gitnexus_query({query: "<concept>", task_context: "...", goal: "...", repo: "__GITNEXUS_REPO__"}) to find execution flows, then gitnexus_context on symbols.\n` +
-        'If GitNexus results look wrong after uid retry, scoped Grep in a known file is OK — tell the user why GN was not trusted.',
-      'Broad source Glob blocked — GitNexus query finds flows faster.'
-    );
+  if (helpers.isBroadSourceGlob(pattern, config)) {
+    const call = helpers.mcpQuery({ query: '<concept>', taskContext: 'find modules', goal: 'entry points', repo });
+    emit({
+      permission: 'deny',
+      agent_message: helpers.hookAgentMessage(
+        root,
+        `glob:${pattern}`,
+        `Glob blocked → ${call}`,
+        `Glob blocked → ${call}`
+      ) + (reNudge ? `\n${reNudge}` : ''),
+      user_message: 'Broad source Glob blocked — use GitNexus query.',
+    });
     process.exit(0);
   }
-  allow('Glob OK for non-source patterns (config/assets).');
+  emit({ permission: 'allow', agent_message: 'Glob OK for non-source patterns.' });
   process.exit(0);
 }
 
 if (tool === 'SemanticSearch') {
-  deny(
-    'SemanticSearch blocked when index is fresh — use gitnexus_query({query, task_context, goal, repo: "__GITNEXUS_REPO__"}) for reasoning about code.\n' +
-      'If query/context returned clearly wrong data after uid retry, tell the user why — hooks allow scoped Grep in a known file for verification.',
-    'SemanticSearch disabled — GitNexus query required.'
-  );
+  const q = ti.query ?? ti.search_term ?? '<topic>';
+  const call = helpers.mcpQuery({ query: q, taskContext: q, goal: 'flows', repo });
+  emit({
+    permission: 'deny',
+    agent_message:
+      helpers.hookAgentMessage(root, 'semantic-search', `SemanticSearch blocked → ${call}`, `→ ${call}`) +
+      (reNudge ? `\n${reNudge}` : ''),
+    user_message: 'SemanticSearch disabled — use gitnexus_query (graph + embeddings).',
+  });
   process.exit(0);
 }
 
@@ -100,7 +89,7 @@ const pattern = ti.pattern ?? '';
 const pathArg = ti.path ?? ti.glob ?? '';
 
 if (!pattern) {
-  allow();
+  emit({ permission: 'allow' });
   process.exit(0);
 }
 
@@ -114,52 +103,69 @@ const allowPattern =
   ) || (/[\\/:*?[\]{}()]/.test(pattern) && pattern.length > 40);
 
 if (allowPath || allowPattern) {
-  allow('Grep OK — literal/config/doc search.');
+  emit({ permission: 'allow', agent_message: 'Grep OK — literal/config/doc search.' });
   process.exit(0);
 }
 
 const bareId = /^[A-Za-z_$][\w$]*$/.test(pattern) && pattern.length >= 3;
 const exportDecl = /^(export\s+)?(async\s+)?function\s+[A-Za-z_$]/.test(pattern);
 const classDecl = /^(export\s+)?class\s+[A-Za-z_$]/.test(pattern);
+const sym = bareId ? pattern : pattern.replace(/^.*?\b([A-Za-z_$][\w$]*).*$/, '$1');
+const scopedSource = pathArg && helpers.isSourceCodePath(pathArg, config);
 
-if ((bareId || exportDecl || classDecl) && isScopedSourceFile(pathArg)) {
+if ((bareId || exportDecl || classDecl) && scopedSource) {
   if (!graphUsedThisSession) {
-    const sym = bareId ? pattern : pattern.replace(/^.*?\b([A-Za-z_$][\w$]*).*$/, '$1');
-    deny(
-      `Scoped Grep("${pattern}") blocked — no GitNexus MCP call yet this session. Use graph tools first:\n` +
-        `  gitnexus_context({name: "${sym}", repo: "__GITNEXUS_REPO__"})\n` +
-        `After at least one GitNexus MCP call, scoped Grep in a known file is OK if GN results were suspicious (tell user why).`,
-      'Use GitNexus context before scoped symbol grep.'
-    );
+    const call = helpers.mcpContext(sym, repo);
+    emit({
+      permission: 'deny',
+      agent_message: helpers.hookAgentMessage(
+        root,
+        `grep-scoped:${sym}`,
+        `Grep blocked (no GN yet) → ${call}`,
+        `→ ${call}`
+      ),
+      user_message: 'Use GitNexus context before scoped symbol grep.',
+    });
     process.exit(0);
   }
-  allow(
-    'Scoped verification Grep in a known file — OK after GitNexus use this session. Tell the user why GN was not trusted for this lookup.'
-  );
+  emit({
+    permission: 'allow',
+    agent_message:
+      'Scoped verification Grep OK after GitNexus use — tell user why GN was not trusted.' +
+      (reNudge ? ` ${reNudge}` : ''),
+  });
   process.exit(0);
 }
 
 if (bareId || exportDecl || classDecl) {
-  const sym = bareId ? pattern : pattern.replace(/^.*?\b([A-Za-z_$][\w$]*).*$/, '$1');
-  deny(
-    `Grep("${pattern}") blocked — symbol lookup must use GitNexus:\n` +
-      `  gitnexus_context({name: "${sym}", repo: "__GITNEXUS_REPO__"})\n` +
-      `  → callers, callees, processes. If ambiguous, re-call with uid from results.\n` +
-      `For fuzzy concepts / reasoning: gitnexus_query({query: "...", task_context: "...", goal: "..."})\n` +
-      `If GN returns 0 callers on a known hub, wrong file paths, or contradicts detect_changes: retry with uid once, then scoped Grep in the file GN pointed to OR tell user GN looks wrong.`,
-    `Symbol grep blocked — use gitnexus_context on "${sym}"`
-  );
+  const ctx = helpers.mcpContext(sym, repo);
+  emit({
+    permission: 'deny',
+    agent_message:
+      helpers.hookAgentMessage(root, `grep:${sym}`, `Grep blocked → ${ctx}`, `→ ${ctx}`) +
+      (reNudge ? `\n${reNudge}` : ''),
+    user_message: `Symbol grep blocked — use gitnexus_context on "${sym}"`,
+  });
   process.exit(0);
 }
 
 if (/^[a-z][a-zA-Z0-9]*$/.test(pattern) && pattern.length >= 6 && !pathArg) {
-  deny(
-    `Grep("${pattern}") looks like a symbol name — use gitnexus_context({name: "${pattern}", repo: "__GITNEXUS_REPO__"}) instead.\n` +
-      'If context is empty/suspicious after uid retry, scoped Grep in a known file is allowed.',
-    'Likely symbol grep blocked.'
-  );
+  const call = helpers.mcpContext(pattern, repo);
+  emit({
+    permission: 'deny',
+    agent_message:
+      helpers.hookAgentMessage(root, `grep:${pattern}`, `Symbol grep → ${call}`, `→ ${call}`) +
+      (reNudge ? `\n${reNudge}` : ''),
+    user_message: 'Likely symbol grep blocked.',
+  });
   process.exit(0);
 }
 
-allow('Grep allowed — if this is structural code lookup or reasoning, prefer gitnexus_context/query instead.');
+emit({
+  permission: 'allow',
+  agent_message:
+    'Grep allowed — if structural lookup, prefer:\n' +
+    `  ${helpers.mcpContext('<symbol>', repo)}` +
+    (reNudge ? `\n${reNudge}` : ''),
+});
 NODE

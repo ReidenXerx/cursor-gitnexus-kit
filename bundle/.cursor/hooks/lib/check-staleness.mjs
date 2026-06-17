@@ -13,6 +13,9 @@ function git(cmd) {
   return execSync(cmd, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
+const agentFix =
+  'Agent MUST run npm run gitnexus:agent-refresh autonomously (required_permissions: ["all"]).';
+
 const out = {
   fresh: true,
   reason: null,
@@ -20,6 +23,9 @@ const out = {
   indexedCommit: null,
   headCommit: null,
   indexedAt: null,
+  nodeCount: 0,
+  embeddingCount: 0,
+  embeddingsReady: false,
 };
 
 const metaPath = path.join(root, '.gitnexus/meta.json');
@@ -42,6 +48,9 @@ try {
 
 out.indexedCommit = meta.lastCommit ?? null;
 out.indexedAt = meta.indexedAt ?? null;
+out.nodeCount = meta.stats?.nodes ?? 0;
+out.embeddingCount = meta.stats?.embeddings ?? 0;
+out.embeddingsReady = out.embeddingCount > 0 || out.nodeCount === 0;
 
 if (!out.indexedCommit) {
   out.fresh = false;
@@ -60,6 +69,11 @@ try {
 }
 
 if (out.indexedCommit === out.headCommit) {
+  if (out.nodeCount > 0 && !out.embeddingsReady) {
+    out.fresh = false;
+    out.reason = 'missing_embeddings';
+    out.detail = `Graph has ${out.nodeCount} symbol(s) but 0 embeddings — gitnexus_query semantic search is unavailable. Classical tools OK for investigation. ${agentFix}`;
+  }
   process.stdout.write(JSON.stringify(out));
   process.exit(0);
 }
@@ -78,7 +92,6 @@ try {
 }
 
 if (!out.fresh) {
-  const agentFix = 'Agent MUST run npm run gitnexus:agent-refresh autonomously (required_permissions: ["all"]).';
   if (out.reason === 'missing') {
     out.detail = `GitNexus index missing — classical tools OK for investigation. ${agentFix}`;
   } else if (out.reason === 'invalid_meta') {

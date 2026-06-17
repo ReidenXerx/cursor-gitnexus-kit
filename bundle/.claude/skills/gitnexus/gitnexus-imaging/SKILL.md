@@ -2,7 +2,7 @@
 name: gitnexus-imaging
 description: >-
   Graph-first mental models for pipelines, call chains, and cross-module flows.
-  Use when explaining architecture, tracing business flows, mapping regions, or
+  Use when explaining architecture, tracing business flows, mapping functional areas, or
   answering "how does X connect to Y?" — never reconstruct structure from grep.
 ---
 
@@ -79,23 +79,21 @@ If stale → **Cursor agents:** `npm run gitnexus:agent-refresh` autonomously. *
 Entry: `symbol` → … → exit
 Steps: (from process trace)
 Hub nodes: symbols with most callers
-Regions touched: Scanner | Adapters | Server | …
+Modules touched: Scanner | Adapters | Server | …
 ```
 
 ---
 
-## Recipe 2 — Map a functional region
+## Recipe 2 — Map a functional area
 
-**Trigger:** "What's in Scanner?", "Map the strategies area", region-bound agent work
+**Trigger:** "What's in Scanner?", "Map the strategies area"
 
 ```
 1. READ gitnexus://repo/__GITNEXUS_REPO__/clusters
 2. READ gitnexus://repo/__GITNEXUS_REPO__/cluster/{AreaName}
-3. query({ query: "{AreaName} entry points", task_context: "region map", goal: "entry symbols" })
+3. query({ query: "{AreaName} entry points", task_context: "area map", goal: "entry symbols" })
 4. context on 2–3 entry symbols listed in cluster
 ```
-
-Use with `docs/AGENT-PROFILES.md` for border contracts between regions.
 
 ---
 
@@ -170,7 +168,7 @@ After `query`, run `detect_changes` on WIP — it often shows cross-community bl
 - Describing a 3+ module flow from memory when index is fresh and GN was not tried
 - Reading entire adapter files before `query`
 - Skipping `process/{name}` when user asked "how does the flow work"
-- Trusting `impact` alone on WIP — pair with `detect_changes` for cross-region edits
+- Trusting `impact` alone on WIP — pair with `detect_changes` for cross-module edits
 - Bypassing GN without a stated reason when index is fresh
 
 ## Related

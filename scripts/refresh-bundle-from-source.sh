@@ -21,7 +21,6 @@ cp -a "$SRC/.cursor/hooks" "$KIT_ROOT/bundle/.cursor/"
 cp -a "$SRC/.claude/skills/gitnexus" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-workspace" "$KIT_ROOT/bundle/.claude/skills/"
 cp -a "$SRC/.claude/skills/gitnexus-enforcement" "$KIT_ROOT/bundle/.claude/skills/"
-[[ -d "$SRC/.claude/skills/agent-region" ]] && cp -a "$SRC/.claude/skills/agent-region" "$KIT_ROOT/bundle/.claude/skills/"
 mkdir -p "$KIT_ROOT/bundle/.githooks" "$KIT_ROOT/bundle/.vscode" "$KIT_ROOT/bundle/scripts/lib" "$KIT_ROOT/bundle/scripts/gitnexus-teaching" "$KIT_ROOT/bundle/docs"
 cp "$SRC/.githooks/pre-commit" "$KIT_ROOT/bundle/.githooks/"
 cp "$SRC/.vscode/settings.json" "$KIT_ROOT/bundle/.vscode/"
@@ -37,14 +36,25 @@ elif [[ -f "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
   cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md"
   cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
 fi
-for stub in regions.overlay.stub.json AGENT-PROFILES.stub.md; do
-[[ -f "$SRC/docs/AGENT-REGIONS-GUIDE.md" ]] && cp "$SRC/docs/AGENT-REGIONS-GUIDE.md" "$KIT_ROOT/bundle/docs/AGENT-REGIONS-GUIDE.md"
-  [[ -f "$SRC/docs/$stub" ]] && cp "$SRC/docs/$stub" "$KIT_ROOT/bundle/docs/$stub"
+
+# Strip region enforcement from refreshed bundle (kit no longer ships regions)
+for f in \
+  bundle/.cursor/hooks/lib/region-edit-check.mjs \
+  bundle/.cursor/hooks/lib/region-infer.mjs \
+  bundle/.cursor/hooks/lib/region-picker-context.mjs \
+  bundle/.cursor/hooks/lib/region-session.mjs \
+  bundle/.cursor/hooks/lib/region-user-guide.mjs \
+  bundle/.claude/skills/agent-region/SKILL.md \
+  bundle/docs/AGENT-REGIONS-GUIDE.md \
+  bundle/docs/regions.overlay.stub.json \
+  bundle/docs/AGENT-PROFILES.stub.md \
+  bundle/scripts/gitnexus-teaching/generate-regions.mjs; do
+  rm -rf "$KIT_ROOT/$f" 2>/dev/null || true
 done
-# docs/regions.overlay.json is per-project — never copy from source (crypto keeps its own)
+rmdir "$KIT_ROOT/bundle/.claude/skills/agent-region" 2>/dev/null || true
 
 find "$KIT_ROOT/bundle" -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' -o -name '*.md' \) -print0 \
-  | xargs -0 sed -i '' 's/crypto-trading-bot/__GITNEXUS_REPO__/g'
+  | xargs -0 sed -i 's/crypto-trading-bot/__GITNEXUS_REPO__/g'
 
 chmod +x "$KIT_ROOT/bundle/scripts/"*.sh "$KIT_ROOT/bundle/.cursor/hooks/"*.sh 2>/dev/null || true
 

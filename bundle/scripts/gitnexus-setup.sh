@@ -114,12 +114,9 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/first-nudge.mjs"
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
-  ".cursor/hooks/lib/region-session.mjs"
-  ".cursor/hooks/lib/region-infer.mjs"
-  ".cursor/hooks/lib/region-user-guide.mjs"
-  "docs/AGENT-REGIONS-GUIDE.md"
-  ".cursor/hooks/lib/region-picker-context.mjs"
-  ".cursor/hooks/lib/region-edit-check.mjs"
+  ".cursor/hooks/lib/hook-helpers.mjs"
+  ".cursor/hooks/lib/agent-brief.mjs"
+  ".cursor/gitnexus-hooks.json"
   ".vscode/settings.json"
   ".githooks/pre-commit"
   "scripts/gitnexus-setup.sh"
@@ -132,9 +129,7 @@ TEACHING_SOURCES=(
   "scripts/lib/project-tmp.mjs"
   "scripts/gitnexus-teaching/install-from-bundle.sh"
   "scripts/gitnexus-teaching/merge-package-scripts.mjs"
-  "scripts/gitnexus-teaching/generate-regions.mjs"
   "docs/GITNEXUS-TEAM-BUNDLE.md"
-  "docs/regions.overlay.stub.json"
   ".gitnexusignore"
   ".claude/skills/gitnexus-workspace/SKILL.md"
   ".claude/skills/gitnexus-enforcement/SKILL.md"
@@ -148,23 +143,10 @@ TEACHING_SOURCES=(
   ".claude/skills/gitnexus/gitnexus-debugging/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-refactoring/SKILL.md"
   ".claude/skills/gitnexus/gitnexus-cli/SKILL.md"
-  ".claude/skills/agent-region/SKILL.md"
 )
 
 for f in "${TEACHING_SOURCES[@]}"; do require_file "$f"; done
 ok "${#TEACHING_SOURCES[@]} teaching source files present"
-
-if [[ -f docs/regions.overlay.json ]]; then
-  ok "docs/regions.overlay.json present (region boundaries)"
-else
-  warn "docs/regions.overlay.json missing — generate-regions will use skills/filesystem scan (optional: copy docs/regions.overlay.stub.json and customize)"
-fi
-
-if [[ -f docs/AGENT-PROFILES.md ]]; then
-  ok "docs/AGENT-PROFILES.md present (region narrative)"
-else
-  warn "docs/AGENT-PROFILES.md missing — optional; see docs/AGENT-PROFILES.stub.md"
-fi
 
 # ── 4. install Cursor teaching bundle (rules + hooks + skills sync) ──────────
 
@@ -274,14 +256,9 @@ cat <<'ONBOARD'
   Start a new Agent chat with:
     "Read gitnexus-workspace skill, then help me with …"
 
-  AGENT REGIONS (every new chat):
-    1. Describe your task in plain English (include a file path if you can).
-    2. We auto-pick your work area — AI tells you which one.
-    3. Wrong area? Reply: region: <id>  or  superchat
-    User guide: docs/AGENT-REGIONS-GUIDE.md
-
   Daily / agent autonomous:
-    npm run gitnexus:agent-status   staleness (agent runs at session start)
+    npm run gitnexus:agent-brief    session orientation + suggested graph calls
+    npm run gitnexus:agent-status   staleness check
     npm run gitnexus:agent-refresh  re-index when stale (hook pre-approved)
     npm run gitnexus:sync-teaching  after pulling rule/skill updates
 

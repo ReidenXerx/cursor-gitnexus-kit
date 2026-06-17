@@ -1,6 +1,0 @@
-{
-  "mode": "enrich",
-  "partialOverflowWrites": 2,
-  "comment": "Optional. Base regions come from npm run gitnexus:generate-regions (GitNexus skills or filesystem scan). Use enrich to add splits; use replace for full manual control (see crypto-trading-bot docs/regions.overlay.json).",
-  "regions": []
-}

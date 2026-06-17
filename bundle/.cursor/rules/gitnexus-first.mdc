@@ -7,10 +7,12 @@ alwaysApply: false
 
 This repo is GitNexus-indexed (**__GITNEXUS_REPO__**). For ANY code-understanding or code-reasoning question, GitNexus is the **default**, not the fallback — including mid-task “what calls this?” / “what breaks?”.
 
+**Graph + embeddings:** fuzzy / exploratory work → `gitnexus_query` first (BM25 + vectors). Structural symbol work → `context` / `impact`.
+
 ## Workflow chain (memorize)
 
 ```
-context (staleness) → query (orient) → context (symbol) → impact (pre-edit) → detect_changes (pre-commit)
+context (staleness) → query (graph+embeddings) → context (symbol) → impact (pre-edit) → detect_changes (pre-commit)
 ```
 
 ## Intent routing
@@ -43,4 +45,4 @@ Tell the user in one sentence when bypassing GN-first.
 2. BEFORE committing → `gitnexus_detect_changes`.
 3. NEVER find-and-replace renames → `gitnexus_rename`.
 4. MCP unreachable or clearly wrong graph output → warn user; classical Grep/Read OK (see `gitnexus-enforcement` fallback).
-5. Stale index → run `npm run gitnexus:agent-refresh` **autonomously** (hook pre-approved; use `required_permissions: ["all"]` if needed). Classical tools OK until fresh.
+5. Stale index or missing embeddings → run `npm run gitnexus:agent-refresh` **autonomously** (hook pre-approved; use `required_permissions: ["all"]` if needed). Classical tools OK until fresh.

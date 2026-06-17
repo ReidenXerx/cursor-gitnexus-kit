@@ -4,7 +4,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { repoName } from './region-session.mjs';
+import { playbookForHint, mcpReadContext, repoName, clearDenyCache } from './hook-helpers.mjs';
 
 export function sessionPaths(root) {
   const cursorDir = path.join(root, '.cursor');
@@ -14,7 +14,6 @@ export function sessionPaths(root) {
     promptHint: path.join(cursorDir, '.gitnexus-prompt-hint.json'),
     refreshPendingFlag: path.join(cursorDir, '.gitnexus-refresh-pending.flag'),
     mcpUsedFlag: path.join(cursorDir, '.gitnexus-mcp-used.flag'),
-    regionState: path.join(cursorDir, '.agent-region.json'),
   };
 }
 
@@ -47,6 +46,7 @@ export function clearSessionState(root) {
       /* ignore */
     }
   }
+  clearDenyCache(root);
 }
 
 export function writePromptHint(root, hint) {
@@ -76,32 +76,23 @@ export function firstToolNudge(root, stale) {
   fs.writeFileSync(primedFlag, new Date().toISOString());
 
   const hint = readPromptHint(root);
+  const repo = repoName(root);
   const parts = [];
 
   if (!stale?.fresh) {
+    const reason =
+      stale?.reason === 'missing_embeddings'
+        ? 'MISSING EMBEDDINGS: semantic query unavailable — '
+        : 'STALE INDEX: ';
     parts.push(
-      'STALE INDEX: next Shell MUST be npm run gitnexus:agent-refresh (required_permissions: ["all"]). Run yourself — never ask user to analyze.'
+      `${reason}next Shell MUST be npm run gitnexus:agent-refresh (required_permissions: ["all"]). Includes --embeddings. Run yourself — never ask user to analyze.`
     );
   } else {
-    const repo = repoName(root);
-    parts.push(`SESSION: READ gitnexus://repo/${repo}/context or npm run gitnexus:agent-status before structural work.`);
+    parts.push(`SESSION: ${mcpReadContext(repo)} OR npm run gitnexus:agent-brief`);
   }
 
-  if (hint.architecture || hint.explore) {
-    parts.push('Explore prompt: gitnexus-imaging → query → process → context → targeted Read.');
-  }
-
-  if (hint.reasoning) {
-    parts.push('Reasoning prompt: query/context/impact — not grep.');
-  }
-
-  if (hint.regionAmbiguous) parts.push(hint.regionAmbiguous);
-  if (hint.regionCard) {
-    parts.push(hint.regionCard);
-  } else if (hint.regionPicker) {
-    parts.push(hint.regionPicker);
-    parts.push('Block edits until region set.');
-  }
+  const playbook = playbookForHint(hint, repo);
+  if (playbook) parts.push(playbook);
 
   return parts.join('\n');
 }

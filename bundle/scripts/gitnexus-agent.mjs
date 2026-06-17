@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -45,11 +45,17 @@ if (cmd === 'status') {
   if (stale.fresh) {
     console.log('GitNexus index: fresh (matches HEAD)');
     console.log(`  indexed: ${(stale.indexedCommit || '').slice(0, 7)} @ ${stale.indexedAt ?? '?'}`);
+    if ((stale.embeddingCount ?? 0) > 0) {
+      console.log(`  embeddings: ${stale.embeddingCount} vectors`);
+    }
     console.log(systemTmp);
     process.exit(0);
   }
-  console.log('GitNexus index: STALE — graph tools may be wrong');
+  console.log('GitNexus index: STALE — graph and/or embeddings may be wrong');
   console.log(`  ${stale.detail || stale.reason}`);
+  if (stale.reason === 'missing_embeddings') {
+    console.log('  embeddings: missing — agent-refresh runs analyze --embeddings');
+  }
   console.log('  Fix: npm run gitnexus:agent-refresh');
   console.log(systemTmp);
   process.exit(1);
@@ -81,5 +87,15 @@ if (cmd === 'refresh') {
   process.exit(1);
 }
 
-console.error(`Unknown command: ${cmd}. Use: status | refresh`);
+if (cmd === 'brief') {
+  const r = spawnSync(process.execPath, [path.join(ROOT, '.cursor/hooks/lib/agent-brief.mjs'), ROOT], {
+    encoding: 'utf8',
+    env: withProjectTmpEnv(ROOT),
+  });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  process.exit(r.status ?? 1);
+}
+
+console.error(`Unknown command: ${cmd}. Use: status | refresh | brief`);
 process.exit(2);

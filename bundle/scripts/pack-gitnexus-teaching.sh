@@ -61,15 +61,12 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/first-nudge.mjs
   .cursor/hooks/lib/clear-session.mjs
   .cursor/hooks/lib/set-refresh-pending.mjs
-  .cursor/hooks/lib/region-session.mjs
-  .cursor/hooks/lib/region-infer.mjs
-  .cursor/hooks/lib/region-picker-context.mjs
-  .cursor/hooks/lib/region-edit-check.mjs
-  .cursor/hooks/lib/region-user-guide.mjs
+  .cursor/hooks/lib/hook-helpers.mjs
+  .cursor/hooks/lib/agent-brief.mjs
+  .cursor/gitnexus-hooks.json
   .claude/skills/gitnexus
   .claude/skills/gitnexus-workspace
   .claude/skills/gitnexus-enforcement
-  .claude/skills/agent-region
   .githooks/pre-commit
   .vscode/settings.json
   scripts/gitnexus-setup.sh
@@ -82,11 +79,7 @@ BUNDLE_PATHS=(
   scripts/lib/project-tmp.mjs
   scripts/gitnexus-teaching/install-from-bundle.sh
   scripts/gitnexus-teaching/merge-package-scripts.mjs
-  scripts/gitnexus-teaching/generate-regions.mjs
   docs/GITNEXUS-TEAM-BUNDLE.md
-  docs/regions.overlay.stub.json
-  docs/AGENT-PROFILES.stub.md
-  docs/AGENT-REGIONS-GUIDE.md
   .gitnexusignore
 )
 
@@ -118,8 +111,7 @@ cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
 .cursor/.gitnexus-prompt-hint.json
 .cursor/.gitnexus-refresh-pending.flag
 .cursor/.gitnexus-mcp-used.flag
-.cursor/.agent-region.json
-.cursor/regions.manifest.json
+.cursor/.gitnexus-deny-cache.json
 SNIP
 
 node <<NODE > "$BUNDLE_ROOT/MANIFEST.json"
@@ -134,7 +126,6 @@ const manifest = {
     'Project-specific: replace __GITNEXUS_REPO__ with target repo name in rules/hooks/skills',
     'Run scripts/gitnexus-teaching/install-from-bundle.sh after extracting',
     'Area skills (.claude/skills/generated) are NOT bundled — created by gitnexus:refresh on target repo',
-    'docs/AGENT-PROFILES.md is NOT bundled — add per-project if using region-bound agents',
   ],
 };
 console.log(JSON.stringify(manifest, null, 2));

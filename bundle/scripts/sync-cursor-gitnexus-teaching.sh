@@ -32,13 +32,10 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/first-nudge.mjs"
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
-  ".cursor/hooks/lib/region-session.mjs"
-  ".cursor/hooks/lib/region-infer.mjs"
-  ".cursor/hooks/lib/region-user-guide.mjs"
-  ".cursor/hooks/lib/region-picker-context.mjs"
-  ".cursor/hooks/lib/region-edit-check.mjs"
+  ".cursor/hooks/lib/hook-helpers.mjs"
+  ".cursor/hooks/lib/agent-brief.mjs"
+  ".cursor/gitnexus-hooks.json"
   "scripts/gitnexus-agent.mjs"
-  "scripts/gitnexus-teaching/generate-regions.mjs"
 )
 
 sync_dir() {
@@ -193,19 +190,10 @@ mkdir -p .cursor/skills
 sync_dir ".claude/skills/gitnexus" ".cursor/skills/gitnexus" "GitNexus playbooks"
 sync_dir ".claude/skills/gitnexus-workspace" ".cursor/skills/gitnexus-workspace" "Master index"
 sync_dir ".claude/skills/gitnexus-enforcement" ".cursor/skills/gitnexus-enforcement" "Enforcement router"
-if [[ -d ".claude/skills/agent-region" ]]; then
-  sync_dir ".claude/skills/agent-region" ".cursor/skills/agent-region" "Agent region profiles"
-fi
 if [[ -d ".claude/skills/generated" ]]; then
   sync_dir ".claude/skills/generated" ".cursor/skills/generated" "Area skills"
 else
   warn "No .claude/skills/generated — run gitnexus:refresh"
-fi
-
-if [[ -f scripts/gitnexus-teaching/generate-regions.mjs ]]; then
-  info "  [3b/5] Generate agent regions manifest"
-  node scripts/gitnexus-teaching/generate-regions.mjs --write && ok "regions.manifest.json" \
-    || warn "generate-regions failed — run npm run gitnexus:generate-regions"
 fi
 
 info "  [4/5] Teaching bundle manifest"

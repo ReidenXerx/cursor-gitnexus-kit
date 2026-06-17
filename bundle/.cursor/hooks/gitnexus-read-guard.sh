@@ -1,68 +1,62 @@
 #!/usr/bin/env bash
-# preToolUse Read: block full-file reads when GN is fresh; allow when stale or verifying suspicion.
+# preToolUse Read: block full-file reads when GN is fresh.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 export GITNEXUS_HOOK_INPUT="$(cat)"
+export GITNEXUS_ROOT="$ROOT"
 export GITNEXUS_STALENESS="$(node "$ROOT/.cursor/hooks/lib/load-staleness.mjs" "$ROOT" 2>/dev/null || echo '{"fresh":false,"reason":"check_failed"}')"
 export GITNEXUS_FIRST_NUDGE="$(node "$ROOT/.cursor/hooks/lib/first-nudge.mjs" "$ROOT" 2>/dev/null || true)"
 
 node <<'NODE'
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
+const root = process.env.GITNEXUS_ROOT || '';
+const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
+const { appendNudge } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const nudge = process.env.GITNEXUS_FIRST_NUDGE || '';
 const ti = input.tool_input ?? {};
 const filePath = ti.path ?? ti.target_file ?? '';
+const config = helpers.loadHookConfig(root);
+const repo = helpers.repoName(root);
+const mcpFlag = path.join(root, '.cursor/.gitnexus-mcp-used.flag');
+const graphUsed = fs.existsSync(mcpFlag);
 
-function out(obj) {
-  process.stdout.write(JSON.stringify(obj));
-}
-
-function withNudge(msg) {
-  if (!msg) return nudge || undefined;
-  return nudge ? `${nudge}\n\n${msg}` : msg;
-}
-
-function allow(msg) {
-  out({ permission: 'allow', agent_message: withNudge(msg) });
-}
-
-function deny(agentMsg, userMsg) {
-  out({
-    permission: 'deny',
-    agent_message: withNudge(agentMsg),
-    user_message: userMsg ?? 'Use GitNexus before reading entire source files.',
-  });
+function emit(result) {
+  const applied = helpers.applyHookMode(result, config.mode);
+  if (applied.agent_message) applied.agent_message = appendNudge(applied.agent_message, nudge);
+  process.stdout.write(JSON.stringify(applied));
 }
 
 if (!stale.fresh) {
-  allow(
-    'GN FALLBACK (stale/untrusted index): ' +
-      (stale.detail || stale.reason || 'Index not fresh.') +
-      ' Full Read allowed — graph tools may be wrong. Tell the user you are bypassing GN-first due to staleness. ' +
-      'Agent MUST run npm run gitnexus:agent-refresh autonomously before trusting graph tools again.'
-  );
+  emit({
+    permission: 'allow',
+    agent_message:
+      'GN FALLBACK (stale): full Read allowed. NEXT: npm run gitnexus:agent-refresh before trusting graph tools.',
+  });
   process.exit(0);
 }
 
 if (!filePath) {
-  allow();
+  emit({ permission: 'allow' });
   process.exit(0);
 }
 
 const rel = filePath.replace(/.*\/__GITNEXUS_REPO__\//, '');
 const hasRange = ti.offset !== undefined || ti.limit !== undefined;
 const norm = filePath.replace(/\\/g, '/');
-const isCode = /(?:^|\/)src\/future\/.*\.(?:js|ts|tsx)$/.test(norm);
+const isCode = helpers.isSourceCodePath(norm, config);
 const isTest = /(?:^|\/)tests?\//.test(norm);
 const isSmallConfig = /\.(json|md|yaml|yml|mdc|sh)$/.test(filePath) || /package\.json$/.test(filePath);
 const isGeneratedSkill = /\.cursor\/skills\//.test(norm);
 
 if (hasRange || isSmallConfig || isGeneratedSkill || isTest || !isCode) {
-  allow();
+  emit({ permission: 'allow' });
   process.exit(0);
 }
 
@@ -72,25 +66,30 @@ try {
     lineCount = fs.readFileSync(filePath, 'utf8').split('\n').length;
   }
 } catch {
-  allow();
+  emit({ permission: 'allow' });
   process.exit(0);
 }
 
-const THRESHOLD = 60;
+const threshold = config.readLineThreshold ?? 60;
+const base = path.basename(filePath, path.extname(filePath));
+const reNudge = helpers.midSessionGraphNudge(graphUsed, root);
 
-if (lineCount > THRESHOLD) {
-  const base = path.basename(filePath, path.extname(filePath));
-  deny(
-    `Read(${rel}) blocked — ${lineCount} lines. Do NOT read whole files to understand or reason about code.\n` +
-      `Use instead:\n` +
-      `  1. gitnexus_query({query: "${base}", task_context: "...", goal: "understand module", repo: "__GITNEXUS_REPO__"})\n` +
-      `  2. gitnexus_context({name: "<symbol>", repo: "__GITNEXUS_REPO__"})\n` +
-      `  3. Read with offset/limit for exact lines.\n` +
-      `If GN returned empty/wrong callers or wrong paths after uid retry, tell the user — full Read is then OK to verify.`,
-    `Full read blocked (${lineCount} lines) — use GitNexus query/context first.`
-  );
+if (lineCount > threshold) {
+  const q = helpers.mcpQuery({ query: base, taskContext: rel, goal: 'module', repo });
+  const ctx = helpers.mcpContext('<symbol>', repo);
+  emit({
+    permission: 'deny',
+    agent_message:
+      helpers.hookAgentMessage(
+        root,
+        `read:${rel}`,
+        `Read blocked (${lineCount}L) → ${q} then ${ctx}; Read offset/limit for edits.`,
+        `Read blocked → ${ctx}`
+      ) + (reNudge ? `\n${reNudge}` : ''),
+    user_message: `Full read blocked (${lineCount} lines) — use GitNexus first.`,
+  });
   process.exit(0);
 }
 
-allow();
+emit({ permission: 'allow' });
 NODE

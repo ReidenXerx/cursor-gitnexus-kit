@@ -10,7 +10,6 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 - Reviewing a branch before merge
 - Assessing risk of a teammate's changes
 - Preparing PR description / test plan from actual blast radius
-- Verifying a PR stayed within intended region
 
 ## Workflow
 
@@ -18,8 +17,7 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 1. gitnexus_detect_changes({scope: "compare", base_ref: "main", repo: "__GITNEXUS_REPO__"})
 2. Review summary.risk_level, changed_symbols, affected_processes
 3. For HIGH/CRITICAL or unexpected processes → impact on changed entry points
-4. Cross-check docs/AGENT-PROFILES.md if changes span regions
-5. Recommend tests per affected process
+4. Recommend tests per affected process
 ```
 
 ## Checklist
@@ -39,7 +37,7 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 
 | detect_changes risk | Action |
 | --- | --- |
-| LOW | Spot-check affected processes + region tests |
+| LOW | Spot-check affected processes + related tests |
 | MEDIUM | Run all affected process test dirs |
 | HIGH | Full integration tests; require explicit reviewer sign-off |
 | CRITICAL | Treat as architectural change — verify every affected_process |
@@ -69,4 +67,3 @@ Follow-up:
 
 - Scenario playbooks: `gitnexus-scenarios/SKILL.md`
 - Impact depth: `gitnexus-impact-analysis/SKILL.md`
-- Region boundaries: `docs/AGENT-PROFILES.md`

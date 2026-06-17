@@ -2,7 +2,7 @@
 name: gitnexus-enforcement
 description: >-
   North-star tool router when GitNexus hooks block Grep/Read/SemanticSearch.
-  Graph-first reasoning, autonomous refresh when stale, classical fallback when GN fails.
+  Graph + embeddings reasoning, autonomous refresh when stale, classical fallback when GN fails.
 disable-model-invocation: false
 ---
 
@@ -10,17 +10,30 @@ disable-model-invocation: false
 
 ## North star
 
-> **Prefer the knowledge graph for all code reasoning when the index is fresh. Refresh autonomously when it is not. Fall back to grep/read/search only when GitNexus is stale, failing, or demonstrably wrong — and say why in one sentence.**
+> **Prefer graph + embeddings when the index is fresh. Use `query` for fuzzy/exploratory work (BM25 + vectors). Refresh autonomously when stale or embeddings are missing. Fall back to grep/read/search only when GitNexus is stale, failing, or demonstrably wrong — and say why in one sentence.**
 
-Graph tools are for **reasoning throughout the task**, not only the first lookup.
+GitNexus tools are for **reasoning throughout the task**, not only the first lookup. Local LLM: rebuild context freely; do not skip gates.
 
-## Response style (token economy)
+## Graph + embeddings (not graph-only)
 
-Default **laconic**: essential answer only — no preamble, no process narration, no post-task essays, no optional follow-up menus.
+| Task | First tool |
+| --- | --- |
+| Fuzzy concept, flow trace, "how does X work?" | `query` (BM25 + embedding vectors) |
+| Known symbol, callers, 360° | `context` |
+| Pre-edit safety | `impact` |
+| Pre-commit / done | `detect_changes` |
 
-Expand only when the user asks (explain, detail, walk me through, deep dive, verbose, ELI5).
+`SemanticSearch` is blocked → always `query`. Missing embeddings (`stats.embeddings === 0`) = **stale** → `agent-refresh` (includes `--embeddings`).
 
-After code edits: 1–3 bullets (what / why / verify). Region notice: one sentence — never paste hook `===` blocks to the user.
+## MCP defaults (generous)
+
+| Tool | Default |
+| --- | --- |
+| `context` | `include_content: false` |
+| `query` | `limit: 5`, `max_symbols: 12` |
+| `impact` | `summaryOnly: false`, `limit: 100` |
+
+Hooks inject calls with these defaults — run verbatim; expand when needed.
 
 ## Decision tree (follow in order)
 
@@ -28,11 +41,11 @@ After code edits: 1–3 bullets (what / why / verify). Region notice: one senten
 START
   │
   ├─ New session / new task?
-  │    └─ npm run gitnexus:agent-status  OR  READ context (autonomous — no user ask)
-  │         stale? → npm run gitnexus:agent-refresh (Shell, required_permissions: ["all"])
+  │    └─ npm run gitnexus:agent-brief  OR  READ context (autonomous)
+  │         stale or missing embeddings? → npm run gitnexus:agent-refresh (Shell, required_permissions: ["all"])
   │
   ├─ Reasoning about code (any point in task)?
-  │    └─ query({query, task_context, goal, repo: "__GITNEXUS_REPO__"})
+  │    └─ query({query, task_context, goal, repo})   # graph + embeddings
   │         └─ context({name}) or context({uid})
   │              └─ READ process trace if cross-module
   │                   └─ impact when considering edits
@@ -46,17 +59,27 @@ START
   │    └─ detect_changes({scope: "unstaged"})
   │
   └─ Hook blocked Grep/Read?
-       ├─ Index stale / check failed? → classical tools auto-allowed; tell user why; refresh
+       ├─ Index stale / embeddings missing / check failed? → classical tools auto-allowed; tell user why; refresh
        ├─ GN suspicious after uid retry + graph used this session? → scoped Grep or Read; tell user why
-       └─ Otherwise → use GitNexus command from agent_message
+       └─ Otherwise → run the **exact** MCP call from hook agent_message (copy-paste)
             NEVER retry the same blocked call without a reason
+```
+
+## Hook block → copy-paste replacements
+
+When blocked, hooks return ready-to-run calls like:
+
+```javascript
+gitnexus_query({ query: "auth flow", task_context: "...", goal: "...", repo: "__GITNEXUS_REPO__", limit: 5, max_symbols: 12 })
+gitnexus_context({ name: "resolveFilters", repo: "__GITNEXUS_REPO__" })
+gitnexus_impact({ target: "handleRequest", direction: "upstream", repo: "__GITNEXUS_REPO__", summaryOnly: false, limit: 100 })
 ```
 
 ## Classical fallback (when NOT to trust GitNexus)
 
 | Signal | What to do |
 | --- | --- |
-| **Stale index** | Classical OK for investigation; `agent-refresh` autonomously; edits blocked until fresh |
+| **Stale index** or **missing embeddings** | Classical OK for investigation; `agent-refresh` autonomously; edits blocked until fresh |
 | **Refresh failed** (ENOSPC, MCP down) | Classical OK; warn user; retry refresh once if feasible |
 | **0 upstream** on a known hub | `context({uid})` retry once → scoped Grep in GN-named file (after ≥1 MCP call this session) |
 | **impact vs detect_changes** disagree | Trust `detect_changes`; verify with Read/Grep |
@@ -70,8 +93,8 @@ START
 | Blocked | Replacement |
 | --- | --- |
 | `Grep("resolveSelectionFilters")` | `context({name: "resolveSelectionFilters"})` |
-| `SemanticSearch("auth flow")` | `query({query: "auth flow", task_context, goal})` |
-| `Glob("src/future/**/*.js")` | `query({query: "module area", goal: "entry points"})` |
+| `SemanticSearch("auth flow")` | `query({query: "auth flow", task_context, goal})` — uses embeddings |
+| `Glob("src/**/*.js")` | `query({query: "module area", goal: "entry points"})` |
 | `Read(entire stablePairScanner.js)` | `query` → `context` → Read offset/limit |
 | Scoped Grep before any GN MCP call | `context` first — scoped Grep only after graph use + suspicion |
 
@@ -80,8 +103,9 @@ When index is **stale**, hooks allow blocked patterns automatically.
 ## Autonomous agent CLI
 
 ```bash
-npm run gitnexus:agent-status    # exit 1 if stale
-npm run gitnexus:agent-refresh   # analyze + sync teaching — agent runs when stale
+npm run gitnexus:agent-brief    # session orientation + suggested calls
+npm run gitnexus:agent-status   # exit 1 if stale or embeddings missing
+npm run gitnexus:agent-refresh  # analyze --embeddings + sync — when stale
 ```
 
 **NEVER** tell the user to run `npx gitnexus analyze` — that is agent work.

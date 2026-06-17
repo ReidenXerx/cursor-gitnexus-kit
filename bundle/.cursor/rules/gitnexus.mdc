@@ -45,7 +45,7 @@ For Server / API work instead:
 1. Read `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md`
 2. `context({name: "handleRequest"})` and `context({name: "isKnownApiPath"})`
 3. `query({query: "research API endpoint", task_context: "server change"})`
-4. Pair every payload change with Dashboard `researchApi.ts` (see `docs/AGENT-PROFILES.md`)
+4. Pair every payload change with Dashboard `researchApi.ts` (server + client)
 
 ## When Grep / Glob / SemanticSearch ARE correct
 
@@ -73,13 +73,13 @@ Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. 
 | Scenario | Playbook |
 | --- | --- |
 | Pre-edit any symbol | `impact` upstream → report d=1 + risk → warn HIGH/CRITICAL |
-| Pre-commit | `detect_changes` → list affected processes → run region tests |
+| Pre-commit | `detect_changes` → list affected processes → run relevant tests |
 | PR review | `detect_changes(compare, main)` → impact on changed entry points |
 | Bug / failure | `query(symptom)` → `context(suspect)` → READ process trace |
 | Refactor / rename | `impact` → `rename` dry_run → apply → `detect_changes(all)` |
-| Cross-region change | `detect_changes` + check border table in `docs/AGENT-PROFILES.md` |
+| Cross-module change | `detect_changes` + `impact` on shared symbols |
 | Preset / matrix JSON | Grep is fine; validate with `tests/examples` |
-| Region-bound agent | Seed profile card → read `.claude/skills/generated/<area>/SKILL.md` → stay in owned paths |
+| Area-focused work | Read `.claude/skills/generated/<area>/SKILL.md` for entry points |
 | Custom HTTP route change | `gitnexus-api-routes` skill → `handleRequest` context → Dashboard hand-off |
 
 ## Tools (full surface)
@@ -115,11 +115,12 @@ Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. 
 - `detect_impact` — guided pre-commit analysis
 - `generate_map` — architecture doc + mermaid from the graph
 
-## Index freshness
+## Index freshness (graph + embeddings)
 
-- After meaningful code changes: `npm run gitnexus:refresh`
+- After meaningful code changes: `npm run gitnexus:refresh` (includes `--embeddings`)
 - Pre-commit hook runs incremental refresh when hooks installed (`npm run hooks:install`)
-- Embeddings preserved on refresh; `--drop-embeddings` only when rebuilding vectors intentionally
+- **Missing embeddings** (`stats.embeddings === 0` with symbols indexed) = stale — `agent-refresh` rebuilds vectors
+- Embeddings preserved on incremental refresh; `--drop-embeddings` only when rebuilding vectors intentionally
 - If MCP says stale after refresh, restart Cursor to reload the MCP server
 
 ## MCP unreachable — warn immediately
@@ -147,5 +148,4 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | Custom HTTP routes (this repo) | `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md` |
 | CLI / index / wiki | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
 | Tool reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
-| Region-bound agents | `docs/AGENT-PROFILES.md` |
 | Per-area entry points | `.claude/skills/generated/<area>/SKILL.md` |

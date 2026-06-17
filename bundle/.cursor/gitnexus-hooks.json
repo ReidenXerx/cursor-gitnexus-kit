@@ -1,0 +1,7 @@
+{
+  "comment": "Optional hook tuning. mode: enforce (block) | guide (nudge only). sourceGlobs: gitignore-style roots for graph-first paths.",
+  "mode": "enforce",
+  "readLineThreshold": 60,
+  "graceCommitsBehind": 2,
+  "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"]
+}

@@ -18,7 +18,6 @@ const WRAP = 'bash scripts/run-with-project-tmp.sh';
 export const GITNEXUS_NPM_SCRIPTS = {
   'gitnexus:setup': 'bash scripts/gitnexus-setup.sh',
   'gitnexus:sync-teaching': 'bash scripts/sync-cursor-gitnexus-teaching.sh',
-  'gitnexus:generate-regions': 'node scripts/gitnexus-teaching/generate-regions.mjs --write',
   'gitnexus:pack': 'bash scripts/pack-gitnexus-teaching.sh',
   'gitnexus:refresh': `${WRAP} npx gitnexus@latest analyze --embeddings --skills`,
   'gitnexus:full': `${WRAP} npx gitnexus@latest analyze --force --embeddings --skills`,
@@ -27,6 +26,7 @@ export const GITNEXUS_NPM_SCRIPTS = {
     `${WRAP} npx gitnexus@latest wiki --force --provider openai --model gpt-4o-mini --base-url https://api.openai.com/v1`,
   'gitnexus:status': `${WRAP} npx gitnexus@latest status`,
   'gitnexus:agent-status': 'node scripts/gitnexus-agent.mjs status',
+  'gitnexus:agent-brief': 'node scripts/gitnexus-agent.mjs brief',
   'gitnexus:agent-refresh': 'node scripts/gitnexus-agent.mjs refresh',
   'gitnexus:clean-tmp': 'bash scripts/clean-project-tmp.sh',
   'gitnexus:list': `${WRAP} npx gitnexus@latest list`,

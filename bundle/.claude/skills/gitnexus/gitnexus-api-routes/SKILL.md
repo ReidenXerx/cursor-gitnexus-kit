@@ -70,7 +70,7 @@ Or grep `researchApi.ts` for path strings (appropriate here — URL string liter
 | New artifact filename | Adapters (write) + Server (read) + maybe Dashboard (display) |
 | New query param | Server + Dashboard client |
 
-See `docs/AGENT-PROFILES.md` border table.
+Pair server and dashboard client changes in the same PR when possible.
 
 ## Entry symbols
 
