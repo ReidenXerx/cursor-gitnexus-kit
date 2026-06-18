@@ -104,6 +104,21 @@ async function main() {
   lines.push(`  ${cypherFieldAccess('<field>', repo)}`);
   lines.push(`  ${cypherCallChain('<Symbol>', repo, 3)}`);
 
+  const apiProfilePath = path.join(root, '.cursor/gitnexus-api-profile.json');
+  if (fs.existsSync(apiProfilePath)) {
+    try {
+      const api = JSON.parse(fs.readFileSync(apiProfilePath, 'utf8'));
+      lines.push('');
+      lines.push(`HTTP API profile: ${api.profile} (Route nodes: ${api.routeNodes ?? 'n/a'})`);
+      lines.push(`  → ${api.recommendation}`);
+      if (api.sourceSignals?.customSymbols?.length) {
+        lines.push(`  custom entry symbols: ${api.sourceSignals.customSymbols.join(', ')}`);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
   const changes = changedFiles().filter((f) => /\.(js|mjs|ts|tsx|jsx)$/.test(f));
   if (changes.length) {
     lines.push('');

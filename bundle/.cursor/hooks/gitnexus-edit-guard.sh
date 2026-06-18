@@ -22,6 +22,7 @@ const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const nudge = process.env.GITNEXUS_FIRST_NUDGE || '';
 const mode = process.env.GITNEXUS_STALENESS_MODE || 'block';
 const ti = input.tool_input ?? {};
+const tool = input.tool_name ?? '';
 const filePath = (ti.path ?? ti.file_path ?? '').replace(/\\/g, '/');
 
 const config = helpers.loadHookConfig(root);
@@ -70,7 +71,19 @@ if (!stale.fresh && sensitivity !== 'none' && sensitivity !== 'light') {
 }
 
 let agent_message;
-if (sensitivity === 'full') {
+const renamePair =
+  tool === 'StrReplace' ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
+
+if (renamePair && sensitivity !== 'none') {
+  const impact = helpers.mcpImpact(renamePair.oldName, repo);
+  const rn = helpers.mcpRename(renamePair.oldName, renamePair.newName, repo, true);
+  agent_message = helpers.hookAgentMessage(
+    root,
+    `edit-rename:${renamePair.oldName}`,
+    `RENAME detected: ${impact} → ${rn} (dry_run) — do NOT StrReplace symbol names across files.`,
+    `RENAME: ${rn}`
+  );
+} else if (sensitivity === 'full') {
   const impact = helpers.mcpImpact('<symbol>', repo);
   const dc = helpers.mcpDetectChanges(repo);
   agent_message = helpers.hookAgentMessage(

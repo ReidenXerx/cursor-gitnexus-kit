@@ -65,6 +65,9 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/set-refresh-pending.mjs
   .cursor/hooks/lib/hook-helpers.mjs
   .cursor/hooks/lib/cypher-helpers.mjs
+  .cursor/hooks/lib/rename-helpers.mjs
+  .cursor/hooks/lib/detect-api-router.mjs
+  .cursor/hooks/lib/graph-smoke.mjs
   .cursor/hooks/lib/agent-brief.mjs
   .cursor/hooks/lib/agent-health.mjs
   .cursor/hooks/lib/session-health-audit.mjs
@@ -121,6 +124,7 @@ cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
 .cursor/.gitnexus-deny-cache.json
 .cursor/.gitnexus-session-health.json
 .cursor/.gitnexus-session-user-notified.flag
+.cursor/gitnexus-api-profile.json
 SNIP
 
 node <<NODE > "$BUNDLE_ROOT/MANIFEST.json"

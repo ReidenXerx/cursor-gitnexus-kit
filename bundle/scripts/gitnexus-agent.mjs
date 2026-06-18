@@ -107,5 +107,28 @@ if (cmd === 'health') {
   process.exit(r.status ?? 0);
 }
 
-console.error(`Unknown command: ${cmd}. Use: status | refresh | brief | health`);
+if (cmd === 'graph-smoke') {
+  const r = spawnSync(process.execPath, [path.join(ROOT, '.cursor/hooks/lib/graph-smoke.mjs'), ROOT], {
+    encoding: 'utf8',
+    env: withProjectTmpEnv(ROOT),
+  });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  process.exit(r.status ?? 1);
+}
+
+if (cmd === 'detect-api') {
+  const { writeApiRouterProfile } = await import(
+    pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/detect-api-router.mjs')).href
+  );
+  const profile = writeApiRouterProfile(ROOT);
+  console.log(`API router profile: ${profile.profile} (Route nodes: ${profile.routeNodes ?? 'n/a'})`);
+  console.log(`  → ${profile.recommendation}`);
+  if (profile.sourceSignals.customSymbols.length) {
+    console.log(`  custom symbols: ${profile.sourceSignals.customSymbols.join(', ')}`);
+  }
+  process.exit(0);
+}
+
+console.error(`Unknown command: ${cmd}. Use: status | refresh | brief | health | graph-smoke | detect-api`);
 process.exit(2);

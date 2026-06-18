@@ -15,7 +15,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.env.GITNEXUS_ROOT || '';
 const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
-const { appendNudge } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { appendNudge, readPromptHint } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
@@ -74,8 +74,30 @@ try {
 const threshold = config.readLineThreshold ?? 60;
 const base = path.basename(filePath, path.extname(filePath));
 const reNudge = helpers.midSessionGraphNudge(graphUsed, root);
+const hint = readPromptHint(root);
+const dataFlow = helpers.isDataFlowReadContext(hint, rel);
 
 if (lineCount > threshold) {
+  if (dataFlow) {
+    const schema = helpers.mcpReadSchema(repo);
+    const field = hint.fieldHint || base;
+    const cy =
+      hint.fieldHint || helpers.isLikelyFieldName(field)
+        ? helpers.cypherFieldAccess(field, repo)
+        : helpers.mcpQuery({ query: base, taskContext: rel, goal: 'field data flow', repo });
+    emit({
+      permission: 'deny',
+      agent_message:
+        helpers.hookAgentMessage(
+          root,
+          `read:dataflow:${rel}`,
+          `Read blocked (${lineCount}L, data-flow) → ${schema} → ${cy}; then Read offset/limit on cited symbols.`,
+          `→ ${cy}`
+        ) + (reNudge ? `\n${reNudge}` : ''),
+      user_message: helpers.userMessage('block.read.dataflow', { lines: lineCount }),
+    });
+    process.exit(0);
+  }
   const q = helpers.mcpQuery({ query: base, taskContext: rel, goal: 'module', repo });
   const ctx = helpers.mcpContext('<symbol>', repo);
   emit({

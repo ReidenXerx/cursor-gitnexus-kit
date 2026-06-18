@@ -320,9 +320,18 @@ Default: `--quick` (skips full re-index). Restart Cursor after updating.
 ./bin/uninstall.sh /path/to/your-repo --remove-index   # also remove .gitnexus/
 ```
 
-## North star (agent contract)
+## Advanced enforcement (beyond query/context)
 
-> GitNexus is the **default reasoning layer for every task** — not a fallback when code is unfamiliar. Prefer **graph + embeddings + cypher** (`query` to orient, `cypher` for structural precision) when the index is fresh. Refresh autonomously when stale or embeddings are missing. Fall back to grep/read/search only when GitNexus is stale, failing, or wrong — say why.
+| Capability | What it does | Commands / hooks |
+|------------|--------------|------------------|
+| **Cypher** | Raw graph queries — field ACCESSES, N-hop CALLS, overrides | `grep-guard` (fields), `read-guard` (data-flow), `agent-brief` recipes |
+| **`rename` MCP** | Graph-coordinated multi-file symbol rename (not find-and-replace) | `edit-guard` blocks blind StrReplace; prompt-router on "rename X to Y" |
+| **API router profile** | Auto-detect Express (`api_impact`) vs custom router (`gitnexus-api-routes`) | `npm run gitnexus:detect-api` at install → `.cursor/gitnexus-api-profile.json` |
+| **Graph smoke test** | Cypher sanity check (ACCESSES edges, Route nodes) after index build | `npm run gitnexus:graph-smoke`; runs in pre-commit after refresh |
+
+### What is `rename` MCP? (not ciphertext, not grep)
+
+When you ask to **rename a function/class across the repo**, agents default to **StrReplace** or find-and-replace — missing graph-backed references and test files. GitNexus **`rename`** walks the graph + text search, tags edits by confidence, and supports **`dry_run: true`** preview. The kit **nudges** agents: prompt says "rename X to Y" → playbook `impact` → `rename` dry_run; `edit-guard` catches StrReplace that only swaps one identifier.
 
 ## Target repo daily commands
 
@@ -331,9 +340,15 @@ npm run gitnexus:health           # human-friendly status (team leads)
 npm run gitnexus:agent-brief      # session orientation (agents)
 npm run gitnexus:agent-status     # staleness (agents)
 npm run gitnexus:agent-refresh    # re-index when stale
+npm run gitnexus:graph-smoke      # Cypher / ACCESSES sanity check (CI)
+npm run gitnexus:detect-api       # refresh HTTP router profile (Express vs custom)
 npm run gitnexus:sync-teaching    # after pulling kit/rule updates
 npm run gitnexus:setup -- --quick # hooks/skills only
 ```
+
+## North star (agent contract)
+
+> GitNexus is the **default reasoning layer for every task** — not a fallback when code is unfamiliar. Prefer **graph + embeddings + cypher** (`query` to orient, `cypher` for structural precision, `rename` for symbol renames) when the index is fresh. Refresh autonomously when stale or embeddings are missing. Fall back to grep/read/search only when GitNexus is stale, failing, or wrong — say why.
 
 ## For maintainers
 

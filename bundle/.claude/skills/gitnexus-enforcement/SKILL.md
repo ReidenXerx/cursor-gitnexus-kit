@@ -57,6 +57,10 @@ START
   │                        └─ impact when considering edits
   │                             └─ Read offset/limit ONLY for exact edit lines
   │
+  ├─ About to RENAME symbol X → Y (prompt or StrReplace)?
+  │    └─ impact({target: X, direction: "upstream"}) → rename({symbol_name: X, new_name: Y, dry_run: true})
+  │         preview → apply dry_run: false OR manual edits following map
+  │
   ├─ About to EDIT src/, tests/, apps/, scripts/?
   │    └─ impact({target, direction: "upstream"}) FIRST
   │         report d=1 + risk → then edit

@@ -118,6 +118,9 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/hook-helpers.mjs"
   ".cursor/hooks/lib/cypher-helpers.mjs"
+  ".cursor/hooks/lib/rename-helpers.mjs"
+  ".cursor/hooks/lib/detect-api-router.mjs"
+  ".cursor/hooks/lib/graph-smoke.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
   ".cursor/hooks/lib/agent-health.mjs"
   ".cursor/hooks/lib/session-health-audit.mjs"
@@ -205,6 +208,12 @@ else
     npm run gitnexus:refresh
   fi
   ok "Knowledge graph indexed"
+
+  info "Detecting HTTP router profile (Express vs custom)"
+  npm run gitnexus:detect-api 2>/dev/null && ok "API router profile written" || warn "API profile detection skipped"
+
+  info "Graph smoke test (Cypher / ACCESSES)"
+  npm run gitnexus:graph-smoke 2>/dev/null && ok "Graph smoke passed" || warn "Graph smoke failed — check index"
 
   # Re-sync generated area skills produced by analyze --skills
   info "Re-syncing area skills after index"

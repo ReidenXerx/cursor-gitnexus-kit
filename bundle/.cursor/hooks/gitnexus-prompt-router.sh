@@ -45,6 +45,8 @@ const fieldMatch =
 const callChainMatch = prompt.match(/\b(?:call chain|callers?)\s+(?:of|for|to)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
 const overrideMatch = prompt.match(/\b(?:override|overrides)\s+(?:of|for|on)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
 const processMatch = prompt.match(/\b(?:process|flow)\s+[`'"]?([^"'`]+)[`'"]?/i);
+const renameParsed = (await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/rename-helpers.mjs')).href)).parseRenameFromPrompt(prompt);
+const dataFlow = /\b(data flow|field flow|property flow|who (reads|writes)|readers?|writers?|mutat|getter|setter)\b/i.test(prompt);
 
 const { writePromptHint } = await import(
   pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
@@ -55,7 +57,9 @@ writePromptHint(root, {
   explore,
   reasoning,
   codeTask,
-  structural: structural || Boolean(fieldMatch || callChainMatch),
+  structural: structural || Boolean(fieldMatch || callChainMatch) || dataFlow,
+  dataFlow,
+  renameHint: renameParsed,
   fieldHint: fieldMatch?.[2] || fieldMatch?.[1] || null,
   fieldRead: /\b(readers?|reads|read access|getter)\b/i.test(prompt),
   fieldWrite: /\b(writers?|writes|write access|mutat|setter)\b/i.test(prompt),

@@ -28,6 +28,8 @@ export const GITNEXUS_NPM_SCRIPTS = {
   'gitnexus:agent-status': 'node scripts/gitnexus-agent.mjs status',
   'gitnexus:agent-brief': 'node scripts/gitnexus-agent.mjs brief',
   'gitnexus:health': 'node scripts/gitnexus-agent.mjs health',
+  'gitnexus:graph-smoke': 'node scripts/gitnexus-agent.mjs graph-smoke',
+  'gitnexus:detect-api': 'node scripts/gitnexus-agent.mjs detect-api',
   'gitnexus:agent-refresh': 'node scripts/gitnexus-agent.mjs refresh',
   'gitnexus:clean-tmp': 'bash scripts/clean-project-tmp.sh',
   'gitnexus:list': `${WRAP} npx gitnexus@latest list`,

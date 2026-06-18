@@ -120,3 +120,16 @@ export function playbookCypherForHint(hint, repo) {
 export function cypherMidSessionNudge() {
   return 'Structural precision (field ACCESSES, N-hop CALLS, overrides, process steps) → READ schema → cypher — not grep.';
 }
+
+/**
+ * Large Read likely for data-flow / model tracing (not generic module understanding).
+ * @param {object} hint from prompt-router
+ * @param {string} relPath
+ */
+export function isDataFlowReadContext(hint, relPath) {
+  if (hint?.dataFlow || hint?.structural || hint?.fieldHint) return true;
+  const norm = (relPath ?? '').replace(/\\/g, '/');
+  if (/(?:^|\/)(models?|entities|dto|schemas?|domain|types)(?:\/|$)/i.test(norm)) return true;
+  if (/(?:Model|Entity|Dto|Schema|Record|Payload)\.(js|mjs|ts|tsx)$/i.test(norm)) return true;
+  return false;
+}

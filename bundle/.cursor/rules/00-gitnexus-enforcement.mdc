@@ -21,11 +21,11 @@ Use the graph for **all** agent work — explore, debug, fix, refactor, review, 
 | Field / property data flow | READ schema → `cypher` (`ACCESSES` read/write) |
 | N-hop call chains, overrides, process steps | READ schema → `cypher` |
 | Edit runtime source (any size) | `impact` upstream before Write/StrReplace |
-| Refactor / rename / shared code | `impact` + `context` on hub symbols |
+| Refactor / rename / shared code | `impact` + `rename` dry_run OR `context` on hub symbols |
 | Review / “what did I change?” | `detect_changes`; `query` to orient |
 | Session start | `agent-brief` or repo context; confirm kit health |
 
-**Anti-patterns:** reserving GitNexus for big exploratory prompts; grep/read from memory on “familiar” files; grepping field names instead of `cypher`; skipping `impact` on “small” edits; jumping to `context`/`impact`/`grep` without `query` first (skips embeddings). `SemanticSearch` is blocked — use `query`.
+**Anti-patterns:** reserving GitNexus for big exploratory prompts; grep/read from memory on “familiar” files; grepping field names instead of `cypher`; **StrReplace/find-and-replace for symbol renames** instead of `rename` dry_run; skipping `impact` on “small” edits; jumping to `context`/`impact`/`grep` without `query` first (skips embeddings). `SemanticSearch` is blocked — use `query`.
 
 ## Graph + embeddings + cypher (layered)
 
@@ -64,6 +64,7 @@ Run hook copy-paste calls verbatim; expand freely when needed:
 | `query` | `limit: 5`, `max_symbols: 12` | Primary semantic+graph orient tool |
 | `cypher` | READ schema first | Use `$params` for symbol/field names |
 | `impact` | `summaryOnly: false`, `limit: 100` | Full blast radius before edits |
+| `rename` | `dry_run: true` first | Coordinated multi-file symbol rename |
 | `detect_changes` | `scope: unstaged` | Pre-commit → `staged`; PR → `compare` |
 
 ## Session (autonomous Shell)
@@ -80,14 +81,15 @@ New chat: run session health ritual if injected — `npm run gitnexus:agent-stat
 3. context → process — drill into symbols
 4. cypher — structural precision (field ACCESSES, N-hop CALLS, overrides, process steps)
 5. impact upstream — before runtime source edits
-6. detect_changes — before commit / done
+6. rename dry_run — before coordinated symbol renames (not StrReplace across files)
+7. detect_changes — before commit / done
 ```
 
 HIGH/CRITICAL impact → warn before proceeding.
 
 ## When fresh — hooks block
 
-Symbol grep → `context`. **Field/property grep → READ schema → `cypher` (`ACCESSES`).** SemanticSearch/broad Glob → `query`. Large source Read → `query` → `context` → Read offset/limit.
+Symbol grep → `context`. **Field/property grep → READ schema → `cypher` (`ACCESSES`).** SemanticSearch/broad Glob → `query`. Large source Read → `query` → `context` → Read offset/limit; **data-flow / model reads → `cypher` first.** Symbol **StrReplace rename** → `rename` dry_run.
 
 ## Fallback
 

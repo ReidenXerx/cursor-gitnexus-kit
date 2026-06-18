@@ -4,7 +4,8 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import { playbookCypherForHint } from './cypher-helpers.mjs';
+import { playbookCypherForHint, isDataFlowReadContext } from './cypher-helpers.mjs';
+import { playbookRenameForHint, detectIdentifierRename, mcpRename } from './rename-helpers.mjs';
 
 export {
   cypherCallChain,
@@ -15,10 +16,18 @@ export {
   cypherMidSessionNudge,
   cypherProcessSteps,
   isLikelyFieldName,
+  isDataFlowReadContext,
   mcpCypher,
   mcpReadSchema,
   playbookCypherForHint,
 } from './cypher-helpers.mjs';
+
+export {
+  detectIdentifierRename,
+  mcpRename,
+  parseRenameFromPrompt,
+  playbookRenameForHint,
+} from './rename-helpers.mjs';
 
 export const CONFIG_FILE = '.cursor/gitnexus-hooks.json';
 
@@ -180,6 +189,9 @@ export function mcpReadContext(repo) {
  * @param {string} repo
  */
 export function playbookForHint(hint, repo) {
+  const renamePlaybook = playbookRenameForHint(hint, repo);
+  if (renamePlaybook) return renamePlaybook;
+
   const cypherPlaybook = playbookCypherForHint(hint, repo);
   if (cypherPlaybook) return cypherPlaybook;
 
@@ -297,6 +309,9 @@ export function userMessage(key, vars = {}) {
     'block.read.full': lines
       ? `Full-file read is blocked (${lines} lines). The agent will pull the relevant symbols from GitNexus, then read only what's needed.`
       : 'Full-file read is blocked. The agent will use GitNexus to find the right symbols first, then read targeted sections.',
+    'block.read.dataflow': lines
+      ? `Full-file read blocked (${lines} lines) for data-flow tracing. The agent will use GitNexus Cypher (ACCESSES) and the graph instead of scanning the whole file.`
+      : 'Full-file read blocked for data-flow work — the agent will use GitNexus Cypher on field/property access edges.',
     'block.edit.stale':
       'The code graph is behind your latest commits. The agent must refresh GitNexus before editing source files — so changes stay accurate.',
     'block.shell.stale':

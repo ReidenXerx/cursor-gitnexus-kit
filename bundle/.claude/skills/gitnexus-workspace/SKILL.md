@@ -8,7 +8,7 @@ description: >-
 
 # GitNexus Workspace (__GITNEXUS_REPO__)
 
-This repo replaces grep-first navigation with a **knowledge graph + embeddings** for **all code reasoning** (not only the first lookup). **`query` uses BM25 + semantic vectors** — use it for fuzzy/explore work, not only `context`/`impact`. **Hooks actively block** lazy patterns when the index is fresh; **autonomous refresh** when stale or embeddings missing; **classical fallback** when GN fails — see `00-gitnexus-enforcement` rule.
+This repo replaces grep-first navigation with a **knowledge graph + embeddings + Cypher** for **all code reasoning** (not only the first lookup). **`query`** uses BM25 + semantic vectors for orient/explore. **`cypher`** answers precise structural questions (field ACCESSES, N-hop CALLS, overrides). **`rename`** coordinates multi-file symbol renames (dry_run first). **Hooks actively block** lazy patterns when the index is fresh; **autonomous refresh** when stale or embeddings missing; **classical fallback** when GN fails — see `00-gitnexus-enforcement` rule.
 
 ## Mandatory workflow chain
 
@@ -16,13 +16,30 @@ Do not skip steps:
 
 ```
 READ gitnexus://repo/__GITNEXUS_REPO__/context   # or npm run gitnexus:agent-brief (autonomous)
-→ query({query, task_context, goal, repo, limit: 5, max_symbols: 12})   # graph + embeddings — orient / explore
+READ gitnexus://repo/__GITNEXUS_REPO__/schema    # before ad-hoc Cypher
+→ query({query, task_context, goal, repo, limit: 5, max_symbols: 12})   # graph + embeddings — orient
 → context({name, include_content: false}) or context({uid, include_content: false})
+→ cypher({query, params})   # structural: field ACCESSES, N-hop CALLS, overrides, process steps
 → impact({target, direction: "upstream", summaryOnly: false, limit: 100})   # BEFORE edit
 → detect_changes({scope})                                              # BEFORE commit / PR
 ```
 
+**Renames:** `impact` → `rename({symbol_name, new_name, dry_run: true})` — never find-and-replace symbols.
+
 Stale, missing embeddings, or wrong graph? **`npm run gitnexus:agent-refresh`** autonomously (Shell, `required_permissions: ["all"]`) — includes `--embeddings`; hook pre-approves, do not ask user.
+
+## HTTP API routing (auto-detected at install)
+
+After index build, the kit writes `.cursor/gitnexus-api-profile.json`:
+
+| Profile | Use |
+| --- | --- |
+| `framework` | `api_impact` / `route_map` / `shape_check` — indexed Route nodes |
+| `custom` | **`gitnexus-api-routes`** skill — context on dispatcher symbols (e.g. `handleRequest`) |
+| `framework-likely` | Try `api_impact`; if empty, fall back to custom playbook |
+| `none` | No HTTP layer detected |
+
+Run `npm run gitnexus:detect-api` to refresh the profile after major server changes.
 
 ## Pick the right skill
 
@@ -30,12 +47,13 @@ Stale, missing embeddings, or wrong graph? **`npm run gitnexus:agent-refresh`** 
 | --- | --- |
 | Unfamiliar code / architecture | `gitnexus-exploring` |
 | Pipelines / cross-module flows / "how does X connect" | `gitnexus-imaging` |
+| Field read/write / data flow | `cypher` ACCESSES (READ schema) — hooks block field grep |
 | Before editing / blast radius | `gitnexus-impact-analysis` |
 | Bug / failure / wrong behavior | `gitnexus-debugging` |
-| Rename / extract / refactor | `gitnexus-refactoring` |
+| Rename / extract / refactor | `gitnexus-refactoring` + **`rename` MCP** |
 | Structured task (pre-commit, PR, cross-module) | `gitnexus-scenarios` |
 | PR or branch review | `gitnexus-pr-review` |
-| Research HTTP API change | `gitnexus-api-routes` (**not** api_impact) |
+| Research HTTP API change | See **HTTP API routing** above |
 | Tool reference / Cypher / CLI | `gitnexus-guide` / `gitnexus-cli` |
 | Area entry points | `.claude/skills/generated/<area>/` |
 | Hook blocked Grep/Read | `gitnexus-enforcement` (staleness + suspicion fallback) |
@@ -61,10 +79,11 @@ Pass `task_context` + `goal` — they improve **embedding** ranking, not just ke
 ## Anti-patterns (grep is wrong tool)
 
 - Symbol lookup → `context`, not Grep
-- Understand a module → `query`, not Read whole file
+- Field/property data flow → `cypher` ACCESSES, not Grep field name
+- Understand a module → `query`, not Read whole file (data-flow reads → Cypher first)
 - Change scope → `detect_changes`, not git diff \| grep
-- Rename → `rename` dry_run, not find-and-replace
-- Research API route → `gitnexus-api-routes`, not `api_impact`
+- Rename symbol → **`rename` dry_run**, not StrReplace across files
+- Research API route → profile-driven (`api_impact` vs `gitnexus-api-routes`)
 
 Grep **is** correct for: preset JSON, log strings, comments, exact config keys in YAML.
 
@@ -74,7 +93,7 @@ Installed by `npm run gitnexus:setup`:
 
 - **Enforcement rule** — `.cursor/rules/00-gitnexus-enforcement.mdc` (only `alwaysApply: true` contract)
 - **Reference rules** — `.cursor/rules/gitnexus.mdc` + `gitnexus-first.mdc` (load on demand)
-- **Hooks** — GN-first when fresh; **classical fallback when stale**; scoped Grep after suspicious GN
+- **Hooks** — GN-first when fresh; **classical fallback when stale**; field grep → Cypher; large data-flow Read → Cypher
 - **Skills** — synced to `.cursor/skills/` from this repo's `.claude/skills/`
 - **MCP** — `gitnexus` in `.cursor/mcp.json`
 
@@ -86,6 +105,9 @@ Restart Cursor after setup so MCP + hooks load.
 | --- | --- |
 | Ambiguous symbol name | `context({uid: "..."})` from prior output |
 | Field read/write trace | `cypher` with `ACCESSES` |
+| N-hop call chain | `cypher` CALLS variable-length path |
+| Coordinated rename | `rename({symbol_name, new_name, dry_run: true})` |
 | Class member blast radius | `impact` + `relationTypes: ["CALLS","IMPORTS","ACCESSES"]` |
 | PR vs main | `detect_changes({scope: "compare", base_ref: "main"})` |
+| Graph integrity check | `npm run gitnexus:graph-smoke` |
 | Architecture doc | MCP prompt `generate_map` |
