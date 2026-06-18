@@ -35,6 +35,7 @@ export const GITNEXUS_SCRIPT_GATES = [
       'gitnexus:graph-smoke': 'node scripts/gitnexus-agent.mjs graph-smoke',
       'gitnexus:detect-api': 'node scripts/gitnexus-agent.mjs detect-api',
       'gitnexus:scorecard': 'node scripts/gitnexus-agent.mjs scorecard',
+      'gitnexus:map': 'node scripts/gitnexus-agent.mjs map',
     },
   },
   {
@@ -49,6 +50,7 @@ export const GITNEXUS_SCRIPT_GATES = [
       'gitnexus:status': `${WRAP} npx gitnexus@latest status`,
       'gitnexus:agent-refresh': 'node scripts/gitnexus-agent.mjs refresh',
       'gitnexus:agent-review': 'node scripts/gitnexus-agent.mjs review',
+      'gitnexus:commit-msg': 'node scripts/gitnexus-agent.mjs commit-msg',
       'gitnexus:clean-tmp': 'bash scripts/clean-project-tmp.sh',
       'gitnexus:list': `${WRAP} npx gitnexus@latest list`,
     },
@@ -61,6 +63,7 @@ export const GITNEXUS_SCRIPT_GATES = [
     scripts: {
       'gitnexus:verify': 'node scripts/gitnexus-agent.mjs verify',
       'gitnexus:doctor': 'node scripts/gitnexus-agent.mjs doctor',
+      'gitnexus:ci': 'node scripts/gitnexus-ci.mjs',
     },
   },
   {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|scorecard|graph-smoke|detect-api
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|commit-msg|map|scorecard|graph-smoke|detect-api
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -93,6 +93,15 @@ if (cmd === 'refresh') {
   if (stale.fresh) {
     console.log('==> Index fresh after refresh');
     markRefreshOutcome(true);
+    try {
+      const { generateArchDoc } = await import(
+        pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/generate-arch-doc.mjs')).href
+      );
+      const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
+      if (res.written) console.log(`==> Architecture doc refreshed: ${res.path}`);
+    } catch {
+      /* best effort */
+    }
     process.exit(0);
   }
   console.error('==> Refresh finished but index still not fresh — check git state');
@@ -251,6 +260,28 @@ if (cmd === 'doctor') {
   process.exit(problems === 0 ? 0 : 1);
 }
 
+if (cmd === 'map') {
+  const { generateArchDoc } = await import(
+    pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/generate-arch-doc.mjs')).href
+  );
+  const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
+  if (res.written) {
+    console.log(`Architecture doc written: ${res.path}`);
+    process.exit(0);
+  }
+  console.error(`Could not generate architecture doc: ${res.reason}`);
+  process.exit(1);
+}
+
+if (cmd === 'commit-msg') {
+  const { draftCommitMessage } = await import(
+    pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/commit-message.mjs')).href
+  );
+  const { message } = draftCommitMessage(ROOT, undefined, withProjectTmpEnv(ROOT));
+  console.log(message);
+  process.exit(0);
+}
+
 if (cmd === 'scorecard') {
   const { readScorecard } = await import(
     pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/session-primer.mjs')).href
@@ -277,6 +308,6 @@ if (cmd === 'scorecard') {
 }
 
 console.error(
-  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | scorecard | graph-smoke | detect-api`
+  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | commit-msg | map | scorecard | graph-smoke | detect-api`
 );
 process.exit(2);

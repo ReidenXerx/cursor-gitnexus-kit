@@ -72,14 +72,18 @@ if (sensitivity !== 'none' && sensitivity !== 'light' && stalePolicy.phase !== '
 if (sensitivity === 'full' && !isImpactUsed(root)) {
   const renameAhead =
     tool === 'StrReplace' ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
+  // Auto-widen for model / DTO / schema edits — field changes ripple through ACCESSES edges.
+  const widen = helpers.isDataFlowReadContext({}, filePath);
+  const impactOpts = widen ? { relationTypes: ['CALLS', 'IMPORTS', 'ACCESSES'] } : {};
   const playbook = renameAhead
-    ? `${helpers.mcpImpact(renameAhead.oldName, repo)} → ${helpers.mcpRename(renameAhead.oldName, renameAhead.newName, repo, true)}`
-    : helpers.mcpImpact('<symbol-you-are-editing>', repo);
+    ? `${helpers.mcpImpact(renameAhead.oldName, repo, impactOpts)} → ${helpers.mcpRename(renameAhead.oldName, renameAhead.newName, repo, true)}`
+    : helpers.mcpImpact('<symbol-you-are-editing>', repo, impactOpts);
   bumpScore(root, 'impactGate');
   emit({
     permission: 'deny',
     agent_message:
       `IMPACT GATE: run blast-radius analysis before editing runtime source — ${playbook}. ` +
+      (widen ? 'Model/DTO file — widened to ACCESSES so field readers/writers are included. ' : '') +
       'Review d=1 (WILL BREAK) + risk; warn on HIGH/CRITICAL. This gate clears for the rest of the session after one impact call.',
     user_message:
       'Before editing source, the agent checks blast radius in GitNexus (what breaks) — graph-first safety, not blind edits.',

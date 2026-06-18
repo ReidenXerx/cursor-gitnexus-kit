@@ -24,6 +24,7 @@
     "install:target": "./bin/install.sh",
     "update:target": "./bin/update.sh",
     "uninstall:target": "./bin/uninstall.sh",
+    "eval": "node eval/run-eval.mjs",
     "test": "node --test lib/kit.test.mjs"
   },
   "keywords": [

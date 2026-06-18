@@ -68,6 +68,9 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/cypher-helpers.mjs
   .cursor/hooks/lib/rename-helpers.mjs
   .cursor/hooks/lib/stale-policy.mjs
+  .cursor/hooks/lib/cypher-cli.mjs
+  .cursor/hooks/lib/generate-arch-doc.mjs
+  .cursor/hooks/lib/commit-message.mjs
   .cursor/hooks/lib/detect-api-router.mjs
   .cursor/hooks/lib/graph-smoke.mjs
   .cursor/hooks/lib/agent-brief.mjs
@@ -86,6 +89,7 @@ BUNDLE_PATHS=(
   scripts/pack-gitnexus-teaching.sh
   scripts/install-git-hooks.sh
   scripts/gitnexus-agent.mjs
+  scripts/gitnexus-ci.mjs
   scripts/gitnexus-gate-hint.mjs
   scripts/run-with-project-tmp.sh
   scripts/clean-project-tmp.sh
@@ -96,6 +100,7 @@ BUNDLE_PATHS=(
   scripts/gitnexus-teaching/script-gates.mjs
   docs/GITNEXUS-TEAM-BUNDLE.md
   docs/GITNEXUS-CURSOR-GUIDE.md
+  .github/workflows/gitnexus-ci.yml
   .gitnexusignore
 )
 

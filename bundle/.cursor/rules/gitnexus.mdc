@@ -133,6 +133,9 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | `npm run gitnexus:agent-refresh` | Rebuild graph + embeddings when stale (autonomous) |
 | `npm run gitnexus:doctor` | Probe MCP/CLI backend reachability |
 | `npm run gitnexus:agent-review -- <base>` | PR review playbook: detect_changes(compare) + impact per changed symbol |
+| `npm run gitnexus:commit-msg` | Draft a graph-grounded commit message (affected flows + modules) from staged changes |
+| `npm run gitnexus:map` | Regenerate `docs/ARCHITECTURE.gitnexus.md` from the graph (offline, no API key) |
+| `npm run gitnexus:ci` | Merge-time impact gate (blocks high-blast-radius changes with no tests) — see `.github/workflows/gitnexus-ci.yml` |
 | `npm run gitnexus:scorecard` | Session enforcement tally (grep→graph, impact/commit gates) |
 | `npm run gitnexus:verify` | Full install verification before demoing |
 

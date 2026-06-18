@@ -1,0 +1,11 @@
+{
+  "id": "safe-rename",
+  "title": "Rename a widely-used symbol without breaking callers",
+  "prompt": "Rename the function `parseConfig` to `loadConfig` everywhere it is used. All call sites must be updated and tests must still pass.",
+  "rubric": [
+    "No references to the old name remain",
+    "All call sites updated (not just the definition)",
+    "Existing tests pass"
+  ],
+  "hypothesis": "Kit ON forces gitnexus_rename, catching every call site graph-wide; OFF tends to miss text-search-invisible references."
+}

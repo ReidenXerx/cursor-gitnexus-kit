@@ -1,0 +1,11 @@
+{
+  "id": "trace-flow",
+  "title": "Explain an execution flow end-to-end",
+  "prompt": "Explain how a request flows from the API entry point to where data is persisted, naming each function in order.",
+  "rubric": [
+    "Names the real entry point",
+    "Lists the call chain in correct order",
+    "Identifies the terminal/persistence step"
+  ],
+  "hypothesis": "Kit ON uses gitnexus_query/process resources for an accurate chain; OFF guesses from scattered grep results."
+}

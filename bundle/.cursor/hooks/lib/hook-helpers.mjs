@@ -184,13 +184,17 @@ export function mcpQuery({ query, taskContext = '', goal = '', repo, limit = 5, 
 /**
  * @param {string} target
  * @param {string} repo
- * @param {{ summaryOnly?: boolean }} [opts]
+ * @param {{ summaryOnly?: boolean, relationTypes?: string[] }} [opts]
  */
 export function mcpImpact(target, repo, opts = {}) {
   const safe = String(target).replace(/"/g, '\\"');
   const summaryOnly = opts.summaryOnly === true;
   const extra = summaryOnly ? ', summaryOnly: true' : ', summaryOnly: false, limit: 100';
-  return `gitnexus_impact({ target: "${safe}", direction: "upstream", repo: "${repo}"${extra} })`;
+  const rel =
+    Array.isArray(opts.relationTypes) && opts.relationTypes.length
+      ? `, relationTypes: [${opts.relationTypes.map((r) => `"${r}"`).join(', ')}]`
+      : '';
+  return `gitnexus_impact({ target: "${safe}", direction: "upstream", repo: "${repo}"${extra}${rel} })`;
 }
 
 /** @param {string} repo @param {string} [scope] */
