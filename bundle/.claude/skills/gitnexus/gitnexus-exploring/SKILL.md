@@ -16,10 +16,10 @@ description: "Use when the user asks how code works, wants to understand archite
 ## Workflow
 
 ```
-1. READ gitnexus://repos                          → Discover indexed repos
-2. READ gitnexus://repo/{name}/context             → Codebase overview, check staleness
-3. query({query: "<what you want to understand>"})  → Find related execution flows
-4. context({name: "<symbol>"})            → Deep dive on specific symbol
+1. READ gitnexus://repo/{name}/context             → Codebase overview, check staleness
+2. query({query: "<what you want to understand>"})  → Find related execution flows
+3. context({name: "<symbol>"})            → Deep dive on specific symbol
+4. cypher({query, params})                → Field ACCESSES, N-hop chains, overrides (READ schema first)
 5. READ gitnexus://repo/{name}/process/{name}      → Trace full execution flow
 ```
 
@@ -32,6 +32,7 @@ description: "Use when the user asks how code works, wants to understand archite
 - [ ] query for the concept you want to understand
 - [ ] Review returned processes (execution flows)
 - [ ] context on key symbols for callers/callees
+- [ ] cypher for field data flow or custom call chains if context is not enough (READ schema first)
 - [ ] READ process resource for full execution traces
 - [ ] Read source files for implementation details
 ```

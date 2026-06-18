@@ -45,6 +45,7 @@ async function main() {
   lines.push('What this means for you:');
   lines.push('• Your Cursor agent uses the GitNexus knowledge graph for code reasoning');
   lines.push('• When the graph is fresh, grep and broad reads are blocked — by design');
+  lines.push('• Field/property searches route to Cypher (ACCESSES) — readers/writers from the graph');
   lines.push('• The agent refreshes the index automatically when it falls behind');
   lines.push('• Pre-edit checks reduce “what breaks if I change this?” surprises');
   lines.push('');

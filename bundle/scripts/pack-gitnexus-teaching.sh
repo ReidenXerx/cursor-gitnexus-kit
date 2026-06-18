@@ -64,6 +64,7 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/clear-session.mjs
   .cursor/hooks/lib/set-refresh-pending.mjs
   .cursor/hooks/lib/hook-helpers.mjs
+  .cursor/hooks/lib/cypher-helpers.mjs
   .cursor/hooks/lib/agent-brief.mjs
   .cursor/hooks/lib/agent-health.mjs
   .cursor/hooks/lib/session-health-audit.mjs

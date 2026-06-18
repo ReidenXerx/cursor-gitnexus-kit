@@ -111,9 +111,33 @@ if (allowPath || allowPattern) {
   process.exit(0);
 }
 
-const bareId = /^[A-Za-z_$][\w$]*$/.test(pattern) && pattern.length >= 3;
 const exportDecl = /^(export\s+)?(async\s+)?function\s+[A-Za-z_$]/.test(pattern);
 const classDecl = /^(export\s+)?class\s+[A-Za-z_$]/.test(pattern);
+
+let fieldName = pattern;
+const dotField = pattern.match(/(?:^|\.)((?:[a-z][a-zA-Z0-9]*))$/);
+if (dotField) fieldName = dotField[1];
+
+if (helpers.isLikelyFieldName(fieldName) && !exportDecl && !classDecl) {
+  const schema = helpers.mcpReadSchema(repo);
+  const call = helpers.cypherFieldAccess(fieldName, repo);
+  emit({
+    permission: 'deny',
+    agent_message:
+      helpers.hookAgentMessage(
+        root,
+        `grep:field:${fieldName}`,
+        `Field grep blocked → ${schema} → ${call}`,
+        `→ ${call}`
+      ) +
+      (reNudge ? `\n${reNudge}` : '') +
+      `\n${helpers.cypherMidSessionNudge()}`,
+    user_message: helpers.userMessage('block.grep.field', { symbol: fieldName }),
+  });
+  process.exit(0);
+}
+
+const bareId = /^[A-Za-z_$][\w$]*$/.test(pattern) && pattern.length >= 3;
 const sym = bareId ? pattern : pattern.replace(/^.*?\b([A-Za-z_$][\w$]*).*$/, '$1');
 const scopedSource = pathArg && helpers.isSourceCodePath(pathArg, config);
 
@@ -154,6 +178,18 @@ if (bareId || exportDecl || classDecl) {
 }
 
 if (/^[a-z][a-zA-Z0-9]*$/.test(pattern) && pattern.length >= 6 && !pathArg) {
+  if (helpers.isLikelyFieldName(pattern)) {
+    const schema = helpers.mcpReadSchema(repo);
+    const call = helpers.cypherFieldAccess(pattern, repo);
+    emit({
+      permission: 'deny',
+      agent_message:
+        helpers.hookAgentMessage(root, `grep:field:${pattern}`, `Field grep → ${schema} → ${call}`, `→ ${call}`) +
+        (reNudge ? `\n${reNudge}` : ''),
+      user_message: helpers.userMessage('block.grep.field', { symbol: pattern }),
+    });
+    process.exit(0);
+  }
   const call = helpers.mcpContext(pattern, repo);
   emit({
     permission: 'deny',
@@ -169,7 +205,8 @@ emit({
   permission: 'allow',
   agent_message:
     'Grep allowed — if structural lookup, prefer:\n' +
-    `  ${helpers.mcpContext('<symbol>', repo)}` +
+    `  ${helpers.mcpContext('<symbol>', repo)}\n` +
+    `  Field/property: ${helpers.mcpReadSchema(repo)} → ${helpers.cypherFieldAccess('<field>', repo)}` +
     (reNudge ? `\n${reNudge}` : ''),
 });
 NODE

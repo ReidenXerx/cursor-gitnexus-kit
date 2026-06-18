@@ -2,7 +2,7 @@
 name: gitnexus-enforcement
 description: >-
   North-star tool router when GitNexus hooks block Grep/Read/SemanticSearch.
-  Graph + embeddings reasoning, autonomous refresh when stale, classical fallback when GN fails.
+  Graph + embeddings + cypher reasoning, autonomous refresh when stale, classical fallback when GN fails.
 disable-model-invocation: false
 ---
 
@@ -10,20 +10,21 @@ disable-model-invocation: false
 
 ## North star
 
-> **Prefer graph + embeddings when the index is fresh. Use `query` for fuzzy/exploratory work (BM25 + vectors). Refresh autonomously when stale or embeddings are missing. Fall back to grep/read/search only when GitNexus is stale, failing, or demonstrably wrong — and say why in one sentence.**
+> **GitNexus is the default reasoning layer for every task.** Prefer graph + embeddings when fresh. Use `query` to orient. Use `cypher` for precise structural questions (field ACCESSES, N-hop CALLS, overrides). Refresh autonomously when stale or embeddings missing. Fall back to grep/read/search only when GN is stale, failing, or wrong — say why in one sentence.
 
-GitNexus tools are for **reasoning throughout the task**, not only the first lookup. Local LLM: rebuild context freely; do not skip gates.
+GitNexus tools are for **reasoning throughout the task**, not only the first lookup or unfamiliar code. Local LLM: rebuild context freely; do not skip gates.
 
-## Graph + embeddings (not graph-only)
+## Graph + embeddings + cypher (layered)
 
-| Task | First tool |
+| Task | Tool |
 | --- | --- |
 | Fuzzy concept, flow trace, "how does X work?" | `query` (BM25 + embedding vectors) |
 | Known symbol, callers, 360° | `context` |
+| Field read/write, N-hop chains, overrides, process steps | READ schema → `cypher` |
 | Pre-edit safety | `impact` |
 | Pre-commit / done | `detect_changes` |
 
-`SemanticSearch` is blocked → always `query`. Missing embeddings (`stats.embeddings === 0`) = **stale** → `agent-refresh` (includes `--embeddings`).
+`SemanticSearch` is blocked → always `query`. Field/property grep → `cypher` (`ACCESSES`). Missing embeddings = **stale** → `agent-refresh` (includes `--embeddings`).
 
 ## MCP defaults (generous)
 
@@ -31,6 +32,7 @@ GitNexus tools are for **reasoning throughout the task**, not only the first loo
 | --- | --- |
 | `context` | `include_content: false` |
 | `query` | `limit: 5`, `max_symbols: 12` |
+| `cypher` | READ `gitnexus://repo/__GITNEXUS_REPO__/schema` first; use `$params` |
 | `impact` | `summaryOnly: false`, `limit: 100` |
 
 Hooks inject calls with these defaults — run verbatim; expand when needed.
@@ -41,15 +43,19 @@ Hooks inject calls with these defaults — run verbatim; expand when needed.
 START
   │
   ├─ New session / new task?
-  │    └─ npm run gitnexus:agent-brief  OR  READ context (autonomous)
+  │    └─ npm run gitnexus:agent-brief  OR  READ context + schema (autonomous)
   │         stale or missing embeddings? → npm run gitnexus:agent-refresh (Shell, required_permissions: ["all"])
   │
   ├─ Reasoning about code (any point in task)?
   │    └─ query({query, task_context, goal, repo})   # graph + embeddings
   │         └─ context({name}) or context({uid})
-  │              └─ READ process trace if cross-module
-  │                   └─ impact when considering edits
-  │                        └─ Read with offset/limit ONLY for exact edit lines
+  │              └─ Structural precision needed?
+  │                   ├─ field read/write → cypher ACCESSES
+  │                   ├─ N-hop call chain → cypher CALLS path
+  │                   ├─ overrides / process steps → cypher (see schema)
+  │                   └─ READ process trace if cross-module
+  │                        └─ impact when considering edits
+  │                             └─ Read offset/limit ONLY for exact edit lines
   │
   ├─ About to EDIT src/, tests/, apps/, scripts/?
   │    └─ impact({target, direction: "upstream"}) FIRST
@@ -72,6 +78,8 @@ When blocked, hooks return ready-to-run calls like:
 ```javascript
 gitnexus_query({ query: "auth flow", task_context: "...", goal: "...", repo: "__GITNEXUS_REPO__", limit: 5, max_symbols: 12 })
 gitnexus_context({ name: "resolveFilters", repo: "__GITNEXUS_REPO__" })
+READ gitnexus://repo/__GITNEXUS_REPO__/schema
+gitnexus_cypher({ query: "MATCH (f:Function)-[r:CodeRelation {type: 'ACCESSES'}]->(p:Property {name: $name}) RETURN f.name, f.filePath, r.reason", params: { name: "address" }, repo: "__GITNEXUS_REPO__" })
 gitnexus_impact({ target: "handleRequest", direction: "upstream", repo: "__GITNEXUS_REPO__", summaryOnly: false, limit: 100 })
 ```
 
@@ -93,6 +101,7 @@ gitnexus_impact({ target: "handleRequest", direction: "upstream", repo: "__GITNE
 | Blocked | Replacement |
 | --- | --- |
 | `Grep("resolveSelectionFilters")` | `context({name: "resolveSelectionFilters"})` |
+| `Grep("address")` (field/property) | READ schema → `cypher` ACCESSES on `$name: "address"` |
 | `SemanticSearch("auth flow")` | `query({query: "auth flow", task_context, goal})` — uses embeddings |
 | `Glob("src/**/*.js")` | `query({query: "module area", goal: "entry points"})` |
 | `Read(entire stablePairScanner.js)` | `query` → `context` → Read offset/limit |

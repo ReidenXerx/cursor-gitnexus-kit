@@ -13,6 +13,9 @@ import {
   mcpImpact,
   mcpQuery,
   mcpReadContext,
+  mcpReadSchema,
+  cypherFieldAccess,
+  cypherCallChain,
   repoName,
 } from './hook-helpers.mjs';
 
@@ -88,12 +91,18 @@ async function main() {
 
   lines.push(`Hook mode: ${config.mode} (set GITNEXUS_MODE=guide to nudge-only)`);
   lines.push('');
-  lines.push('Reasoning stack: query (graph+embeddings) → context → impact → detect_changes');
-  lines.push('Fuzzy / how-does / explore → query FIRST — not context/impact alone.');
+  lines.push('Reasoning stack: query → context → cypher (structural) → impact → detect_changes');
+  lines.push('Fuzzy / how-does / explore → query FIRST — not context/impact/cypher alone.');
+  lines.push('Field read/write, N-hop chains, overrides → READ schema → cypher (ACCESSES, CALLS, …).');
   lines.push('');
   lines.push('Session start (copy-paste):');
   lines.push(`  ${mcpReadContext(repo)}`);
+  lines.push(`  ${mcpReadSchema(repo)}`);
   lines.push('  npm run gitnexus:agent-brief');
+  lines.push('');
+  lines.push('Cypher recipes (copy-paste):');
+  lines.push(`  ${cypherFieldAccess('<field>', repo)}`);
+  lines.push(`  ${cypherCallChain('<Symbol>', repo, 3)}`);
 
   const changes = changedFiles().filter((f) => /\.(js|mjs|ts|tsx|jsx)$/.test(f));
   if (changes.length) {

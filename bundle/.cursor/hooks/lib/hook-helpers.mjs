@@ -4,6 +4,21 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { playbookCypherForHint } from './cypher-helpers.mjs';
+
+export {
+  cypherCallChain,
+  cypherCallers,
+  cypherClassMethods,
+  cypherFieldAccess,
+  cypherMethodOverrides,
+  cypherMidSessionNudge,
+  cypherProcessSteps,
+  isLikelyFieldName,
+  mcpCypher,
+  mcpReadSchema,
+  playbookCypherForHint,
+} from './cypher-helpers.mjs';
 
 export const CONFIG_FILE = '.cursor/gitnexus-hooks.json';
 
@@ -165,6 +180,9 @@ export function mcpReadContext(repo) {
  * @param {string} repo
  */
 export function playbookForHint(hint, repo) {
+  const cypherPlaybook = playbookCypherForHint(hint, repo);
+  if (cypherPlaybook) return cypherPlaybook;
+
   const snippet = (hint.snippet ?? '').replace(/"/g, "'").slice(0, 80);
 
   if (hint.codeTask) {
@@ -237,7 +255,7 @@ export function midSessionGraphNudge(graphUsedThisSession, root = '') {
   return hookAgentMessage(
     root,
     'mid-session-graph',
-    'MID-SESSION: use query (graph+embeddings) for explore; context/impact for symbols and edits.',
+    'MID-SESSION: query (graph+embeddings) for orient; context/impact for symbols and edits; cypher for field access / N-hop chains / overrides.',
     ''
   );
 }
@@ -255,7 +273,7 @@ export function isGraceStale(stale, config) {
 
 /**
  * Human-facing hook messages — enforcement stays on; voice explains the benefit.
- * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.classical'} key
+ * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.grep.field'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.classical'} key
  * @param {Record<string, string | number>} [vars]
  */
 export function userMessage(key, vars = {}) {
@@ -273,6 +291,9 @@ export function userMessage(key, vars = {}) {
       : 'Symbol search is routed through GitNexus — the graph knows callers and relationships better than grep.',
     'block.grep.likely':
       'This looks like a symbol search — GitNexus will resolve it in the knowledge graph instead of grep.',
+    'block.grep.field': sym
+      ? `Field/property search for "${sym}" is routed through GitNexus Cypher — the graph tracks readers and writers, not just text matches.`
+      : 'Field/property search is routed through GitNexus Cypher — ACCESSES edges show readers and writers.',
     'block.read.full': lines
       ? `Full-file read is blocked (${lines} lines). The agent will pull the relevant symbols from GitNexus, then read only what's needed.`
       : 'Full-file read is blocked. The agent will use GitNexus to find the right symbols first, then read targeted sections.',

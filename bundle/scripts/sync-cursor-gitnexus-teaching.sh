@@ -35,6 +35,7 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/hook-helpers.mjs"
+  ".cursor/hooks/lib/cypher-helpers.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
   ".cursor/hooks/lib/agent-health.mjs"
   ".cursor/hooks/lib/session-health-audit.mjs"
@@ -124,10 +125,12 @@ const manifest = {
   installedAt: new Date().toISOString(),
   repo: '__GITNEXUS_REPO__',
   enforcement: {
-    blockedTools: ['Grep(symbols)', 'SemanticSearch', 'Glob(broad src)', 'Read(large src, no offset)'],
-    gates: ['session status/refresh', 'prompt architecture router', 'query/context explore', 'staleness pre-edit', 'impact pre-edit', 'detect_changes pre-done'],
+    blockedTools: ['Grep(symbols)', 'Grep(fields→cypher)', 'SemanticSearch', 'Glob(broad src)', 'Read(large src, no offset)'],
+    gates: ['session status/refresh', 'session health', 'prompt architecture router', 'query/context explore', 'cypher structural', 'staleness pre-edit', 'impact pre-edit', 'detect_changes pre-done'],
     hookScripts: [
       'gitnexus-session-primer.sh',
+      'gitnexus-session-health.sh',
+      'gitnexus-session-health-user.sh',
       'gitnexus-prompt-router.sh',
       'gitnexus-shell-staleness-guard.sh',
       'gitnexus-grep-guard.sh',
@@ -154,8 +157,10 @@ const manifest = {
   },
   workflowChain: [
     'READ gitnexus://repo/__GITNEXUS_REPO__/context',
+    'READ gitnexus://repo/__GITNEXUS_REPO__/schema',
     'query({query, task_context, goal})',
     'context({name|uid})',
+    'cypher({query, params})',
     'impact({target, direction: upstream})',
     'detect_changes({scope})',
   ],

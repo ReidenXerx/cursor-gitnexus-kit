@@ -12,7 +12,7 @@ This repo is GitNexus-indexed (**__GITNEXUS_REPO__**). For ANY code-understandin
 ## Workflow chain (memorize)
 
 ```
-context (staleness) → query (graph+embeddings) → context (symbol) → impact (pre-edit) → detect_changes (pre-commit)
+context (staleness) → query (graph+embeddings) → context (symbol) → cypher (structural) → impact (pre-edit) → detect_changes (pre-commit)
 ```
 
 ## Intent routing
@@ -24,7 +24,8 @@ context (staleness) → query (graph+embeddings) → context (symbol) → impact
 | "what breaks if I change X?" | `gitnexus_impact` upstream |
 | "what did my edits affect?" | `gitnexus_detect_changes` |
 | "rename X to Y" | `gitnexus_rename` dry_run |
-| "readers/writers of field foo" | `gitnexus_cypher` ACCESSES |
+| "readers/writers of field foo" | `gitnexus_cypher` ACCESSES — READ schema first |
+| N-hop call chain / overrides / process steps | `gitnexus_cypher` — READ schema first |
 | Research API endpoint | **NOT** `api_impact` — see `gitnexus-api-routes` skill |
 
 ## Grep / Glob / SemanticSearch = fallback when GN is untrustworthy

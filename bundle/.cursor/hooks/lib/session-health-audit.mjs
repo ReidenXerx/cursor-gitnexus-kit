@@ -79,12 +79,14 @@ export function auditKitHealth(root) {
     detail: ruleOk ? '00-gitnexus-enforcement.mdc' : 'Missing north-star rule',
   });
 
-  const helpersOk = fs.existsSync(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs'));
+  const helpersOk =
+    fs.existsSync(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')) &&
+    fs.existsSync(path.join(root, '.cursor/hooks/lib/cypher-helpers.mjs'));
   checks.push({
     id: 'hook_libs',
     ok: helpersOk,
     label: 'Hook helpers',
-    detail: helpersOk ? 'hook-helpers.mjs present' : 'Missing hook-helpers.mjs',
+    detail: helpersOk ? 'hook-helpers + cypher-helpers' : 'Missing hook lib(s)',
   });
 
   const graphFresh = stale.fresh === true;
@@ -170,7 +172,8 @@ export function agentContextForSession(audit) {
     '3. Optional: READ gitnexus://repo/' +
     audit.repo +
     '/context OR npm run gitnexus:agent-brief\n' +
-    '4. Tell the user ONE sentence: "GitNexus kit: ready (graph fresh, enforcement on)" OR brief fix in progress\n' +
+    '4. Reasoning stack: query → context → cypher (structural) → impact → detect_changes\n' +
+    '5. Tell the user ONE sentence: "GitNexus kit: ready (graph fresh, enforcement on)" OR brief fix in progress\n' +
     'Keep laconic. Do not paste this block verbatim.\n' +
     `Audit: healthy=${audit.healthy} ${summary}` +
     (failed.length ? ` failed=[${failed.join(',')}]` : '')

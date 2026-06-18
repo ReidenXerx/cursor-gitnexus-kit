@@ -1,5 +1,5 @@
 ---
-description: North-star contract — graph + embeddings when fresh, autonomous refresh when stale, classical fallback when GN fails.
+description: North-star contract — graph + embeddings + cypher on every task when fresh, autonomous refresh when stale, classical fallback when GN fails.
 alwaysApply: true
 ---
 
@@ -7,20 +7,50 @@ alwaysApply: true
 
 ## North star
 
-> **Prefer graph + embeddings when the index is fresh. Use `query` for fuzzy/exploratory reasoning (BM25 + vectors). Refresh autonomously when stale or embeddings are missing. Classical tools only when GN is stale/failing/wrong — say why.**
+> **GitNexus is the default reasoning layer for every task — not a fallback when code is unfamiliar.** Prefer graph + embeddings when the index is fresh. Use `query` to orient (BM25 + vectors). Use `cypher` for precise structural graph questions. Refresh autonomously when stale or embeddings are missing. Classical tools only when GN is stale/failing/wrong — say why.
 
 Local LLM / zero token cost: rebuild context freely; do not skip gates for speed.
 
-## Graph + embeddings (not graph-only)
+## Every task (not “unfamiliar code only”)
+
+Use the graph for **all** agent work — explore, debug, fix, refactor, review, rename, commit — not only architecture questions.
+
+| Task type | Graph role |
+| --- | --- |
+| Answer / explain / debug | `query` → `context` → `cypher` if structural → Read offset/limit |
+| Field / property data flow | READ schema → `cypher` (`ACCESSES` read/write) |
+| N-hop call chains, overrides, process steps | READ schema → `cypher` |
+| Edit runtime source (any size) | `impact` upstream before Write/StrReplace |
+| Refactor / rename / shared code | `impact` + `context` on hub symbols |
+| Review / “what did I change?” | `detect_changes`; `query` to orient |
+| Session start | `agent-brief` or repo context; confirm kit health |
+
+**Anti-patterns:** reserving GitNexus for big exploratory prompts; grep/read from memory on “familiar” files; grepping field names instead of `cypher`; skipping `impact` on “small” edits; jumping to `context`/`impact`/`grep` without `query` first (skips embeddings). `SemanticSearch` is blocked — use `query`.
+
+## Graph + embeddings + cypher (layered)
 
 | Need | Tool | Why |
 | --- | --- | --- |
-| Fuzzy concept, flow, "how does X work?" | `query` | Hybrid BM25 + **embedding** vectors (RRF) |
-| One symbol, callers, 360° | `context` | Structural graph |
+| Orient — any fuzzy or grounding step | `query` | Hybrid BM25 + **embedding** vectors (RRF) |
+| One symbol, callers, 360° | `context` | Structural graph (canned API) |
+| **Precise structural graph questions** | **`cypher`** | Raw traversals the canned tools don't express |
 | Pre-edit blast radius | `impact` | Graph traversal |
 | Pre-commit / done | `detect_changes` | Diff → processes |
 
-**Anti-pattern:** jumping straight to `context`/`impact`/`grep` for exploratory work — that skips embeddings. `SemanticSearch` is blocked; use `query` instead.
+### When to escalate to `cypher` (after `query` / `context`)
+
+READ `gitnexus://repo/__GITNEXUS_REPO__/schema` before ad-hoc Cypher.
+
+| Question | Cypher edge / pattern |
+| --- | --- |
+| Who reads/writes field/property X? | `ACCESSES` with `reason: read` / `write` |
+| Custom N-hop call chain | `CALLS` variable-length path |
+| Method override chain | `METHOD_OVERRIDES` |
+| Ordered steps in a process | `STEP_IN_PROCESS` + `r.step` |
+| All methods on a class | `HAS_METHOD` |
+| Diamond / multi-inheritance | `EXTENDS` multi-path MATCH |
+
+**Order:** `query` (orient) → `context` (symbol) → **`cypher`** (structural precision) → `impact` (before edits). Do not start with `cypher` for fuzzy questions — that's what `query` + embeddings are for.
 
 Refresh always includes `--embeddings` (`gitnexus:refresh` / `agent-refresh`). Missing embeddings = stale (same as commit behind).
 
@@ -32,28 +62,32 @@ Run hook copy-paste calls verbatim; expand freely when needed:
 | --- | --- | --- |
 | `context` | `include_content: false` | Need body → Read offset/limit |
 | `query` | `limit: 5`, `max_symbols: 12` | Primary semantic+graph orient tool |
+| `cypher` | READ schema first | Use `$params` for symbol/field names |
 | `impact` | `summaryOnly: false`, `limit: 100` | Full blast radius before edits |
 | `detect_changes` | `scope: unstaged` | Pre-commit → `staged`; PR → `compare` |
 
 ## Session (autonomous Shell)
 
+New chat: run session health ritual if injected — `npm run gitnexus:agent-status`, one-sentence confirm to user.
+
 `npm run gitnexus:agent-brief` or READ `gitnexus://repo/__GITNEXUS_REPO__/context`. Stale or missing embeddings → `npm run gitnexus:agent-refresh` (`required_permissions: ["all"]`). Never ask user to analyze.
 
-## Gates (do not skip)
+## Gates (do not skip — every task)
 
 ```
 1. brief OR context — session start
-2. query — fuzzy / explore / orient (graph + embeddings)
+2. query — orient / ground (graph + embeddings) before reasoning or edits
 3. context → process — drill into symbols
-4. impact upstream — before runtime source edits
-5. detect_changes — before commit / done
+4. cypher — structural precision (field ACCESSES, N-hop CALLS, overrides, process steps)
+5. impact upstream — before runtime source edits
+6. detect_changes — before commit / done
 ```
 
 HIGH/CRITICAL impact → warn before proceeding.
 
 ## When fresh — hooks block
 
-Symbol grep → `context`. SemanticSearch/broad Glob → `query`. Large source Read → `query` → `context` → Read offset/limit.
+Symbol grep → `context`. **Field/property grep → READ schema → `cypher` (`ACCESSES`).** SemanticSearch/broad Glob → `query`. Large source Read → `query` → `context` → Read offset/limit.
 
 ## Fallback
 

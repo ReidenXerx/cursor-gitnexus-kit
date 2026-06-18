@@ -11,7 +11,8 @@ Portable **rules + hooks + skills + scripts** for graph-first Cursor agents. Bui
 | Included | Purpose |
 | --- | --- |
 | `.cursor/rules/gitnexus*.mdc` | Always-on agent contract |
-| `.cursor/hooks.json` + `.cursor/hooks/**` | Block grep-first; staleness gate; **auto-refresh on session start** |
+| `.cursor/hooks.json` + `.cursor/hooks/**` | Block grep-first; field grep → Cypher; staleness gate; **auto-refresh on session start** |
+| `.cursor/hooks/lib/cypher-helpers.mjs` | Copy-paste Cypher recipes (ACCESSES, CALLS, overrides) |
 | `.claude/skills/gitnexus*` | Playbooks (imaging, enforcement, scenarios, …) |
 | `scripts/gitnexus-setup.sh` | One-shot team installer |
 | `scripts/sync-cursor-gitnexus-teaching.sh` | Re-sync after pull |

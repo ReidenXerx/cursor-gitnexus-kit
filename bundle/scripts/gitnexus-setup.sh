@@ -117,6 +117,7 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/clear-session.mjs"
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/hook-helpers.mjs"
+  ".cursor/hooks/lib/cypher-helpers.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
   ".cursor/hooks/lib/agent-health.mjs"
   ".cursor/hooks/lib/session-health-audit.mjs"
@@ -254,7 +255,7 @@ cat <<'ONBOARD'
   ── Maintainer details ────────────────────────────────────────
 
   Agent workflow (enforced):
-    query → context → impact → detect_changes
+    query → context → cypher (structural) → impact → detect_changes
 
   Daily commands:
     npm run gitnexus:health          human-friendly status

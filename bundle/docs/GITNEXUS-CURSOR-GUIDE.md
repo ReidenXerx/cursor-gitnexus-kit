@@ -6,11 +6,13 @@ Plain-language guide for anyone using **Cursor Agent** on a repo with GitNexus +
 
 GitNexus builds a **knowledge graph** of your codebase (symbols, callers, execution flows, embeddings).
 
-This kit makes Cursor agents **use that graph by default** — with hooks that **block** grep-first habits when the graph is fresh.
+This kit makes Cursor agents **use that graph on every task** — explore, debug, edit, refactor, review — with hooks that **block** grep-first habits when the graph is fresh.
 
 | You get | Why it matters |
 |--------|----------------|
+| Graph in every task loop | Not optional “unfamiliar code” mode — orient, drill, **cypher**, edit, finish through the graph |
 | Graph-first reasoning | Fewer missed callers and “grep-only” blind spots |
+| Structural precision | Field data flow, N-hop chains, overrides → **`cypher`**, not field grep |
 | Semantic search via `query` | Better answers to “how does X work?” |
 | Pre-edit impact checks | Agent sees blast radius before changing shared code |
 | Autonomous index refresh | Graph stays aligned with your latest commits |
@@ -44,6 +46,12 @@ Green = graph fresh + embeddings ready + hooks active.
 
 ```
 How does authentication work in this repo?
+```
+
+```
+Who reads or writes the sessionToken field?
+Trace the 3-hop call chain to validatePayment.
+What overrides handleRequest in this codebase?
 ```
 
 ```
@@ -81,4 +89,4 @@ After install or update: **restart Cursor** on the project.
 
 ## Pitch line (for GitNexus + Cursor)
 
-> **GitNexus gives the graph. This kit makes Cursor agents actually use it — every session, with enforcement.**
+> **GitNexus gives the graph. This kit makes Cursor agents actually use it — on every task, every session, with enforcement.**

@@ -15,8 +15,9 @@ Run tools in this order — do not skip steps:
 1. READ gitnexus://repo/__GITNEXUS_REPO__/context     → staleness check (always first)
 2. gitnexus_query({query, task_context, goal})         → orient by concept / execution flow
 3. gitnexus_context({name}) or context({uid})          → deep dive on one symbol
-4. gitnexus_impact({target, direction: "upstream"})    → BEFORE editing any symbol
-5. gitnexus_detect_changes({scope})                    → BEFORE committing / PR review
+4. gitnexus_cypher({query, params})                      → structural precision (READ schema first)
+5. gitnexus_impact({target, direction: "upstream"})    → BEFORE editing any symbol
+6. gitnexus_detect_changes({scope})                    → BEFORE committing / PR review
 ```
 
 > **Cursor agents:** stale index → `npm run gitnexus:agent-refresh` autonomously. Humans/CI: `npm run gitnexus:refresh`.
