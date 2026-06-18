@@ -13,8 +13,10 @@ function git(cmd) {
   return execSync(cmd, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
+const staleHookNote =
+  'Hooks block Grep/Read/MCP/shell until refresh succeeds or fails.';
 const agentFix =
-  'Agent MUST run npm run gitnexus:agent-refresh autonomously (required_permissions: ["all"]).';
+  `${staleHookNote} Agent MUST run npm run gitnexus:agent-refresh autonomously (required_permissions: ["all"]).`;
 
 const out = {
   fresh: true,
@@ -72,7 +74,7 @@ if (out.indexedCommit === out.headCommit) {
   if (out.nodeCount > 0 && !out.embeddingsReady) {
     out.fresh = false;
     out.reason = 'missing_embeddings';
-    out.detail = `Graph has ${out.nodeCount} symbol(s) but 0 embeddings — gitnexus_query semantic search is unavailable. Classical tools OK for investigation. ${agentFix}`;
+    out.detail = `Graph has ${out.nodeCount} symbol(s) but 0 embeddings — gitnexus_query semantic search is unavailable. ${agentFix}`;
   }
   process.stdout.write(JSON.stringify(out));
   process.exit(0);
@@ -93,16 +95,16 @@ try {
 
 if (!out.fresh) {
   if (out.reason === 'missing') {
-    out.detail = `GitNexus index missing — classical tools OK for investigation. ${agentFix}`;
+    out.detail = `GitNexus index missing — ${agentFix}`;
   } else if (out.reason === 'invalid_meta') {
-    out.detail = `GitNexus meta.json invalid — classical tools OK for investigation. ${agentFix}`;
+    out.detail = `GitNexus meta.json invalid — ${agentFix}`;
   } else if (out.reason === 'not_git') {
     out.detail = 'Not a git repo — cannot verify index freshness.';
   } else if (out.reason === 'diverged') {
-    out.detail = `Index commit ${(out.indexedCommit || '').slice(0, 7)} diverged from HEAD ${(out.headCommit || '').slice(0, 7)} — classical tools OK. ${agentFix}`;
+    out.detail = `Index commit ${(out.indexedCommit || '').slice(0, 7)} diverged from HEAD ${(out.headCommit || '').slice(0, 7)} — ${agentFix}`;
   } else {
     const n = out.commitsBehind ?? '?';
-    out.detail = `Index is ${n} commit(s) behind HEAD (indexed ${(out.indexedCommit || '').slice(0, 7)} → HEAD ${(out.headCommit || '').slice(0, 7)}). Classical tools OK. ${agentFix}`;
+    out.detail = `Index is ${n} commit(s) behind HEAD (indexed ${(out.indexedCommit || '').slice(0, 7)} → HEAD ${(out.headCommit || '').slice(0, 7)}). ${agentFix}`;
   }
 }
 

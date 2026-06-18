@@ -41,17 +41,9 @@ You're not paying for model memory of the codebase — you're paying (once) for 
 
 **New chat:** GitNexus runs a health check when the session starts. On your first message you may see a short notice that the kit is active. The agent’s first reply should confirm health in one sentence (graph fresh, enforcement on).
 
+When the graph is **stale** (behind recent commits or missing embeddings), hooks **block** Grep, Read, MCP, and most Shell until the agent runs **`npm run gitnexus:agent-refresh`**. Classical search is allowed **only if refresh fails** — the agent should say why.
+
 When the graph is **fresh**, the agent may say it was redirected from grep, SemanticSearch, or a full-file read. **That is expected.**
-
-Examples of what you might see:
-
-- “GitNexus has this codebase indexed — the agent will use graph search…”
-- “Symbol search is routed through GitNexus…”
-- “Full-file read is blocked — the agent will pull symbols from the graph first…”
-
-These are **not errors**. Enforcement is the product.
-
-When the graph is **stale** (behind recent commits or missing embeddings), the agent may use classic tools briefly, then refresh the graph automatically.
 
 ## Quick check after install
 
@@ -70,7 +62,7 @@ How does authentication work in this repo?
 ```
 Who reads or writes the sessionToken field?
 Trace the 3-hop call chain to validatePayment.
-What overrides handleRequest in this codebase?
+What overrides the base handler method in this codebase?
 ```
 
 ```

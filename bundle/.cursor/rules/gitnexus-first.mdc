@@ -33,8 +33,9 @@ context (staleness) → query (graph+embeddings) → context (symbol) → cypher
 **Default:** GitNexus for structure. Hooks block symbol Grep, SemanticSearch, and broad Glob when the index is **fresh**.
 
 **Auto-allowed (hooks):**
-- Index **stale** → all classical exploration tools OK
-- **Scoped Grep** in one `src/future/**` file after suspicious GN (0 callers, wrong path, contradicts detect_changes)
+- Index **stale** → hooks **block** classical until `agent-refresh` succeeds or fails; then graph-first when fresh
+- **Refresh failed** → classical exploration OK (say why)
+- **Scoped Grep** in one source file after suspicious GN (0 callers, wrong path, contradicts detect_changes)
 
 **Always OK without hooks:** string literals, JSON/YAML/MD, config keys, Read with offset/limit.
 
@@ -46,4 +47,4 @@ Tell the user in one sentence when bypassing GN-first.
 2. BEFORE committing → `gitnexus_detect_changes`.
 3. NEVER find-and-replace renames → `gitnexus_rename`.
 4. MCP unreachable or clearly wrong graph output → warn user; classical Grep/Read OK (see `gitnexus-enforcement` fallback).
-5. Stale index or missing embeddings → run `npm run gitnexus:agent-refresh` **autonomously** (hook pre-approved; use `required_permissions: ["all"]` if needed). Classical tools OK until fresh.
+5. Stale index or missing embeddings → run `npm run gitnexus:agent-refresh` **autonomously** first (hooks block Grep/Read/MCP until refresh succeeds or fails). Classical only if refresh fails.

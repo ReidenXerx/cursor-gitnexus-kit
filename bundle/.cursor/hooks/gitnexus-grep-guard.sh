@@ -15,7 +15,10 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.env.GITNEXUS_ROOT || '';
 const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
-const { appendNudge } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { appendNudge, bumpScore } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/stale-policy.mjs')).href
+);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
@@ -29,6 +32,7 @@ const mcpFlag = path.join(root, '.cursor/.gitnexus-mcp-used.flag');
 const graphUsedThisSession = fs.existsSync(mcpFlag);
 
 function emit(result) {
+  if (result.permission === 'deny') bumpScore(root, 'grepRedirects');
   const applied = helpers.applyHookMode(result, config.mode);
   if (applied.agent_message) {
     applied.agent_message = appendNudge(applied.agent_message, nudge);
@@ -40,12 +44,43 @@ function staleFallbackMsg() {
   return helpers.hookAgentMessage(
     root,
     'stale-fallback',
-    'GN FALLBACK (stale): classical Grep/Read OK. NEXT: npm run gitnexus:agent-refresh (required_permissions: ["all"]).',
-    'GN FALLBACK (stale): refresh autonomously.'
+    staleRefreshAgentMessage(stale, evaluateStalePolicy(stale, root)),
+    'GN FALLBACK (stale): refresh failed — classical OK; say why.'
   );
 }
 
-if (!stale.fresh) {
+const stalePolicy = evaluateStalePolicy(stale, root);
+
+if (stalePolicy.phase === 'must_refresh') {
+  const pattern = ti.pattern ?? '';
+  const pathArg = ti.path ?? ti.glob ?? '';
+  const allowPath =
+    /\.json|\.jsonl|\.yaml|\.yml|\.toml|\.ini|\.cfg|\.lock|\.md|\.mdc|\.csv|fixtures?\/|__snapshots__|docs\/|\.env|README|package\.json|AGENTS\.md|CLAUDE\.md/i.test(
+      pathArg
+    );
+  const allowPattern =
+    /["'`]|console\.|TODO|FIXME|eslint|@type|@param|gitnexus|npm run|import\s+['"]|require\s*\(|\/api\/|https?:/i.test(
+      pattern
+    ) || (/[\\/:*?[\]{}()]/.test(pattern) && pattern.length > 40);
+
+  if (allowPath || allowPattern) {
+    emit({
+      permission: 'allow',
+      agent_message:
+        'Literal/config grep OK during stale — run npm run gitnexus:agent-refresh before symbol exploration.',
+    });
+    process.exit(0);
+  }
+
+  emit({
+    permission: 'deny',
+    agent_message: staleRefreshAgentMessage(stale, stalePolicy),
+    user_message: helpers.userMessage('stale.must_refresh'),
+  });
+  process.exit(0);
+}
+
+if (stalePolicy.phase === 'classical_fallback') {
   emit({
     permission: 'allow',
     agent_message: staleFallbackMsg(),
@@ -98,11 +133,11 @@ if (!pattern) {
 }
 
 const allowPath =
-  /research\/presets|research\/examples|research\/sweeps|\.json|\.yaml|\.yml|\.md|\.matrix|docs\/|\.env|README|package\.json|AGENTS\.md|CLAUDE\.md/i.test(
+  /\.json|\.jsonl|\.yaml|\.yml|\.toml|\.ini|\.cfg|\.lock|\.md|\.mdc|\.csv|fixtures?\/|__snapshots__|docs\/|\.env|README|package\.json|AGENTS\.md|CLAUDE\.md/i.test(
     pathArg
   );
 const allowPattern =
-  /["'`]|console\.|TODO|FIXME|eslint|@type|strategyId|scannerOptions|profile|\.matrix|gitnexus|npm run|import\s+['"]|require\s*\(|\/api\/|http/i.test(
+  /["'`]|console\.|TODO|FIXME|eslint|@type|@param|gitnexus|npm run|import\s+['"]|require\s*\(|\/api\/|https?:/i.test(
     pattern
   ) || (/[\\/:*?[\]{}()]/.test(pattern) && pattern.length > 40);
 

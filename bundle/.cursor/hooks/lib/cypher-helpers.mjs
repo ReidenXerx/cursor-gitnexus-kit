@@ -27,7 +27,11 @@ export function mcpCypher(query, repo, params = null) {
   return `gitnexus_cypher({ query: "${q}", repo: "${repo}" })`;
 }
 
-/** Field read/write via ACCESSES edges. @param {'read'|'write'|'both'} reason */
+/**
+ * Field read/write via ACCESSES edges.
+ * Source node is left untyped so Methods/Structs/Impls (polyglot) count, not only Functions.
+ * @param {'read'|'write'|'both'} reason
+ */
 export function cypherFieldAccess(field, repo, reason = 'both') {
   const name = escCypher(field);
   const rel =
@@ -36,20 +40,20 @@ export function cypherFieldAccess(field, repo, reason = 'both') {
       : reason === 'write'
         ? "{type: 'ACCESSES', reason: 'write'}"
         : "{type: 'ACCESSES'}";
-  const q = `MATCH (f:Function)-[r:CodeRelation ${rel}]->(p:Property {name: $name}) RETURN f.name, f.filePath, r.reason ORDER BY f.filePath LIMIT 50`;
+  const q = `MATCH (f)-[r:CodeRelation ${rel}]->(p:Property {name: $name}) RETURN f.name, f.filePath, f.kind, r.reason ORDER BY f.filePath LIMIT 50`;
   return mcpCypher(q, repo, { name: field });
 }
 
-/** Multi-hop CALLS chain ending at symbol. */
+/** Multi-hop CALLS chain ending at symbol (target untyped — Functions or Methods). */
 export function cypherCallChain(symbol, repo, maxDepth = 3) {
-  const q = `MATCH path = (a)-[:CodeRelation {type: 'CALLS'}*1..${maxDepth}]->(b:Function {name: $name}) RETURN [n IN nodes(path) | n.name] AS chain, length(path) AS depth ORDER BY depth LIMIT 20`;
+  const q = `MATCH path = (a)-[:CodeRelation {type: 'CALLS'}*1..${maxDepth}]->(b {name: $name}) RETURN [n IN nodes(path) | n.name] AS chain, length(path) AS depth ORDER BY depth LIMIT 20`;
   return mcpCypher(q, repo, { name: symbol, maxDepth });
 }
 
 /** Direct callers via CALLS (when context incoming is incomplete). */
 export function cypherCallers(symbol, repo) {
   const q =
-    "MATCH (caller)-[:CodeRelation {type: 'CALLS'}]->(f:Function {name: $name}) RETURN caller.name, caller.filePath, caller.kind ORDER BY caller.filePath LIMIT 50";
+    "MATCH (caller)-[:CodeRelation {type: 'CALLS'}]->(f {name: $name}) RETURN caller.name, caller.filePath, caller.kind ORDER BY caller.filePath LIMIT 50";
   return mcpCypher(q, repo, { name: symbol });
 }
 

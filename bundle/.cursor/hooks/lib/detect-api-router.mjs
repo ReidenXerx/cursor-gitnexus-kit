@@ -21,12 +21,13 @@ const FRAMEWORK_RES = [
   /\brouter\.(get|post|put|patch|delete)\s*\(/,
 ];
 
+// Generic hand-rolled-router signals (framework-neutral; no repo-specific symbols).
 const CUSTOM_SYMBOLS = [
-  'handleRequest',
-  'isKnownApiPath',
   'dispatchRequest',
   'routeRequest',
   'matchRoute',
+  'handleHttpRequest',
+  'createRouter',
 ];
 
 /**

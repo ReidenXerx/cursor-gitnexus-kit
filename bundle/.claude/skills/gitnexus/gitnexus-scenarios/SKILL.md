@@ -73,19 +73,19 @@ Cross-module flows / architecture questions → also read **`gitnexus-imaging`**
 - [ ] Run tests on both sides of the boundary
 ```
 
-## 7. Preset / research config (JSON only)
+## 7. Config / data files (JSON / YAML only)
 
 ```
-- [ ] Grep / Read preset files is appropriate (not graph symbols)
-- [ ] Validate strategyId against strategyRegistry (context or Read)
-- [ ] Validate scannerOptions.profile against research/profiles/<strategyId>/ (strategyScanProfiles)
-- [ ] node scripts/run-tests.js tests/examples
+- [ ] Grep / Read config & fixture files is appropriate (not graph symbols)
+- [ ] Validate config keys/IDs against the code that consumes them (context or Read)
+- [ ] Run the relevant config/fixture tests
 ```
 
 ## 8. Explore unfamiliar code
 
 See `gitnexus-exploring` skill — query → context → process trace → Read source.
 
-## 9. Custom HTTP route (this repo only)
+## 9. HTTP route change
 
-See `gitnexus-api-routes` skill — NOT api_impact/route_map.
+See `gitnexus-api-routes` skill — `api_impact`/`route_map`/`shape_check` for framework routers,
+`context` on dispatcher symbols for custom routers (profile-driven).

@@ -34,6 +34,7 @@ export const GITNEXUS_SCRIPT_GATES = [
     scripts: {
       'gitnexus:graph-smoke': 'node scripts/gitnexus-agent.mjs graph-smoke',
       'gitnexus:detect-api': 'node scripts/gitnexus-agent.mjs detect-api',
+      'gitnexus:scorecard': 'node scripts/gitnexus-agent.mjs scorecard',
     },
   },
   {
@@ -47,6 +48,7 @@ export const GITNEXUS_SCRIPT_GATES = [
       'gitnexus:full': `${WRAP} npx gitnexus@latest analyze --force --embeddings --skills`,
       'gitnexus:status': `${WRAP} npx gitnexus@latest status`,
       'gitnexus:agent-refresh': 'node scripts/gitnexus-agent.mjs refresh',
+      'gitnexus:agent-review': 'node scripts/gitnexus-agent.mjs review',
       'gitnexus:clean-tmp': 'bash scripts/clean-project-tmp.sh',
       'gitnexus:list': `${WRAP} npx gitnexus@latest list`,
     },
@@ -55,9 +57,10 @@ export const GITNEXUS_SCRIPT_GATES = [
     gate: '6',
     name: 'verify',
     title: 'Install / CI verification',
-    description: 'Full kit check after install, update, or index build. Run before demoing to GitNexus authors.',
+    description: 'Full kit check + backend probe after install, update, or index build. Run before demoing to GitNexus authors.',
     scripts: {
       'gitnexus:verify': 'node scripts/gitnexus-agent.mjs verify',
+      'gitnexus:doctor': 'node scripts/gitnexus-agent.mjs doctor',
     },
   },
   {

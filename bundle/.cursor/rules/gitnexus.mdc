@@ -37,21 +37,19 @@ Run tools in this order — do not skip steps:
 | "trace execution of flow" | READ `gitnexus://repo/__GITNEXUS_REPO__/processes` then process URI |
 | Reviewing a PR (deep) | `detect_changes(compare)` then `impact` per high-risk changed symbol |
 
-### This repo: custom HTTP server (NOT Express)
+### HTTP API work — route by detected profile
 
-`api_impact` / `route_map` / `shape_check` return **no routes** here — the research API uses a hand-rolled router (`handleRequest` + `isKnownApiPath` in `researchApiServer.js`).
+The kit auto-detects the router style at install (`.cursor/gitnexus-api-profile.json`):
 
-For Server / API work instead:
+- **Framework router** (Route nodes indexed) → `api_impact` / `route_map` / `shape_check`.
+- **Custom hand-rolled router** (zero Route nodes) → `context` on the dispatcher/handler symbols + `query`.
 
-1. Read `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md`
-2. `context({name: "handleRequest"})` and `context({name: "isKnownApiPath"})`
-3. `query({query: "research API endpoint", task_context: "server change"})`
-4. Pair every payload change with Dashboard `researchApi.ts` (server + client)
+Read `.claude/skills/gitnexus/gitnexus-api-routes/SKILL.md` for the full playbook. Refresh the profile with `npm run gitnexus:detect-api`.
 
 ## When Grep / Glob / SemanticSearch ARE correct
 
 - String literals, comments, log messages
-- Raw text in JSON / YAML / Markdown (presets under `research/presets/**`)
+- Raw text in JSON / YAML / Markdown (config, fixtures, presets)
 - Config keys not modeled in the graph
 - Exact unique string where you already know the file
 
@@ -65,7 +63,7 @@ A `preToolUse` hook fires before Grep/Glob/SemanticSearch — double-check inten
 - find-and-replace rename → use `rename` dry_run first
 - Skip `impact` before editing → workspace contract forbids it
 - Multiple symbol candidates → re-call with `uid` / `target_uid`; never guess
-- `api_impact` on this repo's research server → use custom-router playbook above
+- `api_impact` returns no routes → custom router; use `context` on dispatcher symbols (see api-routes skill)
 
 ## Scenario playbooks
 
@@ -81,7 +79,7 @@ Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. 
 | Cross-module change | `detect_changes` + `impact` on shared symbols |
 | Preset / matrix JSON | Grep is fine; validate with `tests/examples` |
 | Area-focused work | Read `.claude/skills/generated/<area>/SKILL.md` for entry points |
-| Custom HTTP route change | `gitnexus-api-routes` skill → `handleRequest` context → Dashboard hand-off |
+| HTTP route change | `gitnexus-api-routes` skill → `api_impact` (framework) or dispatcher `context` (custom) |
 
 ## Tools (full surface)
 
@@ -93,8 +91,8 @@ Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. 
 | `detect_changes` | Diff → symbols → processes → risk. Scopes: unstaged, staged, all, compare. |
 | `rename` | Graph + text_search edits. Always `dry_run: true` first. |
 | `cypher` | ACCESSES, HAS_METHOD, STEP_IN_PROCESS, METHOD_OVERRIDES. READ schema first. |
-| `api_impact` | Express-style routes only — **not indexed in this repo**. |
-| `route_map` / `shape_check` | Same limitation here. |
+| `api_impact` | Pre-change report for a framework route: consumers, response shape, middleware, risk. |
+| `route_map` / `shape_check` | Route→handler→consumer map; response keys vs consumer access (framework routers). |
 | `tool_map` | MCP/RPC tool definitions. |
 | `list_repos` | Registry + staleness + embedding counts. |
 | `group_list` / `group_sync` | Cross-repo groups: `repo: "@<groupName>"`. |
@@ -126,7 +124,17 @@ Read `.claude/skills/gitnexus/gitnexus-scenarios/SKILL.md` for full checklists. 
 
 ## MCP unreachable — warn immediately
 
-If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/detect_changes/graph queries unavailable. Falling back to Grep/Read without structural safety checks."_ Do NOT silently fall back.
+If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/detect_changes/graph queries unavailable. Falling back to Grep/Read without structural safety checks."_ Do NOT silently fall back. Confirm backend health with `npm run gitnexus:doctor` (probes the GitNexus CLI + registry).
+
+## Kit maintenance commands
+
+| Command | Use |
+| --- | --- |
+| `npm run gitnexus:agent-refresh` | Rebuild graph + embeddings when stale (autonomous) |
+| `npm run gitnexus:doctor` | Probe MCP/CLI backend reachability |
+| `npm run gitnexus:agent-review -- <base>` | PR review playbook: detect_changes(compare) + impact per changed symbol |
+| `npm run gitnexus:scorecard` | Session enforcement tally (grep→graph, impact/commit gates) |
+| `npm run gitnexus:verify` | Full install verification before demoing |
 
 ## Workspace contract (non-negotiable)
 

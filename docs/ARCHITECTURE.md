@@ -111,8 +111,9 @@ flowchart TD
   Cypher --> Impact
   Impact --> Slice[Read offset/limit if needed]
   Slice --> DC[detect_changes before done]
-  Fresh -->|stale| Classic[Classical tools OK]
-  Classic --> Refresh[agent-refresh autonomously]
+  Fresh -->|stale| Refresh[agent-refresh mandatory]
+  Refresh --> Retry[retry graph tools]
+  Retry -->|failed| Classic[classical fallback OK]
   Refresh --> Query
 ```
 

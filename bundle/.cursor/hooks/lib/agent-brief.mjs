@@ -18,6 +18,7 @@ import {
   cypherCallChain,
   repoName,
 } from './hook-helpers.mjs';
+import { readScorecard } from './session-primer.mjs';
 
 const root = process.argv[2] ?? process.cwd();
 
@@ -144,6 +145,29 @@ async function main() {
   } else {
     lines.push('');
     lines.push('No unstaged/staged code changes detected.');
+  }
+
+  const card = readScorecard(root);
+  const counts = card.counts ?? {};
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  if (total > 0) {
+    lines.push('');
+    lines.push('Enforcement scorecard (this session):');
+    const label = {
+      graphCalls: 'graph calls',
+      grepRedirects: 'grep→graph',
+      readRedirects: 'read→graph',
+      impactGate: 'impact gates',
+      commitGate: 'commit gates',
+      editStaleBlocks: 'stale-edit blocks',
+    };
+    lines.push(
+      '  ' +
+        Object.entries(counts)
+          .filter(([, v]) => v)
+          .map(([k, v]) => `${label[k] ?? k}: ${v}`)
+          .join(', ')
+    );
   }
 
   console.log(lines.join('\n'));

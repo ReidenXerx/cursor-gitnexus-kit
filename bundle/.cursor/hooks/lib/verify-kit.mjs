@@ -20,9 +20,11 @@ const CRITICAL_PATHS = [
   '.cursor/hooks/gitnexus-grep-guard.sh',
   '.cursor/hooks/gitnexus-read-guard.sh',
   '.cursor/hooks/gitnexus-edit-guard.sh',
+  '.cursor/hooks/gitnexus-commit-guard.sh',
   '.cursor/hooks/lib/hook-helpers.mjs',
   '.cursor/hooks/lib/cypher-helpers.mjs',
   '.cursor/hooks/lib/rename-helpers.mjs',
+  '.cursor/hooks/lib/stale-policy.mjs',
   '.cursor/hooks/lib/verify-kit.mjs',
   '.cursor/hooks/lib/graph-smoke.mjs',
   '.cursor/hooks/lib/detect-api-router.mjs',
@@ -42,6 +44,7 @@ const HOOK_SCRIPTS = [
   'gitnexus-grep-guard.sh',
   'gitnexus-read-guard.sh',
   'gitnexus-edit-guard.sh',
+  'gitnexus-commit-guard.sh',
 ];
 
 function checkFile(rel) {

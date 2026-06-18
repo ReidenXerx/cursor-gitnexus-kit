@@ -7,7 +7,7 @@ alwaysApply: true
 
 ## North star
 
-> **GitNexus is the default reasoning layer for every task — not a fallback when code is unfamiliar.** Prefer graph + embeddings when the index is fresh. Use `query` to orient (BM25 + vectors). Use `cypher` for precise structural graph questions. Refresh autonomously when stale or embeddings are missing. Classical tools only when GN is stale/failing/wrong — say why.
+> **GitNexus is the default reasoning layer for every task — not a fallback when code is unfamiliar.** Prefer graph + embeddings when the index is fresh. Use `query` to orient (BM25 + vectors). Use `cypher` for precise structural graph questions. Refresh autonomously when stale or embeddings are missing. Classical tools only **after refresh fails** or GN is wrong — say why.
 
 **Model tiers:** the graph + gates improve **every** agent — budget/local models gain the most *relative* lift; flagship models waste fewer tokens and follow the same enforced loop. Local LLM / zero API cost: rebuild context freely; do not skip gates for speed.
 
@@ -71,7 +71,18 @@ Run hook copy-paste calls verbatim; expand freely when needed:
 
 New chat: run session health ritual if injected — `npm run gitnexus:agent-status`, one-sentence confirm to user.
 
-`npm run gitnexus:agent-brief` or READ `gitnexus://repo/__GITNEXUS_REPO__/context`. Stale or missing embeddings → `npm run gitnexus:agent-refresh` (`required_permissions: ["all"]`). Never ask user to analyze.
+`npm run gitnexus:agent-brief` or READ `gitnexus://repo/__GITNEXUS_REPO__/context`. Stale or missing embeddings → **`npm run gitnexus:agent-refresh` first** (`required_permissions: ["all"]`). Hooks **block** Grep/Read/MCP/shell until refresh succeeds; classical tools only if refresh **fails** (say why). Never ask user to analyze.
+
+## Stale loop (mandatory)
+
+```
+stale → agent-refresh (Shell, pre-approved)
+  → fresh → query / context / cypher / impact
+  → still stale after refresh → agent-refresh retry once if plausible
+  → refresh failed → classical fallback OK (one sentence why)
+```
+
+Session start runs auto-refresh when stale. Do **not** grep/read “while refreshing” — refresh is the next tool, not a background hint.
 
 ## Gates (do not skip — every task)
 
@@ -87,12 +98,18 @@ New chat: run session health ritual if injected — `npm run gitnexus:agent-stat
 
 HIGH/CRITICAL impact → warn before proceeding.
 
-## When fresh — hooks block
+## When fresh — hooks block (enforced, not advisory)
 
 Symbol grep → `context`. **Field/property grep → READ schema → `cypher` (`ACCESSES`).** SemanticSearch/broad Glob → `query`. Large source Read → `query` → `context` → Read offset/limit; **data-flow / model reads → `cypher` first.** Symbol **StrReplace rename** → `rename` dry_run.
 
+**Hard gates (deny until satisfied, once per session):**
+- **Edit runtime source** → blocked until one `impact` (or `rename`) call this session. Run blast radius first; warn on HIGH/CRITICAL.
+- **`git commit`** → blocked until one `detect_changes` call this session. Confirm affected processes match intent.
+
+Enforcement is **polyglot** — JS/TS, Python, Rust, Go, Java, and more count as source (configure `sourceExts` in `.cursor/gitnexus-hooks.json`).
+
 ## Fallback
 
-Stale, missing embeddings, refresh failed, GN wrong after `uid` retry, MCP down — classical OK; one-sentence why.
+**Only after refresh fails** (or MCP down / GN wrong after `uid` retry): classical Grep/Read OK — one-sentence why. While stale and refresh not yet attempted/failed: **deny classical** — run `agent-refresh` first.
 
 Optional: `GITNEXUS_MODE=guide` (nudge-only). Paths: `.cursor/gitnexus-hooks.json`. Playbooks: `gitnexus-enforcement` skill.

@@ -15,12 +15,16 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.env.GITNEXUS_ROOT || '';
 const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
-const { appendNudge } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { appendNudge, isImpactUsed, bumpScore } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
+);
+const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/stale-policy.mjs')).href
+);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const nudge = process.env.GITNEXUS_FIRST_NUDGE || '';
-const mode = process.env.GITNEXUS_STALENESS_MODE || 'block';
 const ti = input.tool_input ?? {};
 const tool = input.tool_name ?? '';
 const filePath = (ti.path ?? ti.file_path ?? '').replace(/\\/g, '/');
@@ -28,7 +32,7 @@ const filePath = (ti.path ?? ti.file_path ?? '').replace(/\\/g, '/');
 const config = helpers.loadHookConfig(root);
 const repo = helpers.repoName(root);
 const sensitivity = helpers.editSensitivity(filePath, config);
-const grace = helpers.isGraceStale(stale, config);
+const stalePolicy = evaluateStalePolicy(stale, root);
 
 function emit(result) {
   const applied = helpers.applyHookMode(result, config.mode);
@@ -40,33 +44,46 @@ function staleDetail() {
   return stale.detail || 'GitNexus index is not fresh.';
 }
 
-if (!stale.fresh && sensitivity !== 'none' && sensitivity !== 'light') {
-  const msg =
-    'STALENESS GATE: ' +
-    staleDetail() +
-    ' Classical tools OK for investigation.';
-
-  if (grace) {
+// Staleness gate — unified with grep/read/shell guards: refresh first, no grace shortcut.
+// Docs / config (none|light) stay editable; runtime source/tests/scripts (medium|full) wait for refresh.
+if (sensitivity !== 'none' && sensitivity !== 'light' && stalePolicy.phase !== 'fresh') {
+  if (stalePolicy.phase === 'classical_fallback') {
     emit({
       permission: 'allow',
       agent_message:
-        msg +
-        ` Grace window (${stale.commitsBehind} commit(s) behind) — edit allowed but run npm run gitnexus:agent-refresh soon.`,
+        'STALENESS: refresh failed — editing allowed; graph may be behind, state why in one sentence.',
     });
     process.exit(0);
   }
+  bumpScore(root, 'editStaleBlocks');
+  emit({
+    permission: 'deny',
+    agent_message:
+      'STALENESS GATE: ' +
+      staleDetail() +
+      ' Edits blocked until refresh — Shell NOW: npm run gitnexus:agent-refresh (required_permissions: ["all"], pre-approved). Never ask the user to analyze.',
+    user_message: helpers.userMessage('block.edit.stale'),
+  });
+  process.exit(0);
+}
 
-  if (mode === 'block' && config.mode === 'enforce') {
-    emit({
-      permission: 'deny',
-      agent_message:
-        msg + ' Edits blocked until refresh — npm run gitnexus:agent-refresh (pre-approved).',
-      user_message: helpers.userMessage('block.edit.stale'),
-    });
-    process.exit(0);
-  }
-
-  emit({ permission: 'allow', agent_message: msg + ' (warn mode — edit allowed.)' });
+// Impact-before-edit (H1) — runtime source edits require one impact/rename call this session.
+// Once impact has run, all subsequent edits are allowed (gate is per-session, not per-file).
+if (sensitivity === 'full' && !isImpactUsed(root)) {
+  const renameAhead =
+    tool === 'StrReplace' ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
+  const playbook = renameAhead
+    ? `${helpers.mcpImpact(renameAhead.oldName, repo)} → ${helpers.mcpRename(renameAhead.oldName, renameAhead.newName, repo, true)}`
+    : helpers.mcpImpact('<symbol-you-are-editing>', repo);
+  bumpScore(root, 'impactGate');
+  emit({
+    permission: 'deny',
+    agent_message:
+      `IMPACT GATE: run blast-radius analysis before editing runtime source — ${playbook}. ` +
+      'Review d=1 (WILL BREAK) + risk; warn on HIGH/CRITICAL. This gate clears for the rest of the session after one impact call.',
+    user_message:
+      'Before editing source, the agent checks blast radius in GitNexus (what breaks) — graph-first safety, not blind edits.',
+  });
   process.exit(0);
 }
 

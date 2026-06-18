@@ -35,7 +35,7 @@ After index build, the kit writes `.cursor/gitnexus-api-profile.json`:
 | Profile | Use |
 | --- | --- |
 | `framework` | `api_impact` / `route_map` / `shape_check` — indexed Route nodes |
-| `custom` | **`gitnexus-api-routes`** skill — context on dispatcher symbols (e.g. `handleRequest`) |
+| `custom` | **`gitnexus-api-routes`** skill — context on the dispatcher symbol (e.g. `dispatchRequest`) |
 | `framework-likely` | Try `api_impact`; if empty, fall back to custom playbook |
 | `none` | No HTTP layer detected |
 
@@ -65,7 +65,7 @@ Always pass context to rank results better:
 
 ```javascript
 query({
-  query: "stable pair scanner profile",
+  query: "<concept or feature you are working on>",
   task_context: "what you are doing in this chat",
   goal: "what you need to find",
   repo: "__GITNEXUS_REPO__",
@@ -93,7 +93,7 @@ Installed by `npm run gitnexus:setup`:
 
 - **Enforcement rule** — `.cursor/rules/00-gitnexus-enforcement.mdc` (only `alwaysApply: true` contract)
 - **Reference rules** — `.cursor/rules/gitnexus.mdc` + `gitnexus-first.mdc` (load on demand)
-- **Hooks** — GN-first when fresh; **classical fallback when stale**; field grep → Cypher; large data-flow Read → Cypher
+- **Hooks** — GN-first when fresh; **refresh-first when stale** (classical only after refresh fails); field grep → Cypher; large data-flow Read → Cypher
 - **Skills** — synced to `.cursor/skills/` from this repo's `.claude/skills/`
 - **MCP** — `gitnexus` in `.cursor/mcp.json`
 

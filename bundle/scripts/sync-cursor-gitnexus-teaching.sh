@@ -22,6 +22,7 @@ HOOK_SCRIPTS=(
   ".cursor/hooks/gitnexus-edit-guard.sh"
   ".cursor/hooks/gitnexus-shell-staleness-guard.sh"
   ".cursor/hooks/gitnexus-shell-allowlist.sh"
+  ".cursor/hooks/gitnexus-commit-guard.sh"
   ".cursor/hooks/gitnexus-mcp-allowlist.sh"
   ".cursor/hooks/gitnexus-after-git-commit.sh"
 )
@@ -37,6 +38,7 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/hook-helpers.mjs"
   ".cursor/hooks/lib/cypher-helpers.mjs"
   ".cursor/hooks/lib/rename-helpers.mjs"
+  ".cursor/hooks/lib/stale-policy.mjs"
   ".cursor/hooks/lib/detect-api-router.mjs"
   ".cursor/hooks/lib/graph-smoke.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
@@ -96,6 +98,7 @@ const checks = [
   ['preToolUse', 'gitnexus-read-guard'],
   ['preToolUse', 'gitnexus-edit-guard'],
   ['beforeShellExecution', 'gitnexus-shell-allowlist'],
+  ['beforeShellExecution', 'gitnexus-commit-guard'],
   ['beforeMCPExecution', 'gitnexus-mcp-allowlist'],
   ['afterShellExecution', 'gitnexus-after-git-commit'],
 ];
@@ -144,6 +147,7 @@ const manifest = {
       'gitnexus-read-guard.sh',
       'gitnexus-edit-guard.sh',
       'gitnexus-shell-allowlist.sh',
+      'gitnexus-commit-guard.sh',
       'gitnexus-mcp-allowlist.sh',
       'gitnexus-after-git-commit.sh',
     ],

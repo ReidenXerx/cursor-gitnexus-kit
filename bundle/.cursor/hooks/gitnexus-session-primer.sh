@@ -29,7 +29,8 @@ if [[ "$IS_FRESH" != "true" ]] && [[ "${GITNEXUS_SKIP_SESSION_REFRESH:-}" != "1"
     REFRESH_CONTEXT="GitNexus index was stale at session start — auto-refresh completed (graph + embeddings). Use query/context/impact normally."
     node "$ROOT/.cursor/hooks/lib/set-refresh-pending.mjs" "$ROOT" clear 2>/dev/null || true
   else
-    REFRESH_CONTEXT="GitNexus index is STALE and auto-refresh failed at session start. Agent MUST run Shell: npm run gitnexus:agent-refresh with required_permissions [\"all\"] as the very next tool call. NEVER tell the user to run npx gitnexus analyze."
+    node "$ROOT/.cursor/hooks/lib/set-refresh-pending.mjs" "$ROOT" set-failed "session auto-refresh failed" 2>/dev/null || true
+    REFRESH_CONTEXT="GitNexus index is STALE and auto-refresh failed at session start. Agent MUST run Shell: npm run gitnexus:agent-refresh with required_permissions [\"all\"] as the very next tool call — hooks block Grep/Read/MCP until refresh succeeds or fails again. NEVER tell the user to run npx gitnexus analyze."
   fi
 elif [[ "$IS_FRESH" != "true" ]]; then
   REFRESH_CONTEXT="GitNexus index is stale (GITNEXUS_SKIP_SESSION_REFRESH=1). Agent MUST run npm run gitnexus:agent-refresh autonomously before structural edits — never ask the user."

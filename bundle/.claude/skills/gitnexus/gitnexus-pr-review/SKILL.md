@@ -26,10 +26,10 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 - [ ] detect_changes compare against main (or PR base branch)
 - [ ] Risk level acceptable for change intent?
 - [ ] affected_processes match PR description?
-- [ ] Any surprise cross-community flows (Scanner↔Adapters↔Server↔Dashboard)?
+- [ ] Any surprise cross-community flows (changes spanning unrelated clusters)?
 - [ ] Entry-point symbols get individual impact upstream
-- [ ] API payload changes paired with researchApi.ts (Server + Dashboard profiles)
-- [ ] Preset-only changes → tests/examples green
+- [ ] API payload changes paired with their client/consumer (shape_check)
+- [ ] Config/fixture-only changes → relevant tests green
 - [ ] Index was fresh during review (context resource)
 ```
 
@@ -54,13 +54,13 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 ```
 detect_changes({scope: "compare", base_ref: "main"})
 → 12 changed symbols, 8 affected processes
-→ ScanStablePairFromCandles, RunExperimentMatrix, LoadResearchRunArtifactCatalog
+→ <entry symbols the diff touches, from the result>
 → Risk: CRITICAL
 
 Follow-up:
-→ impact on scanStablePairFromCandles, runExperimentMatrix
-→ Recommend: tests/core/scanner, tests/adapters, tests/server
-→ Flag: crosses Scanner + Adapters + Server — confirm intentional
+→ impact upstream on each changed entry symbol
+→ Recommend: tests covering the affected processes
+→ Flag: change crosses multiple unrelated clusters — confirm intentional
 ```
 
 ## Related

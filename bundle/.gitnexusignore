@@ -1,8 +1,13 @@
 # GitNexus-only ignores (gitignore syntax). Complements .gitignore for index speed.
 # See: npx gitnexus analyze --help (reads .gitignore + .gitnexusignore)
+#
+# Add large generated/data directories here so the graph stays code-focused, e.g.:
+#   data/
+#   reports/
+#   fixtures/large/
+#   **/__snapshots__/
 
-# Local OHLCV candle shards (~thousands of JSON files) — not source code
-data/candles/
-
-# Research run outputs (large JSON/CSV artifacts)
-reports/
+# Build / dependency output (usually already in .gitignore — listed for clarity)
+dist/
+build/
+coverage/

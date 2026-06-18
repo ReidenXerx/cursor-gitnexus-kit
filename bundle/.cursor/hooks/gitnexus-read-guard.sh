@@ -15,7 +15,10 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.env.GITNEXUS_ROOT || '';
 const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
-const { appendNudge, readPromptHint } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { appendNudge, readPromptHint, bumpScore } = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href);
+const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/stale-policy.mjs')).href
+);
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
@@ -28,16 +31,39 @@ const mcpFlag = path.join(root, '.cursor/.gitnexus-mcp-used.flag');
 const graphUsed = fs.existsSync(mcpFlag);
 
 function emit(result) {
+  if (result.permission === 'deny') bumpScore(root, 'readRedirects');
   const applied = helpers.applyHookMode(result, config.mode);
   if (applied.agent_message) applied.agent_message = appendNudge(applied.agent_message, nudge);
   process.stdout.write(JSON.stringify(applied));
 }
 
-if (!stale.fresh) {
+const stalePolicy = evaluateStalePolicy(stale, root);
+
+if (stalePolicy.phase === 'must_refresh') {
+  const tiEarly = input.tool_input ?? {};
+  const filePathEarly = tiEarly.path ?? tiEarly.target_file ?? '';
+  const normEarly = filePathEarly.replace(/\\/g, '/');
+  const isSmallConfigEarly =
+    /\.(json|md|yaml|yml|mdc|sh)$/.test(filePathEarly) || /package\.json$/.test(filePathEarly);
+  const isGeneratedSkillEarly = /\.cursor\/skills\//.test(normEarly);
+
+  if (!filePathEarly || isSmallConfigEarly || isGeneratedSkillEarly) {
+    emit({ permission: 'allow', agent_message: 'Small/config read OK during stale — refresh before large source reads.' });
+    process.exit(0);
+  }
+
+  emit({
+    permission: 'deny',
+    agent_message: staleRefreshAgentMessage(stale, stalePolicy),
+    user_message: helpers.userMessage('stale.must_refresh'),
+  });
+  process.exit(0);
+}
+
+if (stalePolicy.phase === 'classical_fallback') {
   emit({
     permission: 'allow',
-    agent_message:
-      'GN FALLBACK (stale): full Read allowed. NEXT: npm run gitnexus:agent-refresh before trusting graph tools.',
+    agent_message: staleRefreshAgentMessage(stale, stalePolicy),
     user_message: helpers.userMessage('stale.classical'),
   });
   process.exit(0);

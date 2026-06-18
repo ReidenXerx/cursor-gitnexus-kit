@@ -1,20 +1,31 @@
 #!/usr/bin/env bash
-# beforeMCPExecution: allow GitNexus MCP; mark session as graph-ready after first GN call.
+# beforeMCPExecution: allow GitNexus MCP when fresh; stale → refresh first.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 export GITNEXUS_HOOK_INPUT="$(cat)"
 export GITNEXUS_ROOT="$ROOT"
+export GITNEXUS_STALENESS="$(node "$ROOT/.cursor/hooks/lib/load-staleness.mjs" "$ROOT" 2>/dev/null || echo '{"fresh":false,"reason":"check_failed"}')"
 
 node <<'NODE'
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const root = process.env.GITNEXUS_ROOT;
+const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const tool = input.tool_name ?? '';
 const url = input.url ?? '';
 const cmd = input.command ?? '';
+
+const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
+const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/stale-policy.mjs')).href
+);
+const { setMcpToolUsed, bumpScore } = await import(
+  pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
+);
 
 const isGitnexus =
   /gitnexus/i.test(tool) ||
@@ -25,17 +36,32 @@ function out(obj) {
   process.stdout.write(JSON.stringify(obj));
 }
 
-if (isGitnexus) {
-  const flag = path.join(root, '.cursor/.gitnexus-mcp-used.flag');
-  fs.mkdirSync(path.dirname(flag), { recursive: true });
-  fs.writeFileSync(flag, new Date().toISOString());
+if (!isGitnexus) {
+  out({ permission: 'allow' });
+  process.exit(0);
+}
+
+const policy = evaluateStalePolicy(stale, root);
+
+if (policy.phase === 'must_refresh') {
   out({
-    permission: 'allow',
-    agent_message:
-      'GitNexus MCP call approved — keep using graph tools for mid-task code reasoning. If results look empty/wrong: retry with uid once; if still wrong or index stale, classical fallback OK (say why) and run npm run gitnexus:agent-refresh autonomously.',
+    permission: 'deny',
+    agent_message: staleRefreshAgentMessage(stale, policy),
+    user_message: helpers.userMessage('stale.must_refresh'),
   });
   process.exit(0);
 }
 
-out({ permission: 'allow' });
+setMcpToolUsed(root, `${tool} ${url} ${cmd}`);
+bumpScore(root, 'graphCalls');
+
+const suffix =
+  policy.phase === 'classical_fallback'
+    ? ' Refresh failed — graph may be stale; classical fallback OK if MCP wrong (say why).'
+    : ' Keep using graph tools for mid-task code reasoning.';
+
+out({
+  permission: 'allow',
+  agent_message: `GitNexus MCP call approved.${suffix}`,
+});
 NODE

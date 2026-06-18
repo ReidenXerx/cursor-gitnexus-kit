@@ -42,7 +42,7 @@ const DEFAULT_SOURCE_RES = [
 ];
 
 const DEFAULT_BROAD_GLOB_RES = [
-  /^\*\*\/\*\.(js|mjs|ts|tsx|jsx)$/,
+  /^\*\*\/\*\.(js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|swift|php|cs|cpp|cc|c|scala)$/,
   /^\*\*\/src\//,
   /^src\//,
   /^\*\*\/lib\//,
@@ -50,6 +50,21 @@ const DEFAULT_BROAD_GLOB_RES = [
   /^\*\*\/apps\//,
   /^apps\//,
 ];
+
+// Polyglot: GitNexus indexes many languages — enforcement should not be JS/TS-only.
+// Override in .cursor/gitnexus-hooks.json via "sourceExts": ["js","py","rs", …].
+const DEFAULT_SOURCE_EXT_RE =
+  /\.(js|mjs|cjs|jsx|ts|tsx|mts|cts|py|pyi|rb|go|rs|java|kt|kts|swift|php|cs|cpp|cc|cxx|hpp|hh|c|h|scala|m|mm|dart|lua|ex|exs|clj)$/i;
+
+/** @param {string[]} exts */
+function buildExtRe(exts) {
+  const cleaned = exts
+    .map((e) => String(e).replace(/^\./, '').trim())
+    .filter(Boolean)
+    .map((e) => e.replace(/[.+^${}()|[\]\\]/g, '\\$&'));
+  if (!cleaned.length) return DEFAULT_SOURCE_EXT_RE;
+  return new RegExp(`\\.(${cleaned.join('|')})$`, 'i');
+}
 
 /**
  * @param {string} root
@@ -61,7 +76,8 @@ export function loadHookConfig(root) {
     graceCommitsBehind: 2,
     sourcePathRes: DEFAULT_SOURCE_RES,
     broadGlobRes: DEFAULT_BROAD_GLOB_RES,
-    sourceExtRe: /\.(js|mjs|ts|tsx|jsx)$/i,
+    sourceExtRe: DEFAULT_SOURCE_EXT_RE,
+    stalenessCacheTtlMs: 2500,
   };
 
   const cfgPath = path.join(root, CONFIG_FILE);
@@ -72,8 +88,12 @@ export function loadHookConfig(root) {
     if (file.mode) cfg.mode = file.mode === 'guide' ? 'guide' : 'enforce';
     if (typeof file.readLineThreshold === 'number') cfg.readLineThreshold = file.readLineThreshold;
     if (typeof file.graceCommitsBehind === 'number') cfg.graceCommitsBehind = file.graceCommitsBehind;
+    if (typeof file.stalenessCacheTtlMs === 'number') cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
     if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
       cfg.sourcePathRes = file.sourceGlobs.map((g) => globToRegExp(g));
+    }
+    if (Array.isArray(file.sourceExts) && file.sourceExts.length) {
+      cfg.sourceExtRe = buildExtRe(file.sourceExts);
     }
   } catch {
     /* keep defaults */
@@ -285,7 +305,7 @@ export function isGraceStale(stale, config) {
 
 /**
  * Human-facing hook messages — enforcement stays on; voice explains the benefit.
- * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.grep.field'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.classical'} key
+ * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.grep.field'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.must_refresh'|'stale.classical'} key
  * @param {Record<string, string | number>} [vars]
  */
 export function userMessage(key, vars = {}) {
@@ -316,8 +336,10 @@ export function userMessage(key, vars = {}) {
       'The code graph is behind your latest commits. The agent must refresh GitNexus before editing source files — so changes stay accurate.',
     'block.shell.stale':
       'The code graph needs a refresh before other commands run. The agent will update GitNexus automatically.',
+    'stale.must_refresh':
+      'GitNexus index is behind — the agent must refresh the graph first (not grep/read). Hooks enforce refresh-then-graph, not skip-to-classical.',
     'stale.classical':
-      'GitNexus index is behind or updating — classic search is allowed briefly while the agent refreshes the graph.',
+      'GitNexus refresh failed — the agent may use classic search now and must say why the graph could not be updated.',
   };
   return templates[key] ?? 'GitNexus is guiding the agent to a better code-reasoning path.';
 }

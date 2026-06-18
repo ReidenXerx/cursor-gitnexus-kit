@@ -54,6 +54,7 @@ BUNDLE_PATHS=(
   .cursor/hooks/gitnexus-edit-guard.sh
   .cursor/hooks/gitnexus-shell-staleness-guard.sh
   .cursor/hooks/gitnexus-shell-allowlist.sh
+  .cursor/hooks/gitnexus-commit-guard.sh
   .cursor/hooks/gitnexus-mcp-allowlist.sh
   .cursor/hooks/gitnexus-after-git-commit.sh
   .cursor/hooks/lib/check-staleness.mjs
@@ -66,6 +67,7 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/hook-helpers.mjs
   .cursor/hooks/lib/cypher-helpers.mjs
   .cursor/hooks/lib/rename-helpers.mjs
+  .cursor/hooks/lib/stale-policy.mjs
   .cursor/hooks/lib/detect-api-router.mjs
   .cursor/hooks/lib/graph-smoke.mjs
   .cursor/hooks/lib/agent-brief.mjs
@@ -124,7 +126,12 @@ cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
 .cursor/.gitnexus-session-primed.flag
 .cursor/.gitnexus-prompt-hint.json
 .cursor/.gitnexus-refresh-pending.flag
+.cursor/.gitnexus-refresh-failed.flag
 .cursor/.gitnexus-mcp-used.flag
+.cursor/.gitnexus-impact-used.flag
+.cursor/.gitnexus-detect-used.flag
+.cursor/.gitnexus-staleness-cache.json
+.cursor/.gitnexus-scorecard.json
 .cursor/.gitnexus-deny-cache.json
 .cursor/.gitnexus-session-health.json
 .cursor/.gitnexus-session-user-notified.flag

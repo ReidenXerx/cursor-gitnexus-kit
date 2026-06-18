@@ -39,6 +39,10 @@
       {
         "command": ".cursor/hooks/gitnexus-shell-allowlist.sh",
         "matcher": "gitnexus|gitnexus-agent"
+      },
+      {
+        "command": ".cursor/hooks/gitnexus-commit-guard.sh",
+        "matcher": "git\\s+commit"
       }
     ],
     "beforeMCPExecution": [

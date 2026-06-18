@@ -1,7 +1,9 @@
 {
-  "comment": "Optional hook tuning. mode: enforce (block) | guide (nudge only). sourceGlobs: gitignore-style roots for graph-first paths.",
+  "comment": "Optional hook tuning. mode: enforce (block) | guide (nudge only). sourceGlobs: gitignore-style roots for graph-first paths. sourceExts: language file extensions that count as graph-first source (polyglot — GitNexus indexes many languages). stalenessCacheTtlMs: reuse staleness within N ms to cut per-tool-call latency.",
   "mode": "enforce",
   "readLineThreshold": 60,
   "graceCommitsBehind": 2,
-  "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"]
+  "stalenessCacheTtlMs": 2500,
+  "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"],
+  "sourceExts": ["js", "mjs", "cjs", "jsx", "ts", "tsx", "py", "rb", "go", "rs", "java", "kt", "swift", "php", "cs", "cpp", "c", "scala"]
 }

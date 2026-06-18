@@ -27,8 +27,8 @@ Always tell the user in one sentence when bypassing graph-first imaging.
 
 | Question type | Skill |
 | --- | --- |
-| "How does scan → experiment work?" | **gitnexus-imaging** (this) |
-| "What calls `resolveFilters`?" | `gitnexus-exploring` / `context` |
+| "How does feature X flow end-to-end?" | **gitnexus-imaging** (this) |
+| "What calls `<symbol>`?" | `gitnexus-exploring` / `context` |
 | "Safe to change X?" | `gitnexus-impact-analysis` |
 | "Why is this failing?" | `gitnexus-debugging` |
 | Pre-commit / PR checklist | `gitnexus-scenarios` |
@@ -37,9 +37,9 @@ Always tell the user in one sentence when bypassing graph-first imaging.
 
 | Mental model | Tool | Bad habit |
 | --- | --- | --- |
-| Business flow ("scan → experiment → artifacts") | `query` → **processes** | Read 5 adapter files linearly |
+| Business flow ("request → handler → storage") | `query` → **processes** | Read 5 files linearly |
 | Call chain ("who calls X?") | `context` (incoming CALLS) | `Grep("X")` |
-| Module map ("what lives in Scanner?") | `READ clusters` → `cluster/Scanner` | Broad Glob on `src/` |
+| Module map ("what lives in area Y?") | `READ clusters` → `cluster/{Area}` | Broad Glob on `src/` |
 | Pipeline step trace | `READ process/{name}` | Follow imports manually |
 | Blast radius | `impact` + `detect_changes` | Grep callers |
 | Field/data flow | `cypher` with `ACCESSES` | Grep field name |
@@ -56,7 +56,7 @@ If stale → **Cursor agents:** `npm run gitnexus:agent-refresh` autonomously. *
 
 ## Recipe 1 — Explain a pipeline / business flow
 
-**Trigger:** "How does X work?", "Explain the scan pipeline", "What happens when I run Y?"
+**Trigger:** "How does X work?", "Explain the <feature> pipeline", "What happens when I run Y?"
 
 ```
 1. READ context (staleness)
@@ -79,14 +79,14 @@ If stale → **Cursor agents:** `npm run gitnexus:agent-refresh` autonomously. *
 Entry: `symbol` → … → exit
 Steps: (from process trace)
 Hub nodes: symbols with most callers
-Modules touched: Scanner | Adapters | Server | …
+Modules touched: (cluster names from the graph)
 ```
 
 ---
 
 ## Recipe 2 — Map a functional area
 
-**Trigger:** "What's in Scanner?", "Map the strategies area"
+**Trigger:** "What's in area X?", "Map the <area> module"
 
 ```
 1. READ gitnexus://repo/__GITNEXUS_REPO__/clusters
@@ -108,13 +108,13 @@ Modules touched: Scanner | Adapters | Server | …
 4. Optional: READ process/{name} to see step order
 ```
 
-Stop at process boundary (Adapter → Core → Server), not every leaf.
+Stop at process / cluster boundaries, not every leaf.
 
 ---
 
 ## Recipe 4 — Trace a data field
 
-**Trigger:** "Who reads/writes `scannerOptions`?", "Where is profileId consumed?"
+**Trigger:** "Who reads/writes `<field>`?", "Where is `<field>` consumed?"
 
 ```
 1. READ gitnexus://repo/__GITNEXUS_REPO__/schema  (if unfamiliar with cypher)
@@ -127,37 +127,35 @@ Widen impact with `relationTypes: ["CALLS","IMPORTS","ACCESSES"]` when editing f
 
 ---
 
-## Recipe 5 — Cross-module spine (this repo)
+## Recipe 5 — Cross-module spine
 
-**Trigger:** Changes spanning Scanner → Adapters → Server → Dashboard
+**Trigger:** A change spanning several modules (e.g. entry → core → storage → client).
 
-Known high-value spines to query first:
+Discover the repo's high-value spines from the graph instead of guessing:
 
-| Spine | Example query |
-| --- | --- |
-| Scan pipeline | `stable pair scan workflow filters` |
-| Scan → experiment | `scan experiment matrix workflow` |
-| Research orchestration | `research run plan orchestrator` |
-| HTTP / artifacts | `research API handleRequest artifacts` |
-| Strategy registry | `strategy scan profile detection` |
+```
+1. READ gitnexus://repo/__GITNEXUS_REPO__/clusters   → top functional areas
+2. READ gitnexus://repo/__GITNEXUS_REPO__/processes  → longest / most-connected flows
+3. query({ query: "<feature> end to end", task_context: "cross-module change", goal: "spine processes" })
+```
 
 After `query`, run `detect_changes` on WIP — it often shows cross-community blast that `impact` on a single symbol misses.
 
 ---
 
-## __GITNEXUS_REPO__ example: scan pipeline
+## Worked example (generic)
 
 ```
 1. READ context
 2. query({
-     query: "stable pair scan workflow",
-     task_context: "explain scan pipeline",
+     query: "<top feature> workflow",
+     task_context: "explain the <feature> pipeline",
      goal: "processes and hub symbols",
      repo: "__GITNEXUS_REPO__"
    })
-   → expect processes touching resolveFilters, runStablePairScanWorkflow, …
+   → expect a process with the entry symbol + a few hubs
 3. READ process/{top process name}
-4. context({ name: "runStablePairScanWorkflow" })
+4. context({ name: "<entry symbol from the process>" })
 5. Summarize with process name + hub symbols — then cite file:line for details
 ```
 
@@ -175,4 +173,4 @@ After `query`, run `detect_changes` on WIP — it often shows cross-community bl
 
 - Master index: `gitnexus-workspace`
 - Structured checklists: `gitnexus-scenarios`
-- Research HTTP routes: `gitnexus-api-routes` (not `api_impact`)
+- HTTP routes: `gitnexus-api-routes` (framework `api_impact` or custom dispatcher)
