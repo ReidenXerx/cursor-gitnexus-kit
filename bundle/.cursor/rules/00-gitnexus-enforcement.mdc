@@ -9,7 +9,7 @@ alwaysApply: true
 
 > **GitNexus is the default reasoning layer for every task — not a fallback when code is unfamiliar.** Prefer graph + embeddings when the index is fresh. Use `query` to orient (BM25 + vectors). Use `cypher` for precise structural graph questions. Refresh autonomously when stale or embeddings are missing. Classical tools only when GN is stale/failing/wrong — say why.
 
-Local LLM / zero token cost: rebuild context freely; do not skip gates for speed.
+**Model tiers:** the graph + gates improve **every** agent — budget/local models gain the most *relative* lift; flagship models waste fewer tokens and follow the same enforced loop. Local LLM / zero API cost: rebuild context freely; do not skip gates for speed.
 
 ## Every task (not “unfamiliar code only”)
 

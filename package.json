@@ -1,7 +1,7 @@
 {
   "name": "cursor-gitnexus-kit",
   "version": "1.0.0",
-  "description": "Cursor agent enforcement layer for GitNexus — hooks, MCP, skills, and install UX for graph-first reasoning on every task",
+  "description": "Cursor agent enforcement layer for GitNexus — graph-first agents on every model tier; highest ROI on budget/local models",
   "type": "module",
   "private": true,
   "repository": {

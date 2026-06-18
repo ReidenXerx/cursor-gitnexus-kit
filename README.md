@@ -6,6 +6,10 @@
 
 Hooks · MCP · Skills · Cypher · Autonomous refresh — graph-first reasoning on **every task**, not only when code is unfamiliar.
 
+**Stronger agent work at every model tier** — biggest lift on fast, budget, and local models; flagship models run leaner and more consistently too.
+
+The graph + hooks replace ad hoc grep-and-guess with enforced structure — so you pay less for weights *or* get more from the weights you already pay for.
+
 <br />
 
 [![CI](https://github.com/ReidenXerx/cursor-gitnexus-kit/actions/workflows/ci.yml/badge.svg)](https://github.com/ReidenXerx/cursor-gitnexus-kit/actions/workflows/ci.yml)
@@ -38,10 +42,31 @@ This kit closes that gap with Cursor hooks, a single always-on enforcement rule,
 
 → Deep dive with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
+## Model tiers — who gains what
+
+Frontier models hide weak repo habits (grep-first, skip `impact`, full-file reads). **This kit fixes the workflow for every tier** — not only “dumb” models.
+
+| | Without kit | With kit + fresh graph |
+|---|-------------|------------------------|
+| **Budget / local / fast** | Often fails on large repos; grep loops, shallow refactors | Same enforced loop as everyone else — **graph carries what the model can't hold in context** |
+| **Flagship / expensive** | Still wastes tokens on blind reads and retries; inconsistent tool choice | **Less token burn**, fewer missed callers, same playbook every session — model spends capacity on *thinking*, not repo spelunking |
+
+**Honest positioning:**
+
+- **Unique wedge:** makes serious repo work viable on **lower-cost models** — structure lives in GitNexus, not in parameter count.
+- **Also true:** teams on **Opus / Sonnet / GPT-4 class** models still win — faster runs, fewer “smart but sloppy” edits, enforced `impact` / `cypher` / `detect_changes` even when the model *could* have guessed.
+- **Not either/or:** downgrade tier *or* keep flagship and ship with less waste. The kit is **model-agnostic enforcement**, not a budget-model patch.
+
+You pay for graph index + embeddings once; every agent turn — cheap or expensive — gets the same scaffold.
+
+→ Deep dive: **[docs/ARCHITECTURE.md#model-tiers-who-gains-what](docs/ARCHITECTURE.md#model-tiers-who-gains-what)**
+
 ## What you get
 
 | Outcome | Mechanism |
 |---------|-----------|
+| **Budget-model lift** | Enforced playbook — biggest relative gain on fast/local tiers |
+| **Flagship efficiency** | Same gates — less token waste, fewer grep retries, consistent impact checks |
 | Graph in every task loop | Hooks on explore, edit, commit — not a sidecar |
 | Fewer missed callers | Symbol grep blocked → `context` / `impact` |
 | Better fuzzy grounding | SemanticSearch blocked → `query` (BM25 + embeddings) |
@@ -108,7 +133,7 @@ Enforced in `bundle/.cursor/rules/00-gitnexus-enforcement.mdc`.
 
 ## For GitNexus upstream
 
-> GitNexus gives teams a code knowledge graph. **cursor-gitnexus-kit** is the Cursor agent layer: install once, wire the graph into every task, enforce graph-first reasoning, autonomous refresh, human-readable status.  
+> GitNexus gives teams a code knowledge graph. **cursor-gitnexus-kit** is the Cursor agent layer: install once, wire the graph into every task, enforce graph-first reasoning, autonomous refresh, human-readable status — **model-agnostic uplift; highest ROI on budget/local tiers; flagship models run leaner too.**  
 > **Proposed:** `gitnexus init --cursor-kit`
 
 ## Contributing

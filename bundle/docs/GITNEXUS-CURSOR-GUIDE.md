@@ -10,6 +10,8 @@ This kit makes Cursor agents **use that graph on every task** — explore, debug
 
 | You get | Why it matters |
 |--------|----------------|
+| **Strong results on cheaper models** | Hooks + graph enforce a flagship-style loop — biggest **relative** lift on fast/local tiers |
+| **Less waste on expensive models** | Same gates — fewer grep retries, enforced `impact`, lower token burn even when the model is already capable |
 | Graph in every task loop | Not optional “unfamiliar code” mode — orient, drill, **cypher**, edit, finish through the graph |
 | Graph-first reasoning | Fewer missed callers and “grep-only” blind spots |
 | Structural precision | Field data flow, N-hop chains, overrides → **`cypher`**, not field grep |
@@ -17,6 +19,23 @@ This kit makes Cursor agents **use that graph on every task** — explore, debug
 | Pre-edit impact checks | Agent sees blast radius before changing shared code |
 | Autonomous index refresh | Graph stays aligned with your latest commits |
 | Enforced workflow | Not optional — hooks block lazy patterns when fresh |
+
+## Model tier — what to expect
+
+The kit helps **every model tier**. Messaging is honest about where the lift is largest:
+
+| Tier | What you get |
+|------|----------------|
+| **Fast / budget / local** | Graph + hooks carry repo structure — serious work without needing the most expensive model |
+| **Flagship / high-end** | Same enforced playbook — less spelunking, fewer missed callers, tokens spent on reasoning not blind reads |
+
+**Practical tips (all tiers):**
+
+- Prefer **Agent** mode with GitNexus MCP enabled — hooks only fire when the graph is fresh.
+- If results feel shallow, run `npm run gitnexus:health` — stale or missing embeddings hurt every model equally.
+- Local / zero-API models: rebuild graph context freely; don't skip gates for speed.
+
+You're not paying for model memory of the codebase — you're paying (once) for an index the agent must use. A smarter model still benefits from being **forced** to use it.
 
 ## What you will notice in Agent chats
 

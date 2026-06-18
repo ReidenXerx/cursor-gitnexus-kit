@@ -6,6 +6,46 @@ Production-hardened in [crypto-trading-bot](https://github.com/ReidenXerx/crypto
 
 ---
 
+## Model tiers — who gains what
+
+**Core product thesis:** better agent job results by **offloading repo reasoning to the graph** and **forcing a proven tool loop** via hooks — for **every model tier**, with the **largest relative lift on low-cost and local models**.
+
+Expensive models still grep-first, skip `impact`, and burn tokens on full-file reads. They *can* recover with more retries — budget models usually can't. **The kit fixes the workflow for both:**
+
+```mermaid
+flowchart LR
+  subgraph alone["Any model, no kit"]
+    P[Prompt] --> G[Grep / read / guess]
+    G --> A[Act — hit or miss]
+  end
+
+  subgraph kit["Any model + cursor-gitnexus-kit"]
+    P2[Prompt] --> H[Hooks enforce gate loop]
+    H --> GN["query → context → cypher"]
+    GN --> I[impact / detect_changes]
+    I --> A2[Act on graph-backed facts]
+  end
+```
+
+| Who | Primary gain |
+|-----|----------------|
+| **Budget / fast / local** | Viable for serious repo work — graph holds structure the model lacks |
+| **Flagship / expensive** | Same enforced loop — **fewer tokens**, fewer sloppy edits, model effort goes to reasoning not spelunking |
+
+| Capability models often “simulate” | What the kit provides instead |
+|-------------------------------------|-------------------------------|
+| Remembering callers across the repo | `context` + `impact` on the graph |
+| Fuzzy “where is X implemented?” | `query` (BM25 + embeddings) |
+| Field / N-hop structural questions | `cypher` (ACCESSES, CALLS, overrides) |
+| Safe refactors | `rename` dry_run + pre-edit `impact` |
+| Knowing when to stop exploring | Fixed gates; hooks block tool spam |
+
+**Positioning for GitNexus authors / buyers:** not “replace your flagship model” — **(a)** downgrade tier without losing repo quality, **(b)** keep flagship and waste less, **(c)** local/zero-API paths with the same gates. Index + embeddings amortize across all tiers.
+
+The enforcement rule explicitly supports **local LLM / zero API cost** paths: rebuild graph context freely; do not skip gates for speed.
+
+---
+
 ## 0. Optional sidecar vs graph in every task
 
 **Problem:** Without enforcement, GitNexus is a tool agents *may* use. They grep familiar files, patch from memory, and skip `impact` on “small” edits — the graph sits idle unless the prompt screams “explore this codebase.”
@@ -193,6 +233,7 @@ flowchart TD
 
 | Agent failure mode | Kit component |
 |-------------------|---------------|
+| Budget model can't "hold the repo in head" | Enforced `query` → `context` → `cypher` loop |
 | Graph only for “unfamiliar code” | Session gates + `00-gitnexus-enforcement.mdc` |
 | Grep-first habits | `grep-guard`, `read-guard`, `prompt-router` |
 | Skips embeddings | Blocks SemanticSearch → `query` |

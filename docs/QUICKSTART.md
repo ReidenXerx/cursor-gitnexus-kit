@@ -2,6 +2,8 @@
 
 Install **cursor-gitnexus-kit** into any git repo. The kit copies hooks, rules, skills, and scripts, merges MCP config, builds the graph index, and runs a full verification audit.
 
+**Why teams install it:** enforce graph-first agent work on **every model tier** — biggest lift on fast/budget/local models; flagship models run leaner with the same gates. Structure lives in the graph, not in parameter count.
+
 ## Prerequisites
 
 | Requirement | Notes |
