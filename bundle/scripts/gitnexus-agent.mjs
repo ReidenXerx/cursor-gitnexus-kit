@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -97,5 +97,15 @@ if (cmd === 'brief') {
   process.exit(r.status ?? 1);
 }
 
-console.error(`Unknown command: ${cmd}. Use: status | refresh | brief`);
+if (cmd === 'health') {
+  const r = spawnSync(process.execPath, [path.join(ROOT, '.cursor/hooks/lib/agent-health.mjs'), ROOT], {
+    encoding: 'utf8',
+    env: withProjectTmpEnv(ROOT),
+  });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  process.exit(r.status ?? 0);
+}
+
+console.error(`Unknown command: ${cmd}. Use: status | refresh | brief | health`);
 process.exit(2);

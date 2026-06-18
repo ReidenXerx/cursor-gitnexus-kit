@@ -38,6 +38,7 @@ if (!stale.fresh) {
     permission: 'allow',
     agent_message:
       'GN FALLBACK (stale): full Read allowed. NEXT: npm run gitnexus:agent-refresh before trusting graph tools.',
+    user_message: helpers.userMessage('stale.classical'),
   });
   process.exit(0);
 }
@@ -86,7 +87,7 @@ if (lineCount > threshold) {
         `Read blocked (${lineCount}L) → ${q} then ${ctx}; Read offset/limit for edits.`,
         `Read blocked → ${ctx}`
       ) + (reNudge ? `\n${reNudge}` : ''),
-    user_message: `Full read blocked (${lineCount} lines) — use GitNexus first.`,
+    user_message: helpers.userMessage('block.read.full', { lines: lineCount }),
   });
   process.exit(0);
 }

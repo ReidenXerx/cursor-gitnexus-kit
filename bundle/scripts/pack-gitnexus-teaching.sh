@@ -46,6 +46,8 @@ BUNDLE_PATHS=(
   .cursor/rules/gitnexus-first.mdc
   .cursor/hooks.json
   .cursor/hooks/gitnexus-session-primer.sh
+  .cursor/hooks/gitnexus-session-health.sh
+  .cursor/hooks/gitnexus-session-health-user.sh
   .cursor/hooks/gitnexus-prompt-router.sh
   .cursor/hooks/gitnexus-grep-guard.sh
   .cursor/hooks/gitnexus-read-guard.sh
@@ -63,6 +65,9 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/set-refresh-pending.mjs
   .cursor/hooks/lib/hook-helpers.mjs
   .cursor/hooks/lib/agent-brief.mjs
+  .cursor/hooks/lib/agent-health.mjs
+  .cursor/hooks/lib/session-health-audit.mjs
+  .cursor/hooks/lib/session-health-context.mjs
   .cursor/gitnexus-hooks.json
   .claude/skills/gitnexus
   .claude/skills/gitnexus-workspace
@@ -80,6 +85,7 @@ BUNDLE_PATHS=(
   scripts/gitnexus-teaching/install-from-bundle.sh
   scripts/gitnexus-teaching/merge-package-scripts.mjs
   docs/GITNEXUS-TEAM-BUNDLE.md
+  docs/GITNEXUS-CURSOR-GUIDE.md
   .gitnexusignore
 )
 
@@ -112,6 +118,8 @@ cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
 .cursor/.gitnexus-refresh-pending.flag
 .cursor/.gitnexus-mcp-used.flag
 .cursor/.gitnexus-deny-cache.json
+.cursor/.gitnexus-session-health.json
+.cursor/.gitnexus-session-user-notified.flag
 SNIP
 
 node <<NODE > "$BUNDLE_ROOT/MANIFEST.json"

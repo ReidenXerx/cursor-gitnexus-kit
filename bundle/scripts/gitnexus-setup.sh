@@ -99,6 +99,8 @@ TEACHING_SOURCES=(
   ".cursor/rules/gitnexus-first.mdc"
   ".cursor/hooks.json"
   ".cursor/hooks/gitnexus-session-primer.sh"
+  ".cursor/hooks/gitnexus-session-health.sh"
+  ".cursor/hooks/gitnexus-session-health-user.sh"
   ".cursor/hooks/gitnexus-prompt-router.sh"
   ".cursor/hooks/gitnexus-grep-guard.sh"
   ".cursor/hooks/gitnexus-read-guard.sh"
@@ -116,6 +118,9 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/hook-helpers.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
+  ".cursor/hooks/lib/agent-health.mjs"
+  ".cursor/hooks/lib/session-health-audit.mjs"
+  ".cursor/hooks/lib/session-health-context.mjs"
   ".cursor/gitnexus-hooks.json"
   ".vscode/settings.json"
   ".githooks/pre-commit"
@@ -130,6 +135,7 @@ TEACHING_SOURCES=(
   "scripts/gitnexus-teaching/install-from-bundle.sh"
   "scripts/gitnexus-teaching/merge-package-scripts.mjs"
   "docs/GITNEXUS-TEAM-BUNDLE.md"
+  "docs/GITNEXUS-CURSOR-GUIDE.md"
   ".gitnexusignore"
   ".claude/skills/gitnexus-workspace/SKILL.md"
   ".claude/skills/gitnexus-enforcement/SKILL.md"
@@ -228,41 +234,38 @@ echo "╚═══════════════════════�
 echo ""
 cat <<'ONBOARD'
 
-  RESTART CURSOR — required for MCP + hooks + skills to load.
+  GitNexus is now your Cursor agent's code brain — with enforcement.
 
-  ┌─ ENFORCEMENT (blocks inefficient defaults) ─────────────────┐
-  │ Hooks DENY: symbol Grep, SemanticSearch, broad Glob, large Read (when fresh) │
-  │ Hooks ALLOW: gitnexus npm scripts (agent runs refresh autonomously)          │
-  │ Prompt router: architecture questions → gitnexus-imaging nudge              │
-  │                                                              │
-  │ TEACHING                                                     │
-  │   • North-star rule:  00-gitnexus-enforcement.mdc (always) │
-  │   • Reference rules:  gitnexus.mdc + gitnexus-first (on demand) │
-  │   • Agent hooks:      block lazy patterns; session refresh   │
-  │   • Master skill:     gitnexus-workspace                     │
-  │   • Playbooks:        gitnexus-scenarios, pr-review, etc.    │
-  │   • Area skills:      .cursor/skills/generated/<area>/       │
-  │   • Manifest:         .cursor/gitnexus-teaching-bundle.json  │
-  │                                                              │
-  │ INFRASTRUCTURE                                               │
-  │   • MCP server:       gitnexus in .cursor/mcp.json           │
-  │   • Git hook:         pre-commit → gitnexus:refresh          │
-  │   • Graph index:      .gitnexus/ (local, gitignored)         │
-  └──────────────────────────────────────────────────────────────┘
+  ✓ Graph + embeddings indexed (or run gitnexus:agent-refresh after --quick)
+  ✓ Hooks block grep-first habits when the graph is fresh
+  ✓ Agent refreshes the index autonomously when stale
 
-  Agent workflow (enforced by rules + hooks):
-    context → query(+task_context,goal) → context(uid) → impact → detect_changes
+  NEXT STEPS
+  ──────────
+  1. RESTART CURSOR on this project (MCP + hooks load on restart)
+  2. Open a new Agent chat and describe your task
+  3. Share docs/GITNEXUS-CURSOR-GUIDE.md with your team
 
-  Start a new Agent chat with:
-    "Read gitnexus-workspace skill, then help me with …"
+  Quick check:  npm run gitnexus:health
 
-  Daily / agent autonomous:
-    npm run gitnexus:agent-brief    session orientation + suggested graph calls
-    npm run gitnexus:agent-status   staleness check
-    npm run gitnexus:agent-refresh  re-index when stale (hook pre-approved)
-    npm run gitnexus:sync-teaching  after pulling rule/skill updates
+  When hooks redirect the agent (grep/read blocked), that is expected —
+  GitNexus is enforcing graph-first reasoning.
 
-  Research API: use gitnexus-api-routes skill (NOT api_impact — custom router).
+  ── Maintainer details ────────────────────────────────────────
+
+  Agent workflow (enforced):
+    query → context → impact → detect_changes
+
+  Daily commands:
+    npm run gitnexus:health          human-friendly status
+    npm run gitnexus:agent-brief     session orientation (agents)
+    npm run gitnexus:agent-status    staleness (agents)
+    npm run gitnexus:agent-refresh   re-index when stale
+    npm run gitnexus:sync-teaching   after pulling kit updates
+
+  Hooks DENY (when fresh): symbol Grep, SemanticSearch, broad Glob, large Read
+  Hooks ALLOW: gitnexus npm scripts (agent refresh pre-approved)
+  MCP: gitnexus in .cursor/mcp.json · pre-commit → gitnexus:refresh
 
 ONBOARD
 echo ""

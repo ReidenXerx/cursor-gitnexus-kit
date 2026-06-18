@@ -50,7 +50,7 @@ if (mustRefresh) {
         (stale.detail || 'Index not fresh.') +
         (pending.pending ? ' Session auto-refresh did not complete.' : '')
     ),
-    user_message: 'GitNexus index stale — agent must refresh autonomously before other shell commands.',
+    user_message: helpers.userMessage('block.shell.stale'),
   });
   process.exit(0);
 }

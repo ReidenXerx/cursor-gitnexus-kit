@@ -4,9 +4,15 @@
     "sessionStart": [
       {
         "command": ".cursor/hooks/gitnexus-session-primer.sh"
+      },
+      {
+        "command": ".cursor/hooks/gitnexus-session-health.sh"
       }
     ],
     "beforeSubmitPrompt": [
+      {
+        "command": ".cursor/hooks/gitnexus-session-health-user.sh"
+      },
       {
         "command": ".cursor/hooks/gitnexus-prompt-router.sh"
       }

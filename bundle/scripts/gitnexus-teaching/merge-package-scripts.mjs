@@ -27,6 +27,7 @@ export const GITNEXUS_NPM_SCRIPTS = {
   'gitnexus:status': `${WRAP} npx gitnexus@latest status`,
   'gitnexus:agent-status': 'node scripts/gitnexus-agent.mjs status',
   'gitnexus:agent-brief': 'node scripts/gitnexus-agent.mjs brief',
+  'gitnexus:health': 'node scripts/gitnexus-agent.mjs health',
   'gitnexus:agent-refresh': 'node scripts/gitnexus-agent.mjs refresh',
   'gitnexus:clean-tmp': 'bash scripts/clean-project-tmp.sh',
   'gitnexus:list': `${WRAP} npx gitnexus@latest list`,

@@ -14,6 +14,8 @@ fail()  { printf '\033[1;31mERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 
 HOOK_SCRIPTS=(
   ".cursor/hooks/gitnexus-session-primer.sh"
+  ".cursor/hooks/gitnexus-session-health.sh"
+  ".cursor/hooks/gitnexus-session-health-user.sh"
   ".cursor/hooks/gitnexus-prompt-router.sh"
   ".cursor/hooks/gitnexus-grep-guard.sh"
   ".cursor/hooks/gitnexus-read-guard.sh"
@@ -34,6 +36,9 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/set-refresh-pending.mjs"
   ".cursor/hooks/lib/hook-helpers.mjs"
   ".cursor/hooks/lib/agent-brief.mjs"
+  ".cursor/hooks/lib/agent-health.mjs"
+  ".cursor/hooks/lib/session-health-audit.mjs"
+  ".cursor/hooks/lib/session-health-context.mjs"
   ".cursor/gitnexus-hooks.json"
   "scripts/gitnexus-agent.mjs"
 )
@@ -75,6 +80,8 @@ const h = hooks.hooks ?? {};
 
 const checks = [
   ['sessionStart', 'gitnexus-session-primer'],
+  ['sessionStart', 'gitnexus-session-health'],
+  ['beforeSubmitPrompt', 'gitnexus-session-health-user'],
   ['beforeSubmitPrompt', 'gitnexus-prompt-router'],
   ['preToolUse', 'gitnexus-shell-staleness-guard'],
   ['preToolUse', 'gitnexus-grep-guard'],

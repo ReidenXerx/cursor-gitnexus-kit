@@ -4,6 +4,8 @@ Portable **rules + hooks + skills + scripts** for graph-first Cursor agents. Bui
 
 > **Standalone installer:** [`cursor-gitnexus-kit`](https://github.com/ReidenXerx/cursor-gitnexus-kit) — `install` / `update` / `uninstall` scripts for any repo (upstream for this teaching bundle).
 
+> **Team-facing guide:** `docs/GITNEXUS-CURSOR-GUIDE.md` — plain language for developers (what enforcement feels like, `npm run gitnexus:health`).
+
 ## What's in the bundle
 
 | Included | Purpose |

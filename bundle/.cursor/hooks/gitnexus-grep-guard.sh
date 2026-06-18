@@ -46,7 +46,11 @@ function staleFallbackMsg() {
 }
 
 if (!stale.fresh) {
-  emit({ permission: 'allow', agent_message: staleFallbackMsg() });
+  emit({
+    permission: 'allow',
+    agent_message: staleFallbackMsg(),
+    user_message: helpers.userMessage('stale.classical'),
+  });
   process.exit(0);
 }
 
@@ -64,7 +68,7 @@ if (tool === 'Glob') {
         `Glob blocked → ${call}`,
         `Glob blocked → ${call}`
       ) + (reNudge ? `\n${reNudge}` : ''),
-      user_message: 'Broad source Glob blocked — use GitNexus query.',
+      user_message: helpers.userMessage('block.glob'),
     });
     process.exit(0);
   }
@@ -80,7 +84,7 @@ if (tool === 'SemanticSearch') {
     agent_message:
       helpers.hookAgentMessage(root, 'semantic-search', `SemanticSearch blocked → ${call}`, `→ ${call}`) +
       (reNudge ? `\n${reNudge}` : ''),
-    user_message: 'SemanticSearch disabled — use gitnexus_query (graph + embeddings).',
+    user_message: helpers.userMessage('block.semantic'),
   });
   process.exit(0);
 }
@@ -124,7 +128,7 @@ if ((bareId || exportDecl || classDecl) && scopedSource) {
         `Grep blocked (no GN yet) → ${call}`,
         `→ ${call}`
       ),
-      user_message: 'Use GitNexus context before scoped symbol grep.',
+      user_message: helpers.userMessage('block.grep.noGraph'),
     });
     process.exit(0);
   }
@@ -144,7 +148,7 @@ if (bareId || exportDecl || classDecl) {
     agent_message:
       helpers.hookAgentMessage(root, `grep:${sym}`, `Grep blocked → ${ctx}`, `→ ${ctx}`) +
       (reNudge ? `\n${reNudge}` : ''),
-    user_message: `Symbol grep blocked — use gitnexus_context on "${sym}"`,
+    user_message: helpers.userMessage('block.grep.symbol', { symbol: sym }),
   });
   process.exit(0);
 }
@@ -156,7 +160,7 @@ if (/^[a-z][a-zA-Z0-9]*$/.test(pattern) && pattern.length >= 6 && !pathArg) {
     agent_message:
       helpers.hookAgentMessage(root, `grep:${pattern}`, `Symbol grep → ${call}`, `→ ${call}`) +
       (reNudge ? `\n${reNudge}` : ''),
-    user_message: 'Likely symbol grep blocked.',
+    user_message: helpers.userMessage('block.grep.likely'),
   });
   process.exit(0);
 }

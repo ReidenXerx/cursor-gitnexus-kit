@@ -60,7 +60,7 @@ if (!stale.fresh && sensitivity !== 'none' && sensitivity !== 'light') {
       permission: 'deny',
       agent_message:
         msg + ' Edits blocked until refresh — npm run gitnexus:agent-refresh (pre-approved).',
-      user_message: 'GitNexus index stale — agent should refresh autonomously.',
+      user_message: helpers.userMessage('block.edit.stale'),
     });
     process.exit(0);
   }

@@ -252,3 +252,36 @@ export function isGraceStale(stale, config) {
   const n = stale.commitsBehind ?? 0;
   return n > 0 && n <= (config.graceCommitsBehind ?? 0);
 }
+
+/**
+ * Human-facing hook messages — enforcement stays on; voice explains the benefit.
+ * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.classical'} key
+ * @param {Record<string, string | number>} [vars]
+ */
+export function userMessage(key, vars = {}) {
+  const sym = vars.symbol != null ? String(vars.symbol) : '';
+  const lines = String(vars.lines ?? '');
+  const templates = {
+    'block.glob':
+      'GitNexus has this codebase indexed — the agent will use graph search to find modules instead of scanning every file.',
+    'block.semantic':
+      'Exploratory questions go through GitNexus (graph + embeddings) so the agent maps real execution flows, not just text matches.',
+    'block.grep.noGraph':
+      'GitNexus goes first — the agent will look up this symbol in the knowledge graph before searching files.',
+    'block.grep.symbol': sym
+      ? `Symbol search is routed through GitNexus for "${sym}" — callers and relationships come from the graph, not grep.`
+      : 'Symbol search is routed through GitNexus — the graph knows callers and relationships better than grep.',
+    'block.grep.likely':
+      'This looks like a symbol search — GitNexus will resolve it in the knowledge graph instead of grep.',
+    'block.read.full': lines
+      ? `Full-file read is blocked (${lines} lines). The agent will pull the relevant symbols from GitNexus, then read only what's needed.`
+      : 'Full-file read is blocked. The agent will use GitNexus to find the right symbols first, then read targeted sections.',
+    'block.edit.stale':
+      'The code graph is behind your latest commits. The agent must refresh GitNexus before editing source files — so changes stay accurate.',
+    'block.shell.stale':
+      'The code graph needs a refresh before other commands run. The agent will update GitNexus automatically.',
+    'stale.classical':
+      'GitNexus index is behind or updating — classic search is allowed briefly while the agent refreshes the graph.',
+  };
+  return templates[key] ?? 'GitNexus is guiding the agent to a better code-reasoning path.';
+}

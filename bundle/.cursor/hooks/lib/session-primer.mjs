@@ -46,6 +46,13 @@ export function clearSessionState(root) {
       /* ignore */
     }
   }
+  for (const rel of ['.gitnexus-session-user-notified.flag']) {
+    try {
+      fs.unlinkSync(path.join(cursorDir, rel));
+    } catch {
+      /* ignore */
+    }
+  }
   clearDenyCache(root);
 }
 
