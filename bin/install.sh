@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install cursor-gitnexus-kit into a target git repo.
-# Usage: ./bin/install.sh /path/to/repo [--repo-name NAME] [--quick] [--no-setup]
+# Usage: ./bin/install.sh /path/to/repo [--repo-name NAME] [--quick] [--no-setup] [--skip-verify]
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"

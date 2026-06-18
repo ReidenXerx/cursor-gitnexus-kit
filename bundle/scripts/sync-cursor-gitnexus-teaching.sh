@@ -43,8 +43,12 @@ HOOK_LIBS=(
   ".cursor/hooks/lib/agent-health.mjs"
   ".cursor/hooks/lib/session-health-audit.mjs"
   ".cursor/hooks/lib/session-health-context.mjs"
+  ".cursor/hooks/lib/verify-kit.mjs"
   ".cursor/gitnexus-hooks.json"
   "scripts/gitnexus-agent.mjs"
+  "scripts/gitnexus-gate-hint.mjs"
+  "scripts/gitnexus-teaching/script-gates.mjs"
+  "scripts/lib/setup-ui.mjs"
 )
 
 sync_dir() {

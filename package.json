@@ -1,9 +1,17 @@
 {
   "name": "cursor-gitnexus-kit",
   "version": "1.0.0",
-  "description": "Portable Cursor + GitNexus enforcement bundle — install, update, uninstall for any repo",
+  "description": "Cursor agent enforcement layer for GitNexus — hooks, MCP, skills, and install UX for graph-first reasoning on every task",
   "type": "module",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReidenXerx/cursor-gitnexus-kit.git"
+  },
+  "homepage": "https://github.com/ReidenXerx/cursor-gitnexus-kit#readme",
+  "bugs": {
+    "url": "https://github.com/ReidenXerx/cursor-gitnexus-kit/issues"
+  },
   "bin": {
     "gn-kit-install": "./bin/install.sh",
     "gn-kit-update": "./bin/update.sh",
@@ -18,6 +26,16 @@
     "uninstall:target": "./bin/uninstall.sh",
     "test": "node --test lib/kit.test.mjs"
   },
-  "keywords": ["cursor", "gitnexus", "agent", "hooks", "mcp"],
+  "keywords": [
+    "cursor",
+    "gitnexus",
+    "mcp",
+    "ai-agents",
+    "code-intelligence",
+    "knowledge-graph",
+    "cursor-hooks",
+    "cypher",
+    "developer-tools"
+  ],
   "license": "ISC"
 }

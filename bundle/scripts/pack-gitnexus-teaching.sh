@@ -72,6 +72,7 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/agent-health.mjs
   .cursor/hooks/lib/session-health-audit.mjs
   .cursor/hooks/lib/session-health-context.mjs
+  .cursor/hooks/lib/verify-kit.mjs
   .cursor/gitnexus-hooks.json
   .claude/skills/gitnexus
   .claude/skills/gitnexus-workspace
@@ -83,11 +84,14 @@ BUNDLE_PATHS=(
   scripts/pack-gitnexus-teaching.sh
   scripts/install-git-hooks.sh
   scripts/gitnexus-agent.mjs
+  scripts/gitnexus-gate-hint.mjs
   scripts/run-with-project-tmp.sh
   scripts/clean-project-tmp.sh
   scripts/lib/project-tmp.mjs
+  scripts/lib/setup-ui.mjs
   scripts/gitnexus-teaching/install-from-bundle.sh
   scripts/gitnexus-teaching/merge-package-scripts.mjs
+  scripts/gitnexus-teaching/script-gates.mjs
   docs/GITNEXUS-TEAM-BUNDLE.md
   docs/GITNEXUS-CURSOR-GUIDE.md
   .gitnexusignore

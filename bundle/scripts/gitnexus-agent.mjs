@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|graph-smoke|detect-api
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -130,5 +130,15 @@ if (cmd === 'detect-api') {
   process.exit(0);
 }
 
-console.error(`Unknown command: ${cmd}. Use: status | refresh | brief | health | graph-smoke | detect-api`);
+if (cmd === 'verify') {
+  const verifyPath = path.join(ROOT, '.cursor/hooks/lib/verify-kit.mjs');
+  const r = spawnSync(process.execPath, [verifyPath, ROOT, ...process.argv.slice(3)], {
+    cwd: ROOT,
+    stdio: 'inherit',
+    env: withProjectTmpEnv(ROOT),
+  });
+  process.exit(r.status ?? 1);
+}
+
+console.error(`Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | graph-smoke | detect-api`);
 process.exit(2);

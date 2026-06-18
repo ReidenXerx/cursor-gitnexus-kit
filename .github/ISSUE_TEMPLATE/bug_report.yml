@@ -1,0 +1,61 @@
+name: Bug report
+description: Something broke during install, hooks, or agent enforcement
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Include versions and what you expected vs what happened.
+
+  - type: input
+    id: kit-version
+    attributes:
+      label: Kit version or commit
+      placeholder: e.g. v1.0.0 or abc1234
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS
+        - Linux
+        - WSL
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ./bin/install.sh ../my-repo
+        2. Restart Cursor
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / verify output
+      description: Paste `npm run gitnexus:verify` or hook output if available
+      render: shell

@@ -125,6 +125,7 @@ TEACHING_SOURCES=(
   ".cursor/hooks/lib/agent-health.mjs"
   ".cursor/hooks/lib/session-health-audit.mjs"
   ".cursor/hooks/lib/session-health-context.mjs"
+  ".cursor/hooks/lib/verify-kit.mjs"
   ".cursor/gitnexus-hooks.json"
   ".vscode/settings.json"
   ".githooks/pre-commit"
@@ -133,11 +134,14 @@ TEACHING_SOURCES=(
   "scripts/install-git-hooks.sh"
   "scripts/pack-gitnexus-teaching.sh"
   "scripts/gitnexus-agent.mjs"
+  "scripts/gitnexus-gate-hint.mjs"
   "scripts/run-with-project-tmp.sh"
   "scripts/clean-project-tmp.sh"
   "scripts/lib/project-tmp.mjs"
+  "scripts/lib/setup-ui.mjs"
   "scripts/gitnexus-teaching/install-from-bundle.sh"
   "scripts/gitnexus-teaching/merge-package-scripts.mjs"
+  "scripts/gitnexus-teaching/script-gates.mjs"
   "docs/GITNEXUS-TEAM-BUNDLE.md"
   "docs/GITNEXUS-CURSOR-GUIDE.md"
   ".gitnexusignore"
@@ -222,18 +226,12 @@ fi
 
 # ── 8. verify ─────────────────────────────────────────────────────────────────
 
-info "Verifying installation"
-[[ -f ".cursor/gitnexus-teaching-bundle.json" ]] && ok "Teaching manifest written" \
-  || warn "Teaching manifest missing"
-[[ -f ".cursor/skills/gitnexus-workspace/SKILL.md" ]] && ok "Master skill in .cursor/skills/" \
-  || warn "Master skill not synced — run npm run gitnexus:sync-teaching"
-
-if [[ "$SKIP_INDEX" == false ]]; then
-  npm run gitnexus:status 2>/dev/null && ok "Index status OK" || warn "Status check failed"
+info "Full kit verification"
+if npm run gitnexus:verify 2>/dev/null; then
+  ok "Kit verification passed"
+else
+  warn "Verification reported issues — run npm run gitnexus:verify after fixing"
 fi
-
-"${GITNEXUS_CLI[@]}" list 2>/dev/null | grep -q __GITNEXUS_REPO__ \
-  && ok "Registered in GitNexus" || warn "Not in registry — run gitnexus:refresh"
 
 # ── 9. onboarding ─────────────────────────────────────────────────────────────
 
@@ -257,6 +255,8 @@ cat <<'ONBOARD'
   3. Share docs/GITNEXUS-CURSOR-GUIDE.md with your team
 
   Quick check:  npm run gitnexus:health
+  Full audit:   npm run gitnexus:verify
+  Gate docs:    npm run gitnexus.__gate.1.session
 
   When hooks redirect the agent (grep/read blocked), that is expected —
   GitNexus is enforcing graph-first reasoning.

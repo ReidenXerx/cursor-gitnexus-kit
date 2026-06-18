@@ -1,0 +1,33 @@
+name: Feature request
+description: New enforcement gate, hook, skill, or install UX improvement
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What agent or team behavior are we trying to fix?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Hooks / enforcement
+        - Install / verify UX
+        - Skills / rules
+        - MCP / graph tools
+        - Docs / onboarding
+        - Other
+    validations:
+      required: true

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Update cursor-gitnexus-kit files in a target repo (re-copy bundle + sync teaching).
-# Usage: ./bin/update.sh /path/to/repo [--repo-name NAME] [--quick]
+# Usage: ./bin/update.sh /path/to/repo [--repo-name NAME] [--quick] [--skip-verify]
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
