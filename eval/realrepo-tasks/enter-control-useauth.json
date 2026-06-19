@@ -1,0 +1,41 @@
+{
+  "id": "enter-control-useauth-impact",
+  "title": "Pinpoint the exact web-useAuth dependency closure in a mirrored monorepo",
+  "repo": "/Users/vk/Projects/enter-control",
+  "answerFile": "web-useauth-files.txt",
+  "scoreBy": "path",
+  "prompt": "This monorepo has two near-identical client packages: `clients/web` and `clients/desktop`. EACH has its OWN separate `useAuth` hook, and many component files share the SAME name across both packages. Your job: list the repo-relative file path of every module in `clients/web` that depends on the WEB `useAuth` hook (the one exported from `clients/web/src/auth/auth-provider.tsx`). Include BOTH files that call it directly AND files that depend on it transitively up to 2 levels (a component that renders another component which uses useAuth is also affected, even if it never mentions `useAuth` itself). STRICT RULES: (1) ONLY `clients/web/...` paths — exclude every `clients/desktop/...` file, it has its own unrelated useAuth. (2) Exclude the hook's own definition/re-export files (auth-provider.tsx, auth/index.ts). Write one repo-relative path per line (e.g. `clients/web/src/components/account-panel.tsx`) to `web-useauth-files.txt` in the repo root.",
+  "threshold": 0.95,
+  "scoreMetric": "f1",
+  "groundTruth": [
+    "clients/web/src/App.tsx",
+    "clients/web/src/components/account-panel.tsx",
+    "clients/web/src/components/admin-panel.tsx",
+    "clients/web/src/components/billing-panel.tsx",
+    "clients/web/src/components/chat-gate.tsx",
+    "clients/web/src/components/dev-menu.tsx",
+    "clients/web/src/components/embedded-pricing-table.tsx",
+    "clients/web/src/components/login-register-panel.tsx",
+    "clients/web/src/components/manage-team-panel.tsx",
+    "clients/web/src/hooks/use-baa-signing.ts",
+    "clients/web/src/hooks/use-widget-token.ts",
+    "clients/web/src/components/onboarding-flow.tsx",
+    "clients/web/src/components/organization-settings.tsx",
+    "clients/web/src/components/payment-prompt.tsx",
+    "clients/web/src/components/personalization-panel.tsx",
+    "clients/web/src/components/refresh-user-button.tsx",
+    "clients/web/src/components/subscription-details-card.tsx",
+    "clients/web/src/components/toolbar.tsx",
+    "clients/web/src/services/chat-availability-service.tsx",
+    "clients/web/src/views/settings-view.tsx",
+    "clients/web/src/components/agreement-prompt.tsx",
+    "clients/web/src/pages/chat.tsx",
+    "clients/web/src/views/chat-view/chat-view.tsx"
+  ],
+  "grepInvisible": [
+    "clients/web/src/components/agreement-prompt.tsx",
+    "clients/web/src/pages/chat.tsx",
+    "clients/web/src/views/chat-view/chat-view.tsx"
+  ],
+  "hypothesis": "Graph-only task. 3 of 23 truth files (agreement-prompt.tsx, pages/chat.tsx, chat-view.tsx) are transitive dependents that NEVER contain the text 'useAuth', so grep cannot find them — a flawless grep run ceilings at 20/23 = 0.87 recall, F1 <= 0.93. Meanwhile `grep useAuth` floods with clients/desktop mirror files + web non-callers, dragging precision down further. gitnexus_impact(upstream, depth 2) returns the exact 23-file closure → F1 = 1.0. Pass bar F1 >= 0.95 is reachable only with the graph."
+}

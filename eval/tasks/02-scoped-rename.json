@@ -1,0 +1,13 @@
+{
+  "id": "scoped-rename",
+  "title": "Rename one symbol among a name collision (don't touch the namesake)",
+  "prompt": "This repo has TWO unrelated functions both named `load`: one in src/cache.js and a different one in src/db.js. Rename ONLY the `load` defined in src/cache.js (and its callers) to `loadFromCache`. Do NOT rename or modify the `load` in src/db.js or its callers. Running `node src/index.js` must still print exactly `cache:k|db:i`. Make the edits now.",
+  "fixture": "scoped-rename",
+  "check": { "cmd": "node verify.mjs" },
+  "rubric": [
+    "cache.js load + its caller renamed to loadFromCache",
+    "db.js load (the namesake) left completely untouched",
+    "node src/index.js still prints cache:k|db:i"
+  ],
+  "hypothesis": "Kit ON resolves `load` to a specific graph symbol and renames only its references; OFF tends to text-replace and corrupt the unrelated namesake (or miss the caller)."
+}

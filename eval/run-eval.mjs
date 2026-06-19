@@ -31,13 +31,15 @@ const TASKS_DIR = path.join(HERE, 'tasks');
 const REPORT_PATH = path.join(HERE, 'report.md');
 
 function parseArgs(argv) {
-  const args = { runner: null, model: null, dryRun: true };
+  const args = { runner: null, model: null, dryRun: true, trials: 1 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--runner') {
       args.runner = argv[++i];
       args.dryRun = false;
     } else if (argv[i] === '--model') {
       args.model = argv[++i];
+    } else if (argv[i] === '--trials') {
+      args.trials = Math.max(1, Number(argv[++i]) || 1);
     } else if (argv[i] === '--dry-run') {
       args.dryRun = true;
     }
@@ -76,6 +78,7 @@ function runCondition(runner, task, kit, model) {
       GITNEXUS_KIT: kit,
       GITNEXUS_TASK_ID: task.id,
       GITNEXUS_TASK_PROMPT: task.prompt,
+      GITNEXUS_TASK_JSON: JSON.stringify(task),
       ...(model ? { GITNEXUS_MODEL: model } : {}),
     },
   });
@@ -90,6 +93,22 @@ function runCondition(runner, task, kit, model) {
 
 function pct(n, d) {
   return d ? Math.round((n / d) * 100) : 0;
+}
+
+function runTrials(runner, task, kit, model, trials) {
+  let passes = 0;
+  let tokenSum = 0;
+  let tokenRuns = 0;
+  for (let i = 0; i < trials; i++) {
+    const r = runCondition(runner, task, kit, model);
+    if (r.pass) passes++;
+    if (r.tokens > 0) {
+      tokenSum += r.tokens;
+      tokenRuns++;
+    }
+    process.stdout.write(r.pass ? '.' : 'x');
+  }
+  return { passes, trials, avgTokens: tokenRuns ? Math.round(tokenSum / tokenRuns) : 0 };
 }
 
 function main() {
@@ -120,47 +139,61 @@ function main() {
     }
     console.log(
       '\nPlug in a runner to measure real lift, e.g.:\n' +
-        '  node eval/run-eval.mjs --runner "node eval/runners/cursor-agent.mjs" --model gpt-5.5-medium\n' +
+        '  node eval/run-eval.mjs --runner "node eval/runners/cursor-agent.mjs" --model composer-2.5-fast --trials 3\n' +
         '\nThe runner gets GITNEXUS_KIT=on|off and prints {"pass":bool,"tokens":int}.'
     );
     return;
   }
 
-  const rows = [];
-  for (const t of tasks) {
-    process.stdout.write(`Running [${t.id}] … `);
-    const off = runCondition(args.runner, t, 'off', args.model);
-    const on = runCondition(args.runner, t, 'on', args.model);
-    rows.push({ id: t.id, title: t.title, off, on });
-    console.log(`off=${off.pass ? 'PASS' : 'fail'} on=${on.pass ? 'PASS' : 'fail'}`);
+  const runnable = tasks.filter((t) => t.check && t.check.cmd);
+  const skipped = tasks.filter((t) => !(t.check && t.check.cmd));
+  for (const t of skipped) {
+    console.log(`  (skip [${t.id}] — no machine check; runs in --dry-run matrix only)`);
+  }
+  if (!runnable.length) {
+    console.error('No tasks with a machine "check" — nothing to score. Add a check to a task spec.');
+    process.exit(1);
   }
 
-  const offPass = rows.filter((r) => r.off.pass).length;
-  const onPass = rows.filter((r) => r.on.pass).length;
-  const offTok = rows.reduce((s, r) => s + r.off.tokens, 0);
-  const onTok = rows.reduce((s, r) => s + r.on.tokens, 0);
+  const trials = args.trials;
+  const rows = [];
+  for (const t of runnable) {
+    process.stdout.write(`Running [${t.id}] (${trials}× each) off:`);
+    const off = runTrials(args.runner, t, 'off', args.model, trials);
+    process.stdout.write(' on:');
+    const on = runTrials(args.runner, t, 'on', args.model, trials);
+    rows.push({ id: t.id, title: t.title, off, on });
+    console.log(` → off=${off.passes}/${trials} on=${on.passes}/${trials}`);
+  }
+
+  const totalTrials = rows.length * trials;
+  const offPass = rows.reduce((s, r) => s + r.off.passes, 0);
+  const onPass = rows.reduce((s, r) => s + r.on.passes, 0);
 
   const md = [];
   md.push('# GitNexus kit eval report');
   md.push('');
-  md.push(`Model: ${args.model || '(runner default)'} · Tasks: ${rows.length} · ${new Date().toISOString()}`);
+  md.push(
+    `Model: ${args.model || '(runner default)'} · Tasks: ${rows.length} · Trials/condition: ${trials} · ${new Date().toISOString()}`
+  );
   md.push('');
-  md.push('| Task | Kit OFF | Kit ON | OFF tokens | ON tokens |');
+  md.push('| Task | Kit OFF (pass) | Kit ON (pass) | OFF avg tokens | ON avg tokens |');
   md.push('| --- | --- | --- | --- | --- |');
   for (const r of rows) {
     md.push(
-      `| ${r.title} | ${r.off.pass ? '✅' : '❌'} | ${r.on.pass ? '✅' : '❌'} | ${r.off.tokens} | ${r.on.tokens} |`
+      `| ${r.title} | ${r.off.passes}/${trials} | ${r.on.passes}/${trials} | ${r.off.avgTokens || '—'} | ${r.on.avgTokens || '—'} |`
     );
   }
   md.push('');
   md.push('## Summary');
   md.push('');
-  md.push(`- Pass-rate: **${pct(offPass, rows.length)}% → ${pct(onPass, rows.length)}%** (OFF → ON)`);
-  md.push(`- Tokens: ${offTok} → ${onTok} (${onTok - offTok >= 0 ? '+' : ''}${onTok - offTok})`);
+  md.push(
+    `- Overall pass-rate: **${pct(offPass, totalTrials)}% → ${pct(onPass, totalTrials)}%** (OFF → ON), n=${totalTrials} runs`
+  );
   md.push('');
   fs.writeFileSync(REPORT_PATH, md.join('\n') + '\n');
 
-  console.log(`\nPass-rate OFF→ON: ${pct(offPass, rows.length)}% → ${pct(onPass, rows.length)}%`);
+  console.log(`\nOverall pass-rate OFF→ON: ${pct(offPass, totalTrials)}% → ${pct(onPass, totalTrials)}%`);
   console.log(`Report: ${path.relative(process.cwd(), REPORT_PATH)}`);
 }
 

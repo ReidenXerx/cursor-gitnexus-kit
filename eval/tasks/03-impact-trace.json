@@ -1,0 +1,13 @@
+{
+  "id": "impact-trace",
+  "title": "Identify the full transitive blast radius of a change",
+  "prompt": "Without editing any source, determine the COMPLETE set of functions that would be affected — directly OR transitively, at any call depth — if the return value of `getValue` in src/core.js changed. Write each affected function's name on its own line to a file named affected.txt in the repo root.",
+  "fixture": "impact-trace",
+  "check": { "cmd": "node verify.mjs" },
+  "rubric": [
+    "Includes direct caller (compute)",
+    "Includes transitive callers (report, render)",
+    "Excludes unrelated functions"
+  ],
+  "hypothesis": "Kit ON uses gitnexus_impact(upstream) to get the whole call chain in one shot; OFF greps `getValue`, finds only the direct caller, and misses the transitive ones."
+}

@@ -1,11 +1,13 @@
 {
   "id": "safe-rename",
   "title": "Rename a widely-used symbol without breaking callers",
-  "prompt": "Rename the function `parseConfig` to `loadConfig` everywhere it is used. All call sites must be updated and tests must still pass.",
+  "prompt": "In this repo, rename the function `parseConfig` to `loadConfig`. Update its definition AND every call site / import across the codebase. Do not break anything — running `node src/index.js` must still print `ok`. Make the edits now.",
+  "fixture": "mini-rename",
+  "check": { "cmd": "node verify.mjs" },
   "rubric": [
     "No references to the old name remain",
-    "All call sites updated (not just the definition)",
-    "Existing tests pass"
+    "All call sites + imports updated (not just the definition)",
+    "node src/index.js still prints 'ok'"
   ],
   "hypothesis": "Kit ON forces gitnexus_rename, catching every call site graph-wide; OFF tends to miss text-search-invisible references."
 }
