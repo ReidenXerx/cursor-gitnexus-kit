@@ -20,7 +20,7 @@ const architecture =
   );
 
 const structural =
-  /\b(readers?|writers?|who (reads|writes)|field access|property access|getter|setter|mutat|ACCESSES|data flow through|override chain|method override|diamond inherit|\d+.hop|multi.hop|call chain|process step|STEP_IN_PROCESS|HAS_METHOD|class methods)\b/i.test(
+  /\b(readers?|writers?|who (reads|writes)|field access|property access|getter|setter|mutat|ACCESSES|data flow through|override chain|method override|diamond inherit|\d+.hop|multi.hop|call chain|shortest path|trace from|path from|process step|STEP_IN_PROCESS|HAS_METHOD|class methods|PDG|control dependence|control flow|data dependence|taint|injection|xss|path traversal)\b/i.test(
     prompt
   );
 
@@ -37,16 +37,21 @@ const codeTask =
     prompt
   );
 
-const pathMatch = prompt.match(/(?:^|[\s(])([\w./-]+\.(?:js|mjs|ts|tsx|jsx))/);
+const pathMatch = prompt.match(/(?:^|[\s(])([\w./-]+\.(?:js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|swift|php|cs|cpp|cc|c|cu|cuh))/);
 const symbolMatch = prompt.match(/\b([A-Z][A-Za-z0-9]+)\b/);
 const fieldMatch =
   prompt.match(/\b(?:field|property)\s+[`'"]?([a-z][a-zA-Z0-9]*)[`'"]?/i) ||
   prompt.match(/\b(readers?|writers?)\s+(?:of|for)\s+[`'"]?([a-z][a-zA-Z0-9]*)[`'"]?/i);
-const callChainMatch = prompt.match(/\b(?:call chain|callers?)\s+(?:of|for|to)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
+const callChainMatch = prompt.match(/\b(?:call chain|callers?|shortest path|trace)\s+(?:of|for|to)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
+const traceMatch = prompt.match(/\b(?:trace|path)\s+(?:from\s+)?[`'"]?([A-Za-z_$][\w$]*)[`'"]?\s+(?:to|->|→)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
 const overrideMatch = prompt.match(/\b(?:override|overrides)\s+(?:of|for|on)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
 const processMatch = prompt.match(/\b(?:process|flow)\s+[`'"]?([^"'`]+)[`'"]?/i);
 const renameParsed = (await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/rename-helpers.mjs')).href)).parseRenameFromPrompt(prompt);
-const dataFlow = /\b(data flow|field flow|property flow|who (reads|writes)|readers?|writers?|mutat|getter|setter)\b/i.test(prompt);
+const dataFlow = /\b(data flow|data dependence|field flow|property flow|who (reads|writes)|readers?|writers?|mutat|getter|setter|where does .+ flow)\b/i.test(prompt);
+const pdgControl = /\b(PDG|control flow|control dependence|what guards|guarded by|under what condition|why does .+ run)\b/i.test(prompt);
+const pdgImpact = /\b(PDG impact|precise impact|genuinely affected|control.data affected)\b/i.test(prompt);
+const taint = /\b(taint|injection|sql injection|command injection|code injection|path traversal|xss|source.?sink|security review)\b/i.test(prompt);
+const variableMatch = prompt.match(/\b(?:variable|var|binding)\s+[`'"]?([A-Za-z_$][\w$]*)[`'"]?/i);
 
 const { writePromptHint } = await import(
   pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
@@ -57,13 +62,20 @@ writePromptHint(root, {
   explore,
   reasoning,
   codeTask,
-  structural: structural || Boolean(fieldMatch || callChainMatch) || dataFlow,
+  structural: structural || Boolean(fieldMatch || callChainMatch || traceMatch) || dataFlow || pdgControl || pdgImpact || taint,
   dataFlow,
+  pdgFlowHint: dataFlow,
+  pdgControlHint: pdgControl,
+  pdgImpactHint: pdgImpact,
+  taintHint: taint,
   renameHint: renameParsed,
   fieldHint: fieldMatch?.[2] || fieldMatch?.[1] || null,
   fieldRead: /\b(readers?|reads|read access|getter)\b/i.test(prompt),
   fieldWrite: /\b(writers?|writes|write access|mutat|setter)\b/i.test(prompt),
   callChainHint: callChainMatch?.[1] || null,
+  traceFrom: traceMatch?.[1] || null,
+  traceTo: traceMatch?.[2] || null,
+  variableHint: variableMatch?.[1] || null,
   overrideHint: overrideMatch?.[1] || null,
   processHint: structural && processMatch ? processMatch[1].trim().slice(0, 80) : null,
   hopDepth: /\b(\d+)[- ]hop/i.test(prompt) ? Number(prompt.match(/\b(\d+)[- ]hop/i)[1]) : 3,

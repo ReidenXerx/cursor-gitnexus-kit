@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Uninstall cursor-gitnexus-kit from a target repo (restores hooks/mcp backups when present).
+# Uninstall gitnexus-agent-kit from a target repo.
 # Usage: ./bin/uninstall.sh /path/to/repo [--remove-index]
 set -euo pipefail
 
@@ -7,9 +7,7 @@ KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="${1:-}"
 
 if [[ -z "$TARGET" ]] || [[ "$TARGET" == "-h" ]] || [[ "$TARGET" == "--help" ]]; then
-  sed -n '2,4p' "$0" | sed 's/^# \?//'
-  echo ""
-  echo "  --remove-index   Also delete .gitnexus/ and .tmp-agent/"
+  sed -n '2,3p' "$0" | sed 's/^# *//'
   exit 0
 fi
 

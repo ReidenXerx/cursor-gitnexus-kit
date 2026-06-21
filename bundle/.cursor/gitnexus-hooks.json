@@ -5,5 +5,26 @@
   "graceCommitsBehind": 2,
   "stalenessCacheTtlMs": 2500,
   "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"],
-  "sourceExts": ["js", "mjs", "cjs", "jsx", "ts", "tsx", "py", "rb", "go", "rs", "java", "kt", "swift", "php", "cs", "cpp", "c", "scala"]
+  "sourceExts": [
+    "js",
+    "mjs",
+    "cjs",
+    "jsx",
+    "ts",
+    "tsx",
+    "py",
+    "rb",
+    "go",
+    "rs",
+    "java",
+    "kt",
+    "swift",
+    "php",
+    "cs",
+    "cpp",
+    "c",
+    "cu",
+    "cuh",
+    "scala"
+  ]
 }

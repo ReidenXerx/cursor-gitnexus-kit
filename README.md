@@ -1,10 +1,10 @@
 <div align="center">
 
-# cursor-gitnexus-kit
+# gitnexus-agent-kit
 
-**The enforcement layer for GitNexus + Cursor**
+**The enforcement layer for GitNexus — Cursor, Zed, and Ollama**
 
-Hooks · MCP · Skills · Cypher · Autonomous refresh — graph-first reasoning on **every task**, not only when code is unfamiliar.
+Hooks (Cursor) · Agent profiles (Zed) · MCP · Skills · Cypher · Autonomous refresh — graph-first reasoning on **every task**, not only when code is unfamiliar.
 
 **Stronger agent work at every model tier** — biggest lift on fast, budget, and local models; flagship models run leaner and more consistently too.
 
@@ -17,7 +17,7 @@ The graph + hooks replace ad hoc grep-and-guess with enforced structure — so y
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
 [![GitNexus](https://img.shields.io/badge/GitNexus-MCP-6366f1)](https://github.com/abhigyanpatwari/GitNexus)
 
-[Quick start](#quick-start) · [Architecture](docs/ARCHITECTURE.md) · [Full install guide](docs/QUICKSTART.md) · [Team guide](bundle/docs/GITNEXUS-CURSOR-GUIDE.md)
+[Quick start](#quick-start) · [Zed + Ollama](docs/ZED.md) · [Architecture](docs/ARCHITECTURE.md) · [Full install guide](docs/QUICKSTART.md)
 
 </div>
 
@@ -28,17 +28,29 @@ GitNexus builds the knowledge graph. This kit wires it into **all agent reasonin
 Battle-tested in production on [crypto-trading-bot](https://github.com/ReidenXerx/crypto-trading-bot).
 
 ```bash
-git clone https://github.com/ReidenXerx/cursor-gitnexus-kit.git
-cd cursor-gitnexus-kit
-./bin/install.sh /path/to/your-repo
-# → restart Cursor on target → npm run gitnexus:health → new Agent chat
+git clone https://github.com/ReidenXerx/gitnexus-agent-kit.git
+cd gitnexus-agent-kit
+./bin/install.sh                    # interactive — pick Cursor, Zed, or both
+./bin/install.sh /path/to/repo --runtime zed   # Zed + Ollama profile
+./bin/install.sh /path/to/repo --runtime both  # Cursor hooks + Zed profile
+# → restart your IDE → npm run gitnexus:health → new Agent chat
 ```
 
 ## Why this exists
 
 Most teams treat GitNexus as optional onboarding docs. Agents grep familiar files, skip `impact` on “small” edits, and only open the graph when lost. **Wrong model.** The graph should be the default substrate for every task.
 
-This kit closes that gap with Cursor hooks, a single always-on enforcement rule, session health rituals, and a polished install that ends in `gitnexus:verify`.
+This kit closes that gap with **IDE-specific enforcement** — Cursor hooks, Zed agent profiles, shared symlinked skills, session health rituals, and a polished install that ends in `gitnexus:verify`.
+
+## IDE runtimes
+
+| Runtime | What gets installed | Enforcement style |
+| --- | --- | --- |
+| **Cursor** (`--runtime cursor`) | Hooks, rules, `.cursor/mcp.json`, skills | Hard — hooks deny grep/read when graph is fresh |
+| **Zed** (`--runtime zed`) | `.zed/settings.json`, **Zed + GitNexus** agent profile, `.agents/skills/`, `AGENTS.md` | Profile — grep disabled; Zed model + gitnexus MCP |
+| **Both** (`--runtime both`, default) | Everything above | Cursor hard gates + Zed profile for the same repo |
+
+Skills live once in `.gitnexus/agent-kit/skills/` and are **symlinked** into `.cursor/skills/` and/or `.agents/skills/` — one source of truth, both IDEs stay in sync on update.
 
 → Deep dive with diagrams: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
@@ -77,7 +89,7 @@ You pay for graph index + embeddings once; every agent turn — cheap or expensi
 
 ## Quick start
 
-**Prerequisites:** Node ≥ 22.9.0 · git · bash · Cursor with Hooks + MCP
+**Prerequisites:** Node ≥ 22.9.0 · git · bash · **Cursor** (hooks) and/or **Zed** (agent profile) · GitNexus MCP
 
 ```bash
 # Full install + index (recommended)
@@ -108,6 +120,9 @@ Details, flags, update/uninstall: **[docs/QUICKSTART.md](docs/QUICKSTART.md)**
 | `npm run gitnexus:agent-brief` | Agents | Session orientation |
 | `npm run gitnexus:agent-status` | Agents | Staleness check |
 | `npm run gitnexus:agent-refresh` | Agents | Re-index when stale |
+| `npm run gitnexus:branch-status` | PR review | Show current/base branch and branch-aware MCP calls |
+| `npm run gitnexus:pr-impact` | PR review | Branch-aware review playbook vs base |
+| `npm run gitnexus:pdg` | Git hook / humans | Re-index with PDG before commit |
 | `npm run gitnexus:graph-smoke` | CI | Cypher / ACCESSES sanity |
 | `npm run gitnexus:detect-api` | Setup | Express vs custom router profile |
 | `npm run gitnexus.__gate.*` | Docs | Gate explanations in `package.json` |
@@ -117,11 +132,11 @@ Gate map: `scripts/gitnexus-teaching/script-gates.mjs` · `npm run gitnexus.__ga
 ## Repo layout
 
 ```
-cursor-gitnexus-kit/
+gitnexus-agent-kit/
 ├── bin/              install · update · uninstall
 ├── bundle/           teaching bundle → copied into target repos
-├── lib/              kit core + tests
-├── docs/             architecture, quickstart, maintainer notes
+├── lib/              kit core + tests (migrate, skills, zed)
+├── docs/             architecture, quickstart, ZED guide
 └── .github/          CI, issue/PR templates
 ```
 
@@ -133,8 +148,8 @@ Enforced in `bundle/.cursor/rules/00-gitnexus-enforcement.mdc`.
 
 ## For GitNexus upstream
 
-> GitNexus gives teams a code knowledge graph. **cursor-gitnexus-kit** is the Cursor agent layer: install once, wire the graph into every task, enforce graph-first reasoning, autonomous refresh, human-readable status — **model-agnostic uplift; highest ROI on budget/local tiers; flagship models run leaner too.**  
-> **Proposed:** `gitnexus init --cursor-kit`
+> GitNexus gives teams a code knowledge graph. **gitnexus-agent-kit** is the agent layer for Cursor, Zed, and Ollama: install once, wire the graph into every task, enforce graph-first reasoning (hooks on Cursor; profile + skills on Zed), autonomous refresh, human-readable status — **model-agnostic uplift; highest ROI on budget/local tiers; flagship models run leaner too.**  
+> **Proposed:** `gitnexus init --agent-kit`
 
 ## Contributing
 

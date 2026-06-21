@@ -8,7 +8,7 @@ description: >-
 
 # GitNexus Workspace (__GITNEXUS_REPO__)
 
-This repo replaces grep-first navigation with a **knowledge graph + embeddings + Cypher** for **all code reasoning** (not only the first lookup). **`query`** uses BM25 + semantic vectors for orient/explore. **`cypher`** answers precise structural questions (field ACCESSES, N-hop CALLS, overrides). **`rename`** coordinates multi-file symbol renames (dry_run first). **Hooks actively block** lazy patterns when the index is fresh; **autonomous refresh** when stale or embeddings missing; **classical fallback** when GN fails — see `00-gitnexus-enforcement` rule.
+This repo replaces grep-first navigation with a **knowledge graph + embeddings + Cypher/PDG** for **all code reasoning** (not only the first lookup). **`query`** uses BM25 + semantic vectors for orient/explore. **`trace`** answers known A→B call paths. **`pdg_query`** answers control/data-flow questions when the PDG layer exists. **`cypher`** answers precise graph questions (field ACCESSES, overrides, process steps). **`rename`** coordinates multi-file symbol renames (dry_run first). **Hooks actively block** lazy patterns when the index is fresh; **autonomous refresh** when stale or embeddings missing; **classical fallback** when GN fails — see `00-gitnexus-enforcement` rule.
 
 ## Mandatory workflow chain
 
@@ -17,9 +17,9 @@ Do not skip steps:
 ```
 READ gitnexus://repo/__GITNEXUS_REPO__/context   # or npm run gitnexus:agent-brief (autonomous)
 READ gitnexus://repo/__GITNEXUS_REPO__/schema    # before ad-hoc Cypher
-→ query({query, task_context, goal, repo, limit: 5, max_symbols: 12})   # graph + embeddings — orient
+→ query({search_query, task_context, goal, repo, limit: 5, max_symbols: 12})   # graph + embeddings — orient
 → context({name, include_content: false}) or context({uid, include_content: false})
-→ cypher({query, params})   # structural: field ACCESSES, N-hop CALLS, overrides, process steps
+→ cypher({statement, params})   # structural: field ACCESSES, N-hop CALLS, overrides, process steps
 → impact({target, direction: "upstream", summaryOnly: false, limit: 100})   # BEFORE edit
 → detect_changes({scope})                                              # BEFORE commit / PR
 ```
@@ -53,6 +53,7 @@ Run `npm run gitnexus:detect-api` to refresh the profile after major server chan
 | Rename / extract / refactor | `gitnexus-refactoring` + **`rename` MCP** |
 | Structured task (pre-commit, PR, cross-module) | `gitnexus-scenarios` |
 | PR or branch review | `gitnexus-pr-review` |
+| Security / taint / injection review | `gitnexus-security-review` |
 | Research HTTP API change | See **HTTP API routing** above |
 | Tool reference / Cypher / CLI | `gitnexus-guide` / `gitnexus-cli` |
 | Area entry points | `.claude/skills/generated/<area>/` |
@@ -65,7 +66,7 @@ Always pass context to rank results better:
 
 ```javascript
 query({
-  query: "<concept or feature you are working on>",
+  search_query: "<concept or feature you are working on>",
   task_context: "what you are doing in this chat",
   goal: "what you need to find",
   repo: "__GITNEXUS_REPO__",
@@ -108,6 +109,7 @@ Restart Cursor after setup so MCP + hooks load.
 | N-hop call chain | `cypher` CALLS variable-length path |
 | Coordinated rename | `rename({symbol_name, new_name, dry_run: true})` |
 | Class member blast radius | `impact` + `relationTypes: ["CALLS","IMPORTS","ACCESSES"]` |
-| PR vs main | `detect_changes({scope: "compare", base_ref: "main"})` |
+| Branch status / PR setup | `npm run gitnexus:branch-status -- <base>` |
+| PR vs main | `detect_changes({scope: "compare", base_ref: "main", branch: "<current>"})` |
 | Graph integrity check | `npm run gitnexus:graph-smoke` |
 | Architecture doc | MCP prompt `generate_map` |

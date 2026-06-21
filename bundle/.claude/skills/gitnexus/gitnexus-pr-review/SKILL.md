@@ -14,10 +14,12 @@ description: "Use when reviewing a pull request, understanding what a PR changes
 ## Workflow
 
 ```
-1. gitnexus_detect_changes({scope: "compare", base_ref: "main", repo: "__GITNEXUS_REPO__"})
-2. Review summary.risk_level, changed_symbols, affected_processes
-3. For HIGH/CRITICAL or unexpected processes → impact on changed entry points
-4. Recommend tests per affected process
+1. `npm run gitnexus:branch-status -- <base>` to confirm current branch/base and suggested MCP calls
+2. gitnexus_detect_changes({ scope: "compare", base_ref: "main", repo: "__GITNEXUS_REPO__", branch: "<current-branch>" })
+3. Review summary.risk_level, changed_symbols, affected_processes
+4. For HIGH/CRITICAL or unexpected processes → impact on changed entry points with the same `branch`
+5. For security/input/file/db/exec changes → `gitnexus-security-review` (`explain`, `pdg_query`, `trace`)
+6. Recommend tests per affected process
 ```
 
 ## Checklist

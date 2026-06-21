@@ -15,4 +15,4 @@ done
 git config core.hooksPath .githooks
 
 echo "Git hooks installed: core.hooksPath=.githooks"
-echo "Pre-commit will run: npm run gitnexus:refresh"
+echo "Pre-commit will run: npm run gitnexus:pdg (embeddings + skills + PDG)"

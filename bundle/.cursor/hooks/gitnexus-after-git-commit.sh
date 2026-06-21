@@ -7,7 +7,7 @@ input=$(cat)
 if echo "$input" | grep -qE '"command"[[:space:]]*:[[:space:]]*"git[[:space:]]+(commit|merge|rebase|cherry-pick|pull)'; then
   cat <<'JSON'
 {
-  "additional_context": "Git commit/merge detected. If hooks ran, GitNexus index should be fresh. If stale or hooks were skipped (--no-verify): agent MUST run npm run gitnexus:agent-refresh autonomously (Shell, required_permissions all) — never tell the user to run analyze. Before the next commit: gitnexus_detect_changes."
+  "additional_context": "Git commit/merge detected. If hooks ran, GitNexus index should be fresh with PDG. If stale or hooks were skipped (--no-verify): agent MUST run npm run gitnexus:agent-refresh autonomously (Shell, required_permissions all) — never tell the user to run analyze. Before the next commit: gitnexus_detect_changes."
 }
 JSON
   exit 0

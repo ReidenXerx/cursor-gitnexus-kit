@@ -61,7 +61,7 @@ If stale → **Cursor agents:** `npm run gitnexus:agent-refresh` autonomously. *
 ```
 1. READ context (staleness)
 2. query({
-     query: "<feature or pipeline name>",
+     search_query: "<feature or pipeline name>",
      task_context: "<user question verbatim>",
      goal: "find execution flows and entry symbols",
      repo: "__GITNEXUS_REPO__"
@@ -91,7 +91,7 @@ Modules touched: (cluster names from the graph)
 ```
 1. READ gitnexus://repo/__GITNEXUS_REPO__/clusters
 2. READ gitnexus://repo/__GITNEXUS_REPO__/cluster/{AreaName}
-3. query({ query: "{AreaName} entry points", task_context: "area map", goal: "entry symbols" })
+3. query({ search_query: "{AreaName} entry points", task_context: "area map", goal: "entry symbols" })
 4. context on 2–3 entry symbols listed in cluster
 ```
 
@@ -136,7 +136,7 @@ Discover the repo's high-value spines from the graph instead of guessing:
 ```
 1. READ gitnexus://repo/__GITNEXUS_REPO__/clusters   → top functional areas
 2. READ gitnexus://repo/__GITNEXUS_REPO__/processes  → longest / most-connected flows
-3. query({ query: "<feature> end to end", task_context: "cross-module change", goal: "spine processes" })
+3. query({ search_query: "<feature> end to end", task_context: "cross-module change", goal: "spine processes" })
 ```
 
 After `query`, run `detect_changes` on WIP — it often shows cross-community blast that `impact` on a single symbol misses.
@@ -148,7 +148,7 @@ After `query`, run `detect_changes` on WIP — it often shows cross-community bl
 ```
 1. READ context
 2. query({
-     query: "<top feature> workflow",
+     search_query: "<top feature> workflow",
      task_context: "explain the <feature> pipeline",
      goal: "processes and hub symbols",
      repo: "__GITNEXUS_REPO__"

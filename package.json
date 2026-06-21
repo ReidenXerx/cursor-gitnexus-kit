@@ -1,18 +1,21 @@
 {
-  "name": "cursor-gitnexus-kit",
-  "version": "1.0.0",
-  "description": "Cursor agent enforcement layer for GitNexus — graph-first agents on every model tier; highest ROI on budget/local models",
+  "name": "gitnexus-agent-kit",
+  "version": "1.1.0",
+  "description": "Agent enforcement layer for GitNexus — Cursor, Zed, and Ollama; graph-first agents on every model tier",
   "type": "module",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ReidenXerx/cursor-gitnexus-kit.git"
+    "url": "git+https://github.com/ReidenXerx/gitnexus-agent-kit.git"
   },
-  "homepage": "https://github.com/ReidenXerx/cursor-gitnexus-kit#readme",
+  "homepage": "https://github.com/ReidenXerx/gitnexus-agent-kit#readme",
   "bugs": {
-    "url": "https://github.com/ReidenXerx/cursor-gitnexus-kit/issues"
+    "url": "https://github.com/ReidenXerx/gitnexus-agent-kit/issues"
   },
   "bin": {
+    "gn-agent-kit": "./bin/install.sh",
+    "gn-agent-kit-update": "./bin/update.sh",
+    "gn-agent-kit-uninstall": "./bin/uninstall.sh",
     "gn-kit-install": "./bin/install.sh",
     "gn-kit-update": "./bin/update.sh",
     "gn-kit-uninstall": "./bin/uninstall.sh"
@@ -21,6 +24,7 @@
     "node": ">=22.9.0"
   },
   "scripts": {
+    "install": "./bin/install.sh",
     "install:target": "./bin/install.sh",
     "update:target": "./bin/update.sh",
     "uninstall:target": "./bin/uninstall.sh",
@@ -29,9 +33,12 @@
   },
   "keywords": [
     "cursor",
+    "zed",
+    "ollama",
     "gitnexus",
     "mcp",
     "ai-agents",
+    "agent-skills",
     "code-intelligence",
     "knowledge-graph",
     "cursor-hooks",

@@ -79,11 +79,7 @@ BUNDLE_PATHS=(
   .cursor/hooks/lib/session-health-context.mjs
   .cursor/hooks/lib/verify-kit.mjs
   .cursor/gitnexus-hooks.json
-  .claude/skills/gitnexus
-  .claude/skills/gitnexus-workspace
-  .claude/skills/gitnexus-enforcement
-  .githooks/pre-commit
-  .vscode/settings.json
+  scripts/gitnexus-verify.mjs
   scripts/gitnexus-setup.sh
   scripts/sync-cursor-gitnexus-teaching.sh
   scripts/pack-gitnexus-teaching.sh
@@ -102,6 +98,7 @@ BUNDLE_PATHS=(
   docs/GITNEXUS-CURSOR-GUIDE.md
   .github/workflows/gitnexus-ci.yml
   .gitnexusignore
+  skills
 )
 
 info "Packing GitNexus Cursor teaching bundle v${VERSION}"
@@ -121,12 +118,15 @@ node scripts/gitnexus-teaching/merge-package-scripts.mjs --snippet > "$BUNDLE_RO
 
 # gitignore snippet
 cat > "$BUNDLE_ROOT/gitignore.snippet" <<'SNIP'
-# GitNexus + cursor-gitnexus-kit generated local state (safe to remove via gn-kit uninstall)
+# GitNexus + gitnexus-agent-kit generated local state (safe to remove via gn-agent-kit uninstall)
 .gitnexus/
+.gitnexus/agent-kit/
 .tmp-agent/
 .cursor/skills/
+.agents/skills/
 .cursor/gitnexus-teaching-bundle.json
 .cursor/gn-kit-manifest.json
+.gitnexus/agent-kit-manifest.json
 .cursor/.gitnexus-session-edits.flag
 .cursor/.gitnexus-session-primed.flag
 .cursor/.gitnexus-prompt-hint.json

@@ -20,8 +20,11 @@ GitNexus tools are for **reasoning throughout the task**, not only the first loo
 | --- | --- |
 | Fuzzy concept, flow trace, "how does X work?" | `query` (BM25 + embedding vectors) |
 | Known symbol, callers, 360° | `context` |
-| Field read/write, N-hop chains, overrides, process steps | READ schema → `cypher` |
-| Pre-edit safety | `impact` |
+| Known A→B call path | `trace` |
+| Control/data flow | `pdg_query` (`flows` / `controls`) when PDG layer exists |
+| Field read/write, overrides, process steps | READ schema → `cypher` |
+| Security taint/source→sink | `explain` + `pdg_query` + `trace` |
+| Pre-edit safety | `impact` (`mode: "pdg"` for high-risk/PDG-backed precision) |
 | Pre-commit / done | `detect_changes` |
 
 `SemanticSearch` is blocked → always `query`. Field/property grep → `cypher` (`ACCESSES`). Missing embeddings = **stale** → `agent-refresh` (includes `--embeddings`).
@@ -47,7 +50,7 @@ START
   │         stale or missing embeddings? → npm run gitnexus:agent-refresh (Shell, required_permissions: ["all"])
   │
   ├─ Reasoning about code (any point in task)?
-  │    └─ query({query, task_context, goal, repo})   # graph + embeddings
+  │    └─ query({search_query, task_context, goal, repo})   # graph + embeddings
   │         └─ context({name}) or context({uid})
   │              └─ Structural precision needed?
   │                   ├─ field read/write → cypher ACCESSES
@@ -80,10 +83,10 @@ START
 When blocked, hooks return ready-to-run calls like:
 
 ```javascript
-gitnexus_query({ query: "auth flow", task_context: "...", goal: "...", repo: "__GITNEXUS_REPO__", limit: 5, max_symbols: 12 })
+gitnexus_query({ search_query: "auth flow", task_context: "...", goal: "...", repo: "__GITNEXUS_REPO__", limit: 5, max_symbols: 12 })
 gitnexus_context({ name: "<symbol>", repo: "__GITNEXUS_REPO__" })
 READ gitnexus://repo/__GITNEXUS_REPO__/schema
-gitnexus_cypher({ query: "MATCH (f)-[r:CodeRelation {type: 'ACCESSES'}]->(p:Property {name: $name}) RETURN f.name, f.filePath, r.reason", params: { name: "<field>" }, repo: "__GITNEXUS_REPO__" })
+gitnexus_cypher({ statement: "MATCH (f)-[r:CodeRelation {type: 'ACCESSES'}]->(p:Property {name: $name}) RETURN f.name, f.filePath, r.reason", params: { name: "<field>" }, repo: "__GITNEXUS_REPO__" })
 gitnexus_impact({ target: "<symbol>", direction: "upstream", repo: "__GITNEXUS_REPO__", summaryOnly: false, limit: 100 })
 ```
 
@@ -106,8 +109,8 @@ gitnexus_impact({ target: "<symbol>", direction: "upstream", repo: "__GITNEXUS_R
 | --- | --- |
 | `Grep("someFunctionName")` | `context({name: "someFunctionName"})` |
 | `Grep("address")` (field/property) | READ schema → `cypher` ACCESSES on `$name: "address"` |
-| `SemanticSearch("auth flow")` | `query({query: "auth flow", task_context, goal})` — uses embeddings |
-| `Glob("src/**/*.js")` | `query({query: "module area", goal: "entry points"})` |
+| `SemanticSearch("auth flow")` | `query({search_query: "auth flow", task_context, goal})` — uses embeddings |
+| `Glob("src/**/*.js")` | `query({search_query: "module area", goal: "entry points"})` |
 | `Read(entire large source file)` | `query` → `context` → Read offset/limit |
 | Scoped Grep before any GN MCP call | `context` first — scoped Grep only after graph use + suspicion |
 

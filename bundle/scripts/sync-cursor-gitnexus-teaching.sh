@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sync GitNexus teaching bundle into Cursor-native paths (.cursor/skills).
-# Source of truth: .claude/skills/ + .cursor/rules/ + .cursor/hooks/
+# Source of truth: .gitnexus/agent-kit/skills/ + .cursor/rules/ + .cursor/hooks/
 # Run via: npm run gitnexus:setup (or directly)
 set -euo pipefail
 
@@ -164,9 +164,9 @@ const manifest = {
     ],
     hooks: '.cursor/hooks.json',
     mcp: '.cursor/mcp.json',
-    masterSkill: '.cursor/skills/gitnexus-workspace/SKILL.md',
-    enforcementSkill: '.cursor/skills/gitnexus-enforcement/SKILL.md',
-    gitnexusSkills: listSkills('.cursor/skills/gitnexus'),
+    masterSkill: '.agents/skills/gitnexus-workspace/SKILL.md',
+    enforcementSkill: '.agents/skills/gitnexus-enforcement/SKILL.md',
+    gitnexusSkills: listSkills('.gitnexus/agent-kit/skills').filter((n) => n.startsWith('gitnexus-')),
     generatedAreaSkills: listSkills('.cursor/skills/generated'),
   },
   workflowChain: [
@@ -191,7 +191,7 @@ NODE
 
 # ── main ─────────────────────────────────────────────────────────────────────
 
-info "Installing Cursor GitNexus teaching bundle (v2 enforcement)"
+info "Installing GitNexus agent kit teaching bundle (runtime: ${GITNEXUS_RUNTIME:-both})"
 
 info "  [1/5] Cursor rules (single always-on contract)"
 verify_always_apply_rule ".cursor/rules/00-gitnexus-enforcement.mdc"
@@ -211,16 +211,35 @@ for lib in "${HOOK_LIBS[@]}"; do
 done
 ok "${#HOOK_SCRIPTS[@]} hook scripts + ${#HOOK_LIBS[@]} lib(s) ready"
 
-info "  [3/5] Sync skills to .cursor/skills/"
-mkdir -p .cursor/skills
-sync_dir ".claude/skills/gitnexus" ".cursor/skills/gitnexus" "GitNexus playbooks"
-sync_dir ".claude/skills/gitnexus-workspace" ".cursor/skills/gitnexus-workspace" "Master index"
-sync_dir ".claude/skills/gitnexus-enforcement" ".cursor/skills/gitnexus-enforcement" "Enforcement router"
-if [[ -d ".claude/skills/generated" ]]; then
-  sync_dir ".claude/skills/generated" ".cursor/skills/generated" "Area skills"
-else
-  warn "No .claude/skills/generated — run gitnexus:refresh"
+info "  [3/5] Link skills (symlinks from canonical store)"
+STORE=".gitnexus/agent-kit/skills"
+if [[ ! -d "$STORE" ]]; then
+  fail "Missing $STORE — run gn-agent-kit install or update first"
 fi
+
+link_skills() {
+  local dest_root="$1"
+  local label="$2"
+  [[ -d "$STORE" ]] || return 0
+  mkdir -p "$dest_root"
+  local count=0
+  for dir in "$STORE"/*/; do
+    [[ -d "$dir" ]] || continue
+    local name
+    name="$(basename "$dir")"
+    ln -sfn "../../$STORE/$name" "$dest_root/$name"
+    count=$((count + 1))
+  done
+  ok "$label → $dest_root ($count skills symlinked)"
+}
+
+RUNTIME="${GITNEXUS_RUNTIME:-both}"
+case "$RUNTIME" in
+  cursor) link_skills ".cursor/skills" "Cursor skills" ;;
+  zed)    link_skills ".agents/skills" "Zed skills" ;;
+  *)      link_skills ".cursor/skills" "Cursor skills"
+          link_skills ".agents/skills" "Zed skills" ;;
+esac
 
 info "  [4/5] Teaching bundle manifest"
 write_manifest

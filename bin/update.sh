@@ -1,16 +1,22 @@
 #!/usr/bin/env bash
-# Update cursor-gitnexus-kit files in a target repo (re-copy bundle + sync teaching).
-# Usage: ./bin/update.sh /path/to/repo [--repo-name NAME] [--full] [--skip-verify]
-# Default: quick update (bundle + hooks, no re-index). Use --full to rebuild graph.
+# Update gitnexus-agent-kit in a target repo.
+# Usage: ./bin/update.sh /path/to/repo [--runtime cursor|zed|both] [--full] [--no-setup] [--skip-verify]
+#        ./bin/update.sh --all [search-root] [--runtime cursor|zed|both] [--no-setup] [--skip-verify]
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="${1:-}"
 
 if [[ -z "$TARGET" ]] || [[ "$TARGET" == "-h" ]] || [[ "$TARGET" == "--help" ]]; then
-  sed -n '2,4p' "$0" | sed 's/^# \?//'
+  sed -n '2,4p' "$0" | sed 's/^# *//'
   exit 0
 fi
 
 shift
+if [[ "$TARGET" == "--all" ]] || [[ "$TARGET" == "--all-installed" ]]; then
+  SEARCH_ROOT="${1:-$HOME/Projects}"
+  if [[ $# -gt 0 ]]; then shift; fi
+  exec node "$KIT_ROOT/lib/kit.mjs" update-all "$SEARCH_ROOT" "$@"
+fi
+
 exec node "$KIT_ROOT/lib/kit.mjs" update "$TARGET" "$@"

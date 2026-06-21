@@ -61,7 +61,7 @@ out({
     `${helpers.mcpDetectChanges(repo, 'staged')}. ` +
     'Confirm affected processes match intent + run tests for them; warn on HIGH/CRITICAL. ' +
     'This gate clears for the session after one detect_changes call.' +
-    (noVerify ? ' NOTE: --no-verify also skips index refresh — run npm run gitnexus:agent-refresh after.' : ''),
+    (noVerify ? ' NOTE: --no-verify also skips the pre-commit PDG refresh — run npm run gitnexus:pdg after.' : ''),
   user_message:
     'Before committing, the agent checks what changed across the graph (affected flows) via GitNexus — not a blind commit.',
 });

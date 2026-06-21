@@ -29,6 +29,7 @@ description: "Use when the user wants to know what will break if they change som
 
 ```
 - [ ] impact({target, direction: "upstream"}) to find dependents
+- [ ] For high-risk runtime/security/core edits: impact({target, direction: "upstream", mode: "pdg"}) if PDG layer exists
 - [ ] Review d=1 items first (these WILL BREAK)
 - [ ] Check high-confidence (>0.8) dependencies
 - [ ] READ processes to check affected execution flows

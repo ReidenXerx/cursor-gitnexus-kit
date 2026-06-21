@@ -6,7 +6,11 @@
 
 /** @param {string} s */
 function escCypher(s) {
-  return String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\s+/g, ' ').trim();
+  return String(s)
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** @param {string} repo */
@@ -22,9 +26,44 @@ export function mcpReadSchema(repo) {
 export function mcpCypher(query, repo, params = null) {
   const q = escCypher(query);
   if (params && Object.keys(params).length > 0) {
-    return `gitnexus_cypher({ query: "${q}", params: ${JSON.stringify(params)}, repo: "${repo}" })`;
+    return `gitnexus_cypher({ statement: "${q}", params: ${JSON.stringify(params)}, repo: "${repo}" })`;
   }
-  return `gitnexus_cypher({ query: "${q}", repo: "${repo}" })`;
+  return `gitnexus_cypher({ statement: "${q}", repo: "${repo}" })`;
+}
+
+/** Shortest directed call path between two symbols (GitNexus v1.6.8 trace tool). */
+export function mcpTrace(from, to, repo, maxDepth = 10) {
+  const a = escCypher(from);
+  const b = escCypher(to);
+  return `gitnexus_trace({ from: "${a}", to: "${b}", repo: "${repo}", maxDepth: ${maxDepth} })`;
+}
+
+/** PDG-powered impact for precise control/data affectedness (requires index built with --pdg). */
+export function mcpPdgImpact(target, repo, opts = {}) {
+  const safe = escCypher(target);
+  const line = Number.isInteger(opts.line) ? `, line: ${opts.line}` : "";
+  return `gitnexus_impact({ target: "${safe}", direction: "upstream", mode: "pdg", repo: "${repo}", summaryOnly: false${line} })`;
+}
+
+/** Control-dependence query: what guards/conditions control this function or file? */
+export function mcpPdgControls(target, repo) {
+  const safe = escCypher(target);
+  return `gitnexus_pdg_query({ mode: "controls", target: "${safe}", repo: "${repo}" })`;
+}
+
+/** Data-dependence query: where does a variable flow inside the anchored function/file? */
+export function mcpPdgFlows(target, repo, variable = "") {
+  const safe = escCypher(target);
+  const varArg = variable ? `, variable: "${escCypher(variable)}"` : "";
+  return `gitnexus_pdg_query({ mode: "flows", target: "${safe}", repo: "${repo}"${varArg} })`;
+}
+
+/** Persisted taint findings (security source→sink paths; requires PDG/taint layer). */
+export function mcpTaintExplain(target, repo) {
+  const safe = escCypher(target || "");
+  return safe
+    ? `gitnexus_explain({ target: "${safe}", repo: "${repo}" })`
+    : `gitnexus_explain({ repo: "${repo}" })`;
 }
 
 /**
@@ -32,12 +71,12 @@ export function mcpCypher(query, repo, params = null) {
  * Source node is left untyped so Methods/Structs/Impls (polyglot) count, not only Functions.
  * @param {'read'|'write'|'both'} reason
  */
-export function cypherFieldAccess(field, repo, reason = 'both') {
+export function cypherFieldAccess(field, repo, reason = "both") {
   const name = escCypher(field);
   const rel =
-    reason === 'read'
+    reason === "read"
       ? "{type: 'ACCESSES', reason: 'read'}"
-      : reason === 'write'
+      : reason === "write"
         ? "{type: 'ACCESSES', reason: 'write'}"
         : "{type: 'ACCESSES'}";
   const q = `MATCH (f)-[r:CodeRelation ${rel}]->(p:Property {name: $name}) RETURN f.name, f.filePath, f.kind, r.reason ORDER BY f.filePath LIMIT 50`;
@@ -85,9 +124,11 @@ export function cypherClassMethods(className, repo) {
 export function isLikelyFieldName(pattern) {
   if (!pattern || pattern.length < 3 || pattern.length > 40) return false;
   if (!/^[a-z][a-zA-Z0-9]*$/.test(pattern)) return false;
-  if (/^(true|false|null|undefined|async|await|const|let|var|function|class|import|export|return|throw|catch|default)$/.test(
-    pattern
-  )) {
+  if (
+    /^(true|false|null|undefined|async|await|const|let|var|function|class|import|export|return|throw|catch|default)$/.test(
+      pattern,
+    )
+  ) {
     return false;
   }
   return true;
@@ -101,12 +142,28 @@ export function isLikelyFieldName(pattern) {
 export function playbookCypherForHint(hint, repo) {
   const schema = mcpReadSchema(repo);
 
+  if (hint.taintHint) {
+    return `PLAYBOOK: ${mcpTaintExplain(hint.fileHint || hint.symbolHint || "", repo)} → ${mcpPdgImpact(hint.symbolHint || hint.fileHint || "<symbol-or-file>", repo)}`;
+  }
+  if (hint.pdgFlowHint) {
+    return `PLAYBOOK: ${mcpPdgFlows(hint.symbolHint || hint.fileHint || "<function-or-file>", repo, hint.variableHint || "")}`;
+  }
+  if (hint.pdgControlHint) {
+    return `PLAYBOOK: ${mcpPdgControls(hint.symbolHint || hint.fileHint || "<function-or-file>", repo)}`;
+  }
+  if (hint.pdgImpactHint) {
+    return `PLAYBOOK: ${mcpPdgImpact(hint.symbolHint || hint.fileHint || "<symbol-or-file>", repo)}`;
+  }
+
   if (hint.fieldHint) {
-    const reason = hint.fieldWrite ? 'write' : hint.fieldRead ? 'read' : 'both';
+    const reason = hint.fieldWrite ? "write" : hint.fieldRead ? "read" : "both";
     return `PLAYBOOK: ${schema} → ${cypherFieldAccess(hint.fieldHint, repo, reason)}`;
   }
+  if (hint.traceFrom && hint.traceTo) {
+    return `PLAYBOOK: ${mcpTrace(hint.traceFrom, hint.traceTo, repo, hint.hopDepth ?? 10)}`;
+  }
   if (hint.callChainHint) {
-    return `PLAYBOOK: ${schema} → ${cypherCallChain(hint.callChainHint, repo, hint.hopDepth ?? 3)}`;
+    return `PLAYBOOK: ${schema} → ${cypherCallChain(hint.callChainHint, repo, hint.hopDepth ?? 3)} (or ${mcpTrace("<from>", hint.callChainHint, repo)} when you know both endpoints)`;
   }
   if (hint.overrideHint) {
     return `PLAYBOOK: ${schema} → ${cypherMethodOverrides(hint.overrideHint, repo)}`;
@@ -115,14 +172,14 @@ export function playbookCypherForHint(hint, repo) {
     return `PLAYBOOK: ${schema} → ${cypherProcessSteps(hint.processHint, repo)}`;
   }
   if (hint.structural) {
-    return `PLAYBOOK: ${schema} → gitnexus_cypher({ query: "<MATCH …>", repo: "${repo}" })`;
+    return `PLAYBOOK: ${schema} → gitnexus_cypher({ statement: "<MATCH …>", repo: "${repo}" })`;
   }
-  return '';
+  return "";
 }
 
 /** One-line agent reminder for mid-session nudges. */
 export function cypherMidSessionNudge() {
-  return 'Structural precision (field ACCESSES, N-hop CALLS, overrides, process steps) → READ schema → cypher — not grep.';
+  return "Structural precision: trace for known A→B paths; pdg_query for control/data flow; cypher for ACCESSES/overrides/process steps — not grep.";
 }
 
 /**
@@ -132,8 +189,14 @@ export function cypherMidSessionNudge() {
  */
 export function isDataFlowReadContext(hint, relPath) {
   if (hint?.dataFlow || hint?.structural || hint?.fieldHint) return true;
-  const norm = (relPath ?? '').replace(/\\/g, '/');
-  if (/(?:^|\/)(models?|entities|dto|schemas?|domain|types)(?:\/|$)/i.test(norm)) return true;
-  if (/(?:Model|Entity|Dto|Schema|Record|Payload)\.(js|mjs|ts|tsx)$/i.test(norm)) return true;
+  const norm = (relPath ?? "").replace(/\\/g, "/");
+  if (
+    /(?:^|\/)(models?|entities|dto|schemas?|domain|types)(?:\/|$)/i.test(norm)
+  )
+    return true;
+  if (
+    /(?:Model|Entity|Dto|Schema|Record|Payload)\.(js|mjs|ts|tsx)$/i.test(norm)
+  )
+    return true;
   return false;
 }

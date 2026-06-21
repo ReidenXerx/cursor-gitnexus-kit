@@ -2,10 +2,17 @@
 /**
  * Shared GitNexus hook helpers: path rules, MCP copy-paste shortcuts, playbooks, guide mode.
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { playbookCypherForHint, isDataFlowReadContext } from './cypher-helpers.mjs';
-import { playbookRenameForHint, detectIdentifierRename, mcpRename } from './rename-helpers.mjs';
+import fs from "node:fs";
+import path from "node:path";
+import {
+  playbookCypherForHint,
+  isDataFlowReadContext,
+} from "./cypher-helpers.mjs";
+import {
+  playbookRenameForHint,
+  detectIdentifierRename,
+  mcpRename,
+} from "./rename-helpers.mjs";
 
 export {
   cypherCallChain,
@@ -14,22 +21,27 @@ export {
   cypherFieldAccess,
   cypherMethodOverrides,
   cypherMidSessionNudge,
+  mcpPdgControls,
+  mcpPdgFlows,
+  mcpPdgImpact,
+  mcpTaintExplain,
+  mcpTrace,
   cypherProcessSteps,
   isLikelyFieldName,
   isDataFlowReadContext,
   mcpCypher,
   mcpReadSchema,
   playbookCypherForHint,
-} from './cypher-helpers.mjs';
+} from "./cypher-helpers.mjs";
 
 export {
   detectIdentifierRename,
   mcpRename,
   parseRenameFromPrompt,
   playbookRenameForHint,
-} from './rename-helpers.mjs';
+} from "./rename-helpers.mjs";
 
-export const CONFIG_FILE = '.cursor/gitnexus-hooks.json';
+export const CONFIG_FILE = ".cursor/gitnexus-hooks.json";
 
 /** @typedef {'enforce' | 'guide'} HookMode */
 /** @typedef {'none' | 'light' | 'medium' | 'full'} EditSensitivity */
@@ -42,7 +54,7 @@ const DEFAULT_SOURCE_RES = [
 ];
 
 const DEFAULT_BROAD_GLOB_RES = [
-  /^\*\*\/\*\.(js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|swift|php|cs|cpp|cc|c|scala)$/,
+  /^\*\*\/\*\.(js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|swift|php|cs|cpp|cc|c|cu|cuh|scala)$/,
   /^\*\*\/src\//,
   /^src\//,
   /^\*\*\/lib\//,
@@ -54,16 +66,16 @@ const DEFAULT_BROAD_GLOB_RES = [
 // Polyglot: GitNexus indexes many languages — enforcement should not be JS/TS-only.
 // Override in .cursor/gitnexus-hooks.json via "sourceExts": ["js","py","rs", …].
 const DEFAULT_SOURCE_EXT_RE =
-  /\.(js|mjs|cjs|jsx|ts|tsx|mts|cts|py|pyi|rb|go|rs|java|kt|kts|swift|php|cs|cpp|cc|cxx|hpp|hh|c|h|scala|m|mm|dart|lua|ex|exs|clj)$/i;
+  /\.(js|mjs|cjs|jsx|ts|tsx|mts|cts|py|pyi|rb|go|rs|java|kt|kts|swift|php|cs|cpp|cc|cxx|hpp|hh|c|h|cu|cuh|scala|m|mm|dart|lua|ex|exs|clj)$/i;
 
 /** @param {string[]} exts */
 function buildExtRe(exts) {
   const cleaned = exts
-    .map((e) => String(e).replace(/^\./, '').trim())
+    .map((e) => String(e).replace(/^\./, "").trim())
     .filter(Boolean)
-    .map((e) => e.replace(/[.+^${}()|[\]\\]/g, '\\$&'));
+    .map((e) => e.replace(/[.+^${}()|[\]\\]/g, "\\$&"));
   if (!cleaned.length) return DEFAULT_SOURCE_EXT_RE;
-  return new RegExp(`\\.(${cleaned.join('|')})$`, 'i');
+  return new RegExp(`\\.(${cleaned.join("|")})$`, "i");
 }
 
 /**
@@ -84,11 +96,14 @@ export function loadHookConfig(root) {
   if (!fs.existsSync(cfgPath)) return cfg;
 
   try {
-    const file = JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
-    if (file.mode) cfg.mode = file.mode === 'guide' ? 'guide' : 'enforce';
-    if (typeof file.readLineThreshold === 'number') cfg.readLineThreshold = file.readLineThreshold;
-    if (typeof file.graceCommitsBehind === 'number') cfg.graceCommitsBehind = file.graceCommitsBehind;
-    if (typeof file.stalenessCacheTtlMs === 'number') cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
+    const file = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
+    if (file.mode) cfg.mode = file.mode === "guide" ? "guide" : "enforce";
+    if (typeof file.readLineThreshold === "number")
+      cfg.readLineThreshold = file.readLineThreshold;
+    if (typeof file.graceCommitsBehind === "number")
+      cfg.graceCommitsBehind = file.graceCommitsBehind;
+    if (typeof file.stalenessCacheTtlMs === "number")
+      cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
     if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
       cfg.sourcePathRes = file.sourceGlobs.map((g) => globToRegExp(g));
     }
@@ -103,20 +118,24 @@ export function loadHookConfig(root) {
 }
 
 function hookModeFromEnv() {
-  const m = (process.env.GITNEXUS_MODE || process.env.GITNEXUS_HOOK_MODE || 'enforce').toLowerCase();
-  return m === 'guide' ? 'guide' : 'enforce';
+  const m = (
+    process.env.GITNEXUS_MODE ||
+    process.env.GITNEXUS_HOOK_MODE ||
+    "enforce"
+  ).toLowerCase();
+  return m === "guide" ? "guide" : "enforce";
 }
 
 /**
  * @param {string} glob
  */
 function globToRegExp(glob) {
-  const norm = glob.replace(/\\/g, '/').replace(/^\.\//, '');
+  const norm = glob.replace(/\\/g, "/").replace(/^\.\//, "");
   const re = norm
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '\0')
-    .replace(/\*/g, '[^/]*')
-    .replace(/\0/g, '.*');
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replace(/\*\*/g, "\0")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\0/g, ".*");
   return new RegExp(`(?:^|/)${re}`);
 }
 
@@ -131,7 +150,7 @@ export function repoName(root) {
  * @param {ReturnType<typeof loadHookConfig>} config
  */
 export function isSourceCodePath(filePath, config) {
-  const norm = (filePath ?? '').replace(/\\/g, '/');
+  const norm = (filePath ?? "").replace(/\\/g, "/");
   if (!config.sourceExtRe.test(norm)) return false;
   return config.sourcePathRes.some((re) => re.test(norm));
 }
@@ -141,7 +160,7 @@ export function isSourceCodePath(filePath, config) {
  * @param {ReturnType<typeof loadHookConfig>} config
  */
 export function isBroadSourceGlob(pattern, config) {
-  const norm = (pattern ?? '').replace(/\\/g, '/');
+  const norm = (pattern ?? "").replace(/\\/g, "/");
   return config.broadGlobRes.some((re) => re.test(norm));
 }
 
@@ -151,23 +170,31 @@ export function isBroadSourceGlob(pattern, config) {
  * @returns {EditSensitivity}
  */
 export function editSensitivity(filePath, config) {
-  const norm = (filePath ?? '').replace(/\\/g, '/');
-  if (!norm) return 'none';
-  if (/\.(md|mdc|json|yaml|yml|txt|gitignore)$/i.test(norm) || /(?:^|\/)docs\//.test(norm)) {
-    return 'light';
+  const norm = (filePath ?? "").replace(/\\/g, "/");
+  if (!norm) return "none";
+  if (
+    /\.(md|mdc|json|yaml|yml|txt|gitignore)$/i.test(norm) ||
+    /(?:^|\/)docs\//.test(norm)
+  ) {
+    return "light";
   }
-  if (/\.cursor\/hooks\//.test(norm) || /(?:^|\/)bundle\//.test(norm)) return 'light';
-  if (/(?:^|\/)tests?\//.test(norm)) return 'medium';
-  if (/(?:^|\/)scripts\//.test(norm)) return 'medium';
-  if (isSourceCodePath(norm, config)) return 'full';
-  if (/(?:^|\/)apps\//.test(norm) && config.sourceExtRe.test(norm)) return 'full';
-  return 'none';
+  if (/\.cursor\/hooks\//.test(norm) || /(?:^|\/)bundle\//.test(norm))
+    return "light";
+  if (/(?:^|\/)tests?\//.test(norm)) return "medium";
+  if (/(?:^|\/)scripts\//.test(norm)) return "medium";
+  if (isSourceCodePath(norm, config)) return "full";
+  if (/(?:^|\/)apps\//.test(norm) && config.sourceExtRe.test(norm))
+    return "full";
+  return "none";
 }
 
 /** @param {string} repo */
 export function mcpContext(name, repo, opts = {}) {
   const safe = String(name).replace(/"/g, '\\"');
-  const include = opts.include_content === true ? ', include_content: true' : ', include_content: false';
+  const include =
+    opts.include_content === true
+      ? ", include_content: true"
+      : ", include_content: false";
   if (opts.uid) {
     const uid = String(opts.uid).replace(/"/g, '\\"');
     return `gitnexus_context({ uid: "${uid}", repo: "${repo}"${include} })`;
@@ -176,9 +203,16 @@ export function mcpContext(name, repo, opts = {}) {
 }
 
 /** @param {object} opts */
-export function mcpQuery({ query, taskContext = '', goal = '', repo, limit = 5, max_symbols = 12 }) {
-  const esc = (s) => String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-  return `gitnexus_query({ query: "${esc(query)}", task_context: "${esc(taskContext)}", goal: "${esc(goal)}", repo: "${repo}", limit: ${limit}, max_symbols: ${max_symbols} })`;
+export function mcpQuery({
+  query,
+  taskContext = "",
+  goal = "",
+  repo,
+  limit = 5,
+  max_symbols = 12,
+}) {
+  const esc = (s) => String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `gitnexus_query({ search_query: "${esc(query)}", task_context: "${esc(taskContext)}", goal: "${esc(goal)}", repo: "${repo}", limit: ${limit}, max_symbols: ${max_symbols} })`;
 }
 
 /**
@@ -189,16 +223,18 @@ export function mcpQuery({ query, taskContext = '', goal = '', repo, limit = 5, 
 export function mcpImpact(target, repo, opts = {}) {
   const safe = String(target).replace(/"/g, '\\"');
   const summaryOnly = opts.summaryOnly === true;
-  const extra = summaryOnly ? ', summaryOnly: true' : ', summaryOnly: false, limit: 100';
+  const extra = summaryOnly
+    ? ", summaryOnly: true"
+    : ", summaryOnly: false, limit: 100";
   const rel =
     Array.isArray(opts.relationTypes) && opts.relationTypes.length
-      ? `, relationTypes: [${opts.relationTypes.map((r) => `"${r}"`).join(', ')}]`
-      : '';
+      ? `, relationTypes: [${opts.relationTypes.map((r) => `"${r}"`).join(", ")}]`
+      : "";
   return `gitnexus_impact({ target: "${safe}", direction: "upstream", repo: "${repo}"${extra}${rel} })`;
 }
 
 /** @param {string} repo @param {string} [scope] */
-export function mcpDetectChanges(repo, scope = 'unstaged') {
+export function mcpDetectChanges(repo, scope = "unstaged") {
   return `gitnexus_detect_changes({ scope: "${scope}", repo: "${repo}" })`;
 }
 
@@ -219,32 +255,32 @@ export function playbookForHint(hint, repo) {
   const cypherPlaybook = playbookCypherForHint(hint, repo);
   if (cypherPlaybook) return cypherPlaybook;
 
-  const snippet = (hint.snippet ?? '').replace(/"/g, "'").slice(0, 80);
+  const snippet = (hint.snippet ?? "").replace(/"/g, "'").slice(0, 80);
 
   if (hint.codeTask) {
     const topic = hint.fileHint
       ? path.basename(hint.fileHint, path.extname(hint.fileHint))
-      : hint.symbolHint || '<symbol>';
+      : hint.symbolHint || "<symbol>";
     return `PLAYBOOK: ${mcpImpact(topic, repo)} → edit → ${mcpDetectChanges(repo)}`;
   }
   if (hint.reasoning) {
-    const sym = hint.symbolHint || '<symbol>';
+    const sym = hint.symbolHint || "<symbol>";
     return `PLAYBOOK: ${mcpContext(sym, repo)} → ${mcpImpact(sym, repo)}`;
   }
   if (hint.architecture || hint.explore) {
-    return `PLAYBOOK: ${mcpQuery({ query: snippet || '<topic>', taskContext: snippet, goal: 'flows', repo })} → READ process/{name}`;
+    return `PLAYBOOK: ${mcpQuery({ query: snippet || "<topic>", taskContext: snippet, goal: "flows", repo })} → READ process/{name}`;
   }
   if (hint.symbolHint) {
     return `PLAYBOOK: ${mcpContext(hint.symbolHint, repo)}`;
   }
-  return '';
+  return "";
 }
 
-const DENY_CACHE_FILE = '.gitnexus-deny-cache.json';
+const DENY_CACHE_FILE = ".gitnexus-deny-cache.json";
 
 /** @param {string} root */
 function denyCachePath(root) {
-  return path.join(root, '.cursor', DENY_CACHE_FILE);
+  return path.join(root, ".cursor", DENY_CACHE_FILE);
 }
 
 /** @param {string} root */
@@ -272,10 +308,10 @@ export function hookAgentMessage(_root, _cacheKey, full, _compact) {
  * @param {HookMode} mode
  */
 export function applyHookMode(result, mode) {
-  if (mode === 'guide' && result.permission === 'deny') {
+  if (mode === "guide" && result.permission === "deny") {
     return {
-      permission: 'allow',
-      agent_message: `[GUIDE MODE — normally blocked]\n${result.agent_message ?? ''}`,
+      permission: "allow",
+      agent_message: `[GUIDE MODE — normally blocked]\n${result.agent_message ?? ""}`,
       user_message: result.user_message,
     };
   }
@@ -286,13 +322,13 @@ export function applyHookMode(result, mode) {
  * @param {boolean} graphUsedThisSession
  * @param {string} [root]
  */
-export function midSessionGraphNudge(graphUsedThisSession, root = '') {
-  if (!graphUsedThisSession || !root) return '';
+export function midSessionGraphNudge(graphUsedThisSession, root = "") {
+  if (!graphUsedThisSession || !root) return "";
   return hookAgentMessage(
     root,
-    'mid-session-graph',
-    'MID-SESSION: query (graph+embeddings) for orient; context/impact for symbols and edits; cypher for field access / N-hop chains / overrides.',
-    ''
+    "mid-session-graph",
+    "MID-SESSION: query (graph+embeddings) for orient; context/impact for symbols and edits; cypher for field access / N-hop chains / overrides.",
+    "",
   );
 }
 
@@ -302,7 +338,7 @@ export function midSessionGraphNudge(graphUsedThisSession, root = '') {
  */
 export function isGraceStale(stale, config) {
   if (stale?.fresh) return false;
-  if (stale?.reason !== 'behind') return false;
+  if (stale?.reason !== "behind") return false;
   const n = stale.commitsBehind ?? 0;
   return n > 0 && n <= (config.graceCommitsBehind ?? 0);
 }
@@ -313,37 +349,40 @@ export function isGraceStale(stale, config) {
  * @param {Record<string, string | number>} [vars]
  */
 export function userMessage(key, vars = {}) {
-  const sym = vars.symbol != null ? String(vars.symbol) : '';
-  const lines = String(vars.lines ?? '');
+  const sym = vars.symbol != null ? String(vars.symbol) : "";
+  const lines = String(vars.lines ?? "");
   const templates = {
-    'block.glob':
-      'GitNexus has this codebase indexed — the agent will use graph search to find modules instead of scanning every file.',
-    'block.semantic':
-      'Exploratory questions go through GitNexus (graph + embeddings) so the agent maps real execution flows, not just text matches.',
-    'block.grep.noGraph':
-      'GitNexus goes first — the agent will look up this symbol in the knowledge graph before searching files.',
-    'block.grep.symbol': sym
+    "block.glob":
+      "GitNexus has this codebase indexed — the agent will use graph search to find modules instead of scanning every file.",
+    "block.semantic":
+      "Exploratory questions go through GitNexus (graph + embeddings) so the agent maps real execution flows, not just text matches.",
+    "block.grep.noGraph":
+      "GitNexus goes first — the agent will look up this symbol in the knowledge graph before searching files.",
+    "block.grep.symbol": sym
       ? `Symbol search is routed through GitNexus for "${sym}" — callers and relationships come from the graph, not grep.`
-      : 'Symbol search is routed through GitNexus — the graph knows callers and relationships better than grep.',
-    'block.grep.likely':
-      'This looks like a symbol search — GitNexus will resolve it in the knowledge graph instead of grep.',
-    'block.grep.field': sym
+      : "Symbol search is routed through GitNexus — the graph knows callers and relationships better than grep.",
+    "block.grep.likely":
+      "This looks like a symbol search — GitNexus will resolve it in the knowledge graph instead of grep.",
+    "block.grep.field": sym
       ? `Field/property search for "${sym}" is routed through GitNexus Cypher — the graph tracks readers and writers, not just text matches.`
-      : 'Field/property search is routed through GitNexus Cypher — ACCESSES edges show readers and writers.',
-    'block.read.full': lines
+      : "Field/property search is routed through GitNexus Cypher — ACCESSES edges show readers and writers.",
+    "block.read.full": lines
       ? `Full-file read is blocked (${lines} lines). The agent will pull the relevant symbols from GitNexus, then read only what's needed.`
-      : 'Full-file read is blocked. The agent will use GitNexus to find the right symbols first, then read targeted sections.',
-    'block.read.dataflow': lines
+      : "Full-file read is blocked. The agent will use GitNexus to find the right symbols first, then read targeted sections.",
+    "block.read.dataflow": lines
       ? `Full-file read blocked (${lines} lines) for data-flow tracing. The agent will use GitNexus Cypher (ACCESSES) and the graph instead of scanning the whole file.`
-      : 'Full-file read blocked for data-flow work — the agent will use GitNexus Cypher on field/property access edges.',
-    'block.edit.stale':
-      'The code graph is behind your latest commits. The agent must refresh GitNexus before editing source files — so changes stay accurate.',
-    'block.shell.stale':
-      'The code graph needs a refresh before other commands run. The agent will update GitNexus automatically.',
-    'stale.must_refresh':
-      'GitNexus index is behind — the agent must refresh the graph first (not grep/read). Hooks enforce refresh-then-graph, not skip-to-classical.',
-    'stale.classical':
-      'GitNexus refresh failed — the agent may use classic search now and must say why the graph could not be updated.',
+      : "Full-file read blocked for data-flow work — the agent will use GitNexus Cypher on field/property access edges.",
+    "block.edit.stale":
+      "The code graph is behind your latest commits. The agent must refresh GitNexus before editing source files — so changes stay accurate.",
+    "block.shell.stale":
+      "The code graph needs a refresh before other commands run. The agent will update GitNexus automatically.",
+    "stale.must_refresh":
+      "GitNexus index is behind — the agent must refresh the graph first (not grep/read). Hooks enforce refresh-then-graph, not skip-to-classical.",
+    "stale.classical":
+      "GitNexus refresh failed — the agent may use classic search now and must say why the graph could not be updated.",
   };
-  return templates[key] ?? 'GitNexus is guiding the agent to a better code-reasoning path.';
+  return (
+    templates[key] ??
+    "GitNexus is guiding the agent to a better code-reasoning path."
+  );
 }

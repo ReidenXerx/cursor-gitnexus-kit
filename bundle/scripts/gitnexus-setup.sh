@@ -4,7 +4,7 @@
 # Installs:
 #   • Cursor teaching bundle (rules, hooks, skills sync, manifest)
 #   • GitNexus MCP (project + optional global)
-#   • Git pre-commit index refresh (no personal tooling)
+#   • Git pre-commit PDG index refresh (no personal tooling)
 #   • Knowledge graph index
 #
 # Run once after cloning:
@@ -25,6 +25,7 @@ GITNEXUS_CLI=(npx -y gitnexus@latest)
 SKIP_INDEX=false
 FULL_INDEX=false
 SKIP_GLOBAL_MCP=false
+GITNEXUS_RUNTIME="${GITNEXUS_RUNTIME:-both}"
 
 usage() {
   sed -n '2,18p' "$0" | sed 's/^# \?//'
@@ -43,11 +44,17 @@ while [[ $# -gt 0 ]]; do
     --quick|--skip-index) SKIP_INDEX=true ;;
     --full) FULL_INDEX=true ;;
     --skip-global-mcp) SKIP_GLOBAL_MCP=true ;;
+    --runtime)
+      GITNEXUS_RUNTIME="$2"
+      shift
+      ;;
     -h|--help) usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 1 ;;
   esac
   shift
 done
+
+export GITNEXUS_RUNTIME
 
 info()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 ok()    { printf '\033[1;32m    ✓\033[0m %s\n' "$*"; }
@@ -93,89 +100,50 @@ ok "package.json gitnexus:* scripts injected"
 
 info "Verifying GitNexus teaching sources"
 
-TEACHING_SOURCES=(
-  ".cursor/rules/00-gitnexus-enforcement.mdc"
-  ".cursor/rules/gitnexus.mdc"
-  ".cursor/rules/gitnexus-first.mdc"
-  ".cursor/hooks.json"
-  ".cursor/hooks/gitnexus-session-primer.sh"
-  ".cursor/hooks/gitnexus-session-health.sh"
-  ".cursor/hooks/gitnexus-session-health-user.sh"
-  ".cursor/hooks/gitnexus-prompt-router.sh"
-  ".cursor/hooks/gitnexus-grep-guard.sh"
-  ".cursor/hooks/gitnexus-read-guard.sh"
-  ".cursor/hooks/gitnexus-edit-guard.sh"
-  ".cursor/hooks/gitnexus-shell-staleness-guard.sh"
-  ".cursor/hooks/gitnexus-shell-allowlist.sh"
-  ".cursor/hooks/gitnexus-commit-guard.sh"
-  ".cursor/hooks/gitnexus-mcp-allowlist.sh"
-  ".cursor/hooks/gitnexus-after-git-commit.sh"
-  ".cursor/hooks/lib/check-staleness.mjs"
-  ".cursor/hooks/lib/load-staleness.mjs"
-  ".cursor/hooks/lib/graph-session.mjs"
-  ".cursor/hooks/lib/session-primer.mjs"
-  ".cursor/hooks/lib/first-nudge.mjs"
-  ".cursor/hooks/lib/clear-session.mjs"
-  ".cursor/hooks/lib/set-refresh-pending.mjs"
-  ".cursor/hooks/lib/hook-helpers.mjs"
-  ".cursor/hooks/lib/cypher-helpers.mjs"
-  ".cursor/hooks/lib/rename-helpers.mjs"
-  ".cursor/hooks/lib/stale-policy.mjs"
-  ".cursor/hooks/lib/cypher-cli.mjs"
-  ".cursor/hooks/lib/generate-arch-doc.mjs"
-  ".cursor/hooks/lib/commit-message.mjs"
-  ".cursor/hooks/lib/detect-api-router.mjs"
-  ".cursor/hooks/lib/graph-smoke.mjs"
-  ".cursor/hooks/lib/agent-brief.mjs"
-  ".cursor/hooks/lib/agent-health.mjs"
-  ".cursor/hooks/lib/session-health-audit.mjs"
-  ".cursor/hooks/lib/session-health-context.mjs"
-  ".cursor/hooks/lib/verify-kit.mjs"
-  ".cursor/gitnexus-hooks.json"
-  ".vscode/settings.json"
-  ".githooks/pre-commit"
+CORE_SOURCES=(
   "scripts/gitnexus-setup.sh"
   "scripts/sync-cursor-gitnexus-teaching.sh"
   "scripts/install-git-hooks.sh"
-  "scripts/pack-gitnexus-teaching.sh"
+  "scripts/gitnexus-verify.mjs"
   "scripts/gitnexus-agent.mjs"
-  "scripts/gitnexus-ci.mjs"
   "scripts/gitnexus-gate-hint.mjs"
-  "scripts/run-with-project-tmp.sh"
-  "scripts/clean-project-tmp.sh"
-  "scripts/lib/project-tmp.mjs"
-  "scripts/lib/setup-ui.mjs"
-  "scripts/gitnexus-teaching/install-from-bundle.sh"
-  "scripts/gitnexus-teaching/merge-package-scripts.mjs"
   "scripts/gitnexus-teaching/script-gates.mjs"
-  "docs/GITNEXUS-TEAM-BUNDLE.md"
-  "docs/GITNEXUS-CURSOR-GUIDE.md"
-  ".gitnexusignore"
-  ".claude/skills/gitnexus-workspace/SKILL.md"
-  ".claude/skills/gitnexus-enforcement/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-guide/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-scenarios/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-pr-review/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-api-routes/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-exploring/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-imaging/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-impact-analysis/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-debugging/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-refactoring/SKILL.md"
-  ".claude/skills/gitnexus/gitnexus-cli/SKILL.md"
+  "scripts/lib/setup-ui.mjs"
+  ".gitnexus/agent-kit/skills/gitnexus-workspace/SKILL.md"
+  ".gitnexus/agent-kit/skills/gitnexus-enforcement/SKILL.md"
 )
 
-for f in "${TEACHING_SOURCES[@]}"; do require_file "$f"; done
-ok "${#TEACHING_SOURCES[@]} teaching source files present"
+CURSOR_SOURCES=(
+  ".cursor/rules/00-gitnexus-enforcement.mdc"
+  ".cursor/hooks.json"
+  ".cursor/hooks/gitnexus-grep-guard.sh"
+  ".cursor/hooks/lib/hook-helpers.mjs"
+  ".cursor/hooks/lib/stale-policy.mjs"
+)
 
-# ── 4. install Cursor teaching bundle (rules + hooks + skills sync) ──────────
+ZED_SOURCES=(
+  ".zed/settings.json"
+  "AGENTS.md"
+)
 
-info "Installing Cursor GitNexus teaching bundle"
+for f in "${CORE_SOURCES[@]}"; do require_file "$f"; done
+if [[ "$GITNEXUS_RUNTIME" != "zed" ]]; then
+  for f in "${CURSOR_SOURCES[@]}"; do require_file "$f"; done
+fi
+if [[ "$GITNEXUS_RUNTIME" != "cursor" ]]; then
+  for f in "${ZED_SOURCES[@]}"; do require_file "$f"; done
+fi
+ok "Teaching sources OK (runtime: ${GITNEXUS_RUNTIME})"
+
+# ── 4. teaching bundle (skills symlinks + manifest) ─────────────────────────
+
+info "Sync skills + teaching manifest (runtime: ${GITNEXUS_RUNTIME})"
 chmod +x scripts/sync-cursor-gitnexus-teaching.sh scripts/gitnexus-setup.sh
 bash scripts/sync-cursor-gitnexus-teaching.sh
 
-# ── 4. project MCP ───────────────────────────────────────────────────────────
+# ── 4b. Cursor MCP (when runtime includes cursor) ───────────────────────────
 
+if [[ "$GITNEXUS_RUNTIME" != "zed" ]]; then
 info "Ensuring GitNexus MCP in .cursor/mcp.json"
 
 node <<'NODE'
@@ -189,13 +157,16 @@ c.mcpServers.gitnexus = entry;
 fs.writeFileSync(p, JSON.stringify(c, null, 2) + '\n');
 console.log('    ✓ gitnexus MCP entry in .cursor/mcp.json');
 NODE
+fi
 
-# ── 5. global MCP (optional) ─────────────────────────────────────────────────
+# ── 5. global MCP (optional, Cursor) ─────────────────────────────────────────
 
-if [[ "$SKIP_GLOBAL_MCP" == false ]]; then
+if [[ "$GITNEXUS_RUNTIME" != "zed" ]] && [[ "$SKIP_GLOBAL_MCP" == false ]]; then
   info "Global GitNexus MCP (optional — all Cursor projects)"
   "${GITNEXUS_CLI[@]}" setup 2>/dev/null && ok "Global MCP configured" \
     || warn "Global setup skipped — project .cursor/mcp.json is sufficient"
+elif [[ "$GITNEXUS_RUNTIME" == "zed" ]]; then
+  ok "Skipped global Cursor MCP (zed runtime)"
 else
   ok "Skipped global MCP (--skip-global-mcp)"
 fi
@@ -281,7 +252,7 @@ cat <<'ONBOARD'
 
   Hooks DENY (when fresh): symbol Grep, SemanticSearch, broad Glob, large Read
   Hooks ALLOW: gitnexus npm scripts (agent refresh pre-approved)
-  MCP: gitnexus in .cursor/mcp.json · pre-commit → gitnexus:refresh
+  MCP: gitnexus in .cursor/mcp.json · pre-commit → gitnexus:pdg
 
 ONBOARD
 echo ""

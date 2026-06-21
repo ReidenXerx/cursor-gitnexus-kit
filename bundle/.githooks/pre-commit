@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Refresh GitNexus knowledge graph before each commit; smoke-test graph integrity.
+# Refresh GitNexus knowledge graph with PDG before each commit; smoke-test graph integrity.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-npm run gitnexus:refresh
+npm run gitnexus:pdg
 npm run gitnexus:graph-smoke
