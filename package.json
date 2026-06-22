@@ -1,7 +1,7 @@
 {
   "name": "gitnexus-agent-kit",
-  "version": "1.1.0",
-  "description": "Agent enforcement layer for GitNexus — Cursor, Zed, and Ollama; graph-first agents on every model tier",
+  "version": "1.2.0",
+  "description": "Agent enforcement layer for GitNexus \u2014 Cursor, Zed, and Ollama; graph-first agents on every model tier",
   "type": "module",
   "private": true,
   "repository": {

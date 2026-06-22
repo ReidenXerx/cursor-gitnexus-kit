@@ -82,6 +82,12 @@ Skills live once in `.gitnexus/agent-kit/skills/` and are **symlinked** — not 
 
 Default: `--quick` (skips full re-index). **Migration runs on every update** — old rsync'd `.cursor/skills/*`, `.claude/skills/*`, legacy manifest, and Zed profile key `gitnexus` are cleaned automatically.
 
+Bulk update every installed repo under a workspace root:
+
+```bash
+./bin/update.sh --all /path/to/projects --runtime both --no-setup --skip-verify
+```
+
 Restart your IDE after updating.
 
 ## Uninstall
@@ -131,4 +137,9 @@ Source: `scripts/gitnexus-teaching/script-gates.mjs`
 | **Graph smoke test** | `npm run gitnexus:graph-smoke`; pre-commit after PDG refresh |
 | **Zed + Ollama** | See [ZED.md](./ZED.md) — **Zed + GitNexus** profile, local model hints |
 
-See [Architecture](./ARCHITECTURE.md) for diagrams and failure-mode mapping.
+See [Architecture](./ARCHITECTURE.md) for diagrams and failure-mode mapping. See [Skills](./SKILLS.md) for task-to-skill routing.
+
+## Release / maintainer docs
+
+- [CHANGELOG.md](../CHANGELOG.md) — notable changes and migration notes.
+- [RELEASE.md](./RELEASE.md) — release checklist, privacy scan, and install/update matrix.

@@ -17,7 +17,7 @@ The graph + hooks replace ad hoc grep-and-guess with enforced structure — so y
 [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](LICENSE)
 [![GitNexus](https://img.shields.io/badge/GitNexus-MCP-6366f1)](https://github.com/abhigyanpatwari/GitNexus)
 
-[Quick start](#quick-start) · [Zed + Ollama](docs/ZED.md) · [Architecture](docs/ARCHITECTURE.md) · [Full install guide](docs/QUICKSTART.md)
+[Quick start](#quick-start) · [Zed + Ollama](docs/ZED.md) · [Skills](docs/SKILLS.md) · [Architecture](docs/ARCHITECTURE.md) · [Full install guide](docs/QUICKSTART.md)
 
 </div>
 
@@ -137,7 +137,7 @@ gitnexus-agent-kit/
 ├── bin/              install · update · uninstall
 ├── bundle/           teaching bundle → copied into target repos
 ├── lib/              kit core + tests (migrate, skills, zed)
-├── docs/             architecture, quickstart, ZED guide
+├── docs/             architecture, quickstart, skills, ZED guide, release checklist
 └── .github/          CI, issue/PR templates
 ```
 
@@ -160,7 +160,7 @@ npm test
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 
-Maintainer bundle reference: [docs/TEAM-BUNDLE.md](docs/TEAM-BUNDLE.md)
+Maintainer bundle reference: [docs/TEAM-BUNDLE.md](docs/TEAM-BUNDLE.md). Release checklist: [docs/RELEASE.md](docs/RELEASE.md). Changelog: [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

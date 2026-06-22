@@ -1,0 +1,94 @@
+# Release checklist
+
+Use this checklist before tagging or publishing `gitnexus-agent-kit`.
+
+## 1. Version and changelog
+
+- [ ] `package.json` version bumped intentionally.
+- [ ] `CHANGELOG.md` has an entry for the version.
+- [ ] Migration notes are clear for installed repos.
+
+## 2. Privacy / source repo hygiene
+
+- [ ] No private repo names or absolute local paths in public docs/bundle:
+
+  ```bash
+  grep -R "<private-term>" README.md docs bundle lib scripts package.json
+  grep -R "/Users/" README.md docs bundle lib scripts package.json
+  ```
+
+- [ ] `scripts/refresh-bundle-from-source.sh` was run with an explicit source path or `GITNEXUS_BUNDLE_SOURCE`.
+- [ ] Source repo basename was replaced with `__GITNEXUS_REPO__` in bundle content.
+
+## 3. Local validation
+
+- [ ] Syntax checks pass:
+
+  ```bash
+  bash -n bin/install.sh
+  bash -n bin/update.sh
+  bash -n bin/uninstall.sh
+  node --check lib/kit.mjs
+  ```
+
+- [ ] Full tests pass:
+
+  ```bash
+  npm test
+  ```
+
+## 4. Install/update/uninstall matrix
+
+Use temporary git repos for each runtime.
+
+- [ ] Fresh install: `--runtime cursor --quick --no-setup`
+- [ ] Fresh install: `--runtime zed --quick --no-setup`
+- [ ] Fresh install: `--runtime both --quick --no-setup`
+- [ ] Update existing cursor-only → `--runtime both --no-setup --skip-verify`
+- [ ] Update existing zed-only → `--runtime both --no-setup --skip-verify`
+- [ ] `./bin/update.sh --all <tmp-workspace> --runtime both --no-setup --skip-verify`
+- [ ] Uninstall preserves unrelated user config.
+- [ ] Uninstall with `--remove-index` removes `.gitnexus` local state.
+
+## 5. Target repo smoke
+
+In a real target repo after update:
+
+- [ ] Cursor files exist when runtime includes Cursor:
+  - `.cursor/hooks.json`
+  - `.cursor/mcp.json`
+  - `.cursor/skills/gitnexus-workspace`
+- [ ] Zed files exist when runtime includes Zed:
+  - `.zed/settings.json`
+  - `.agents/skills/gitnexus-workspace`
+  - `AGENTS.md`
+- [ ] `npm run gitnexus:health`
+- [ ] `npm run gitnexus:verify`
+- [ ] `npm run gitnexus:branch-status -- main` or repo base branch
+
+## 6. GitNexus v1.6.8 capability smoke
+
+- [ ] Agent brief shows routing for `trace`, `pdg_query`, `explain`, and Cypher.
+- [ ] Pre-commit hook calls `npm run gitnexus:pdg` before `gitnexus:graph-smoke`.
+- [ ] Security review skill warns that no taint/PDG layer is not proof of safety.
+- [ ] MCP snippets use current parameter names:
+  - `gitnexus_query({ search_query: ... })`
+  - `gitnexus_cypher({ statement: ... })`
+
+## 7. Docs
+
+- [ ] `README.md` quick start matches actual CLI flags.
+- [ ] `docs/QUICKSTART.md` daily commands are current.
+- [ ] `docs/SKILLS.md` lists every canonical skill in `bundle/skills`.
+- [ ] `docs/ZED.md` matches the installed Zed profile name.
+
+## 8. Release
+
+- [ ] Commit changes.
+- [ ] Tag release.
+- [ ] Publish release notes from `CHANGELOG.md`.
+- [ ] Update installed repos with:
+
+  ```bash
+  ./bin/update.sh --all /path/to/projects --runtime both --no-setup --skip-verify
+  ```

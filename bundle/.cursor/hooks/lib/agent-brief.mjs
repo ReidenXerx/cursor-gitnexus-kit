@@ -118,6 +118,19 @@ async function main() {
     "Known A→B paths → trace; control/data flow → pdg_query; field/override/process graph questions → cypher.",
   );
   lines.push("");
+  lines.push("Skill routing:");
+  lines.push(
+    "  Security/input/auth/db/file/exec/rendering → gitnexus-security-review",
+  );
+  lines.push("  API route or response payload → gitnexus-api-routes");
+  lines.push("  PR / branch review → gitnexus-pr-review");
+  lines.push("  Rename/refactor → gitnexus-refactoring");
+  lines.push("  Bug/failure path → gitnexus-debugging");
+  lines.push(
+    "  Unknown feature/codebase map → gitnexus-exploring or gitnexus-imaging",
+  );
+  lines.push("  Hook block explanation → gitnexus-enforcement");
+  lines.push("");
   lines.push("Session start (copy-paste):");
   lines.push(`  ${mcpReadContext(repo)}`);
   lines.push(`  ${mcpReadSchema(repo)}`);
