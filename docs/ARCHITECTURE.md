@@ -2,7 +2,7 @@
 
 GitNexus builds the knowledge graph. **gitnexus-agent-kit** is the agent layer for **Cursor, Zed, and Ollama**: hooks (Cursor), agent profiles (Zed), shared symlinked skills, MCP wiring, and install UX so the graph participates in **every task** — not only when code feels unfamiliar.
 
-Production-hardened in [crypto-trading-bot](https://github.com/ReidenXerx/crypto-trading-bot). Proposed upstream integration: `gitnexus init --cursor-kit`.
+Production-hardened across real repositories. Proposed upstream integration: `gitnexus init --cursor-kit`.
 
 ---
 

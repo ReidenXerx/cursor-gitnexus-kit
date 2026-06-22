@@ -13,7 +13,7 @@ if [[ -z "$TARGET" ]] || [[ "$TARGET" == "--interactive" ]] || [[ "$TARGET" == "
     echo "Examples:"
     echo "  $0                              # interactive (pick IDE + repo path)"
     echo "  $0 --interactive                # interactive"
-    echo "  $0 ../crypto-trading-bot"
+    echo "  $0 ../my-service"
     echo "  $0 ../my-app --runtime zed --quick"
     echo "  $0 ../my-app --runtime both --repo-name my-app"
     exit 0

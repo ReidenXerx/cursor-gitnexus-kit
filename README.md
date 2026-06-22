@@ -25,7 +25,8 @@ The graph + hooks replace ad hoc grep-and-guess with enforced structure — so y
 
 GitNexus builds the knowledge graph. This kit wires it into **all agent reasoning** — explore, debug, edit, refactor, review, commit — with **hard enforcement** when the index is fresh: deny grep-first habits, inject MCP playbooks, auto-refresh stale graphs, verify the stack on every install.
 
-Battle-tested in production on [crypto-trading-bot](https://github.com/ReidenXerx/crypto-trading-bot).
+Battle-tested across real production repositories; examples below use neutral placeholder paths.
+
 
 ```bash
 git clone https://github.com/ReidenXerx/gitnexus-agent-kit.git

@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-# Maintainer: re-copy bundle from a source repo (default: ../crypto-trading-bot).
-# Usage: ./scripts/refresh-bundle-from-source.sh [source-repo-path]
+# Maintainer: re-copy bundle from an already-installed source repo.
+# Usage: ./scripts/refresh-bundle-from-source.sh <source-repo-path>
+#        GITNEXUS_BUNDLE_SOURCE=/path/to/source ./scripts/refresh-bundle-from-source.sh
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SRC="${1:-$(dirname "$KIT_ROOT")/crypto-trading-bot}"
+SRC="${1:-${GITNEXUS_BUNDLE_SOURCE:-}}"
+
+if [[ -z "$SRC" ]]; then
+  echo "Usage: $0 <source-repo-path>" >&2
+  echo "Or set GITNEXUS_BUNDLE_SOURCE=/path/to/source" >&2
+  exit 2
+fi
 
 [[ -d "$SRC/.cursor/hooks" ]] || { echo "Missing source hooks: $SRC" >&2; exit 1; }
 
@@ -53,8 +60,9 @@ for f in \
 done
 rmdir "$KIT_ROOT/bundle/.claude/skills/agent-region" 2>/dev/null || true
 
+SOURCE_REPO_NAME="$(basename "$SRC")"
 find "$KIT_ROOT/bundle" -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' -o -name '*.md' \) -print0 \
-  | xargs -0 sed -i 's/crypto-trading-bot/__GITNEXUS_REPO__/g'
+  | xargs -0 sed -i "s/${SOURCE_REPO_NAME}/__GITNEXUS_REPO__/g"
 
 chmod +x "$KIT_ROOT/bundle/scripts/"*.sh "$KIT_ROOT/bundle/.cursor/hooks/"*.sh 2>/dev/null || true
 
