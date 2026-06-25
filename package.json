@@ -29,6 +29,7 @@
     "update:target": "./bin/update.sh",
     "uninstall:target": "./bin/uninstall.sh",
     "eval": "node eval/run-eval.mjs",
+    "gen:contract": "node scripts/gen-contract.mjs",
     "test": "node --test lib/kit.test.mjs"
   },
   "keywords": [

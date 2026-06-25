@@ -91,6 +91,9 @@ Read `.cursor/skills/gitnexus-scenarios/SKILL.md` for full checklists. Quick map
 | `detect_changes` | Diff → symbols → processes → risk. Scopes: unstaged, staged, all, compare. |
 | `rename` | Graph + text_search edits. Always `dry_run: true` first. |
 | `cypher` | ACCESSES, HAS_METHOD, STEP_IN_PROCESS, METHOD_OVERRIDES. READ schema first. |
+| `pdg_query` | Statement-level control/data dependence. `mode: "controls"` (what gates a line) / `"flows"` (where a value reaches). Needs PDG index. |
+| `trace` | Source → sink path between two symbols. |
+| `explain` | Taint analysis — injection, path traversal, XSS source→sink paths. |
 | `api_impact` | Pre-change report for a framework route: consumers, response shape, middleware, risk. |
 | `route_map` / `shape_check` | Route→handler→consumer map; response keys vs consumer access (framework routers). |
 | `tool_map` | MCP/RPC tool definitions. |

@@ -26,6 +26,8 @@ context (staleness) → query (graph+embeddings) → context (symbol) → cypher
 | "rename X to Y" | `gitnexus_rename` dry_run |
 | "readers/writers of field foo" | `gitnexus_cypher` ACCESSES — READ schema first |
 | N-hop call chain / overrides / process steps | `gitnexus_cypher` — READ schema first |
+| Statement-level data/control flow ("what gates this line", "where does X flow") | `gitnexus_pdg_query` (needs PDG index) |
+| Source→sink path / taint (injection, path traversal, XSS) | `gitnexus_trace` / `gitnexus_explain` |
 | HTTP route / API endpoint | `api_impact` (framework router) **or** dispatcher `context` (custom router) — see `gitnexus-api-routes` skill |
 
 ## Grep / Glob / SemanticSearch = fallback when GN is untrustworthy

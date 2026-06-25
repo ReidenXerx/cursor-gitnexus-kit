@@ -1,12 +1,3 @@
----
-description: North-star contract — graph + embeddings + cypher on every task when fresh, autonomous refresh when stale, classical fallback when GN fails.
-alwaysApply: true
----
-
-<!-- GENERATED from scripts/contract/enforcement-contract.md by scripts/gen-contract.mjs — edit there, run `npm run gen:contract`. -->
-
-# GitNexus enforcement
-
 ## North star
 
 > **GitNexus is the default reasoning layer for every task — not a fallback when code is unfamiliar.** Prefer graph + embeddings when the index is fresh. Use `query` to orient (BM25 + vectors). Use `cypher` for precise structural graph questions. Refresh autonomously when stale or embeddings are missing. Classical tools only **after refresh fails** or GN is wrong — say why.
