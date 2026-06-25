@@ -269,7 +269,7 @@ export function classifyRead(req, ctx) {
   const norm = String(filePath).replace(/\\/g, "/");
   const isSmallConfig =
     /\.(json|md|yaml|yml|mdc|sh)$/.test(filePath) || /package\.json$/.test(filePath);
-  const isGeneratedSkill = /\.cursor\/skills\//.test(norm);
+  const isGeneratedSkill = /(\.cursor|\.claude|\.agents)\/skills\//.test(norm);
 
   if (phase === "classical_fallback") {
     return { decision: "allow", agentMessage: ctx.staleFallbackMsg, userKey: "stale.classical" };

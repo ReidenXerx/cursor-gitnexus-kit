@@ -15,14 +15,14 @@ const { withProjectTmpEnv, tmpSpaceReport, enospcHelp } = await import(
   pathToFileURL(path.join(ROOT, "scripts/lib/project-tmp.mjs")).href
 );
 const { inspectPersistence, classifyPersistenceOutput } = await import(
-  pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/persistence-health.mjs"))
+  pathToFileURL(path.join(ROOT, ".gnkit/lib/persistence-health.mjs"))
     .href
 );
 
 function loadStaleness() {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/check-staleness.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/check-staleness.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -80,7 +80,7 @@ if (cmd === "status") {
 function markRefreshOutcome(success, detail = "") {
   const setPending = path.join(
     ROOT,
-    ".cursor/hooks/lib/set-refresh-pending.mjs",
+    ".gnkit/lib/set-refresh-pending.mjs",
   );
   spawnSync(
     process.execPath,
@@ -93,7 +93,7 @@ function markRefreshOutcome(success, detail = "") {
   );
   // Invalidate the short-TTL staleness cache so the next tool call sees fresh state.
   try {
-    fs.unlinkSync(path.join(ROOT, ".cursor/.gitnexus-staleness-cache.json"));
+    fs.unlinkSync(path.join(ROOT, ".gnkit/.gitnexus-staleness-cache.json"));
   } catch {
     /* ignore */
   }
@@ -123,7 +123,7 @@ if (cmd === "refresh") {
     try {
       const { generateArchDoc } = await import(
         pathToFileURL(
-          path.join(ROOT, ".cursor/hooks/lib/generate-arch-doc.mjs"),
+          path.join(ROOT, ".gnkit/lib/generate-arch-doc.mjs"),
         ).href
       );
       const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
@@ -144,7 +144,7 @@ if (cmd === "refresh") {
 if (cmd === "brief") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/agent-brief.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/agent-brief.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -158,7 +158,7 @@ if (cmd === "brief") {
 if (cmd === "health") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/agent-health.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/agent-health.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -172,7 +172,7 @@ if (cmd === "health") {
 if (cmd === "graph-smoke") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/graph-smoke.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/graph-smoke.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -185,7 +185,7 @@ if (cmd === "graph-smoke") {
 
 if (cmd === "detect-api") {
   const { writeApiRouterProfile } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/detect-api-router.mjs"))
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/detect-api-router.mjs"))
       .href
   );
   const profile = writeApiRouterProfile(ROOT);
@@ -203,7 +203,7 @@ if (cmd === "detect-api") {
 
 if (cmd === "verify") {
   const verifyPath = path.join(ROOT, "scripts/gitnexus-verify.mjs");
-  const fallback = path.join(ROOT, ".cursor/hooks/lib/verify-kit.mjs");
+  const fallback = path.join(ROOT, ".gnkit/lib/verify-kit.mjs");
   const script = fs.existsSync(verifyPath) ? verifyPath : fallback;
   const r = spawnSync(
     process.execPath,
@@ -432,7 +432,7 @@ if (cmd === "doctor") {
 
 if (cmd === "map") {
   const { generateArchDoc } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/generate-arch-doc.mjs"))
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/generate-arch-doc.mjs"))
       .href
   );
   const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
@@ -446,7 +446,7 @@ if (cmd === "map") {
 
 if (cmd === "commit-msg") {
   const { draftCommitMessage } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/commit-message.mjs")).href
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/commit-message.mjs")).href
   );
   const { message } = draftCommitMessage(
     ROOT,
@@ -459,7 +459,7 @@ if (cmd === "commit-msg") {
 
 if (cmd === "scorecard") {
   const { readScorecard } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/session-primer.mjs")).href
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
   );
   const card = readScorecard(ROOT);
   const counts = card.counts ?? {};

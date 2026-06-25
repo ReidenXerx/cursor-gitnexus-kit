@@ -56,6 +56,12 @@ done
 
 export GITNEXUS_RUNTIME
 
+# Runtime membership — GITNEXUS_RUNTIME may be cursor|zed|claude|both|all or a
+# comma-list (e.g. "cursor,claude"). both = cursor+zed; all = every adapter.
+wants_cursor() { case "$GITNEXUS_RUNTIME" in *cursor*|*both*|*all*) return 0;; esac; return 1; }
+wants_zed()    { case "$GITNEXUS_RUNTIME" in *zed*|*both*|*all*)    return 0;; esac; return 1; }
+wants_claude() { case "$GITNEXUS_RUNTIME" in *claude*|*all*)        return 0;; esac; return 1; }
+
 info()  { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 ok()    { printf '\033[1;32m    ✓\033[0m %s\n' "$*"; }
 warn()  { printf '\033[1;33m    !\033[0m %s\n' "$*"; }
@@ -117,8 +123,8 @@ CURSOR_SOURCES=(
   ".cursor/rules/00-gitnexus-enforcement.mdc"
   ".cursor/hooks.json"
   ".cursor/hooks/gitnexus-grep-guard.sh"
-  ".cursor/hooks/lib/hook-helpers.mjs"
-  ".cursor/hooks/lib/stale-policy.mjs"
+  ".gnkit/lib/hook-helpers.mjs"
+  ".gnkit/lib/stale-policy.mjs"
 )
 
 ZED_SOURCES=(
@@ -126,13 +132,17 @@ ZED_SOURCES=(
   "AGENTS.md"
 )
 
+CLAUDE_SOURCES=(
+  ".mcp.json"
+  ".claude/settings.json"
+  "CLAUDE.md"
+  ".gnkit/lib/classify.mjs"
+)
+
 for f in "${CORE_SOURCES[@]}"; do require_file "$f"; done
-if [[ "$GITNEXUS_RUNTIME" != "zed" ]]; then
-  for f in "${CURSOR_SOURCES[@]}"; do require_file "$f"; done
-fi
-if [[ "$GITNEXUS_RUNTIME" != "cursor" ]]; then
-  for f in "${ZED_SOURCES[@]}"; do require_file "$f"; done
-fi
+if wants_cursor; then for f in "${CURSOR_SOURCES[@]}"; do require_file "$f"; done; fi
+if wants_zed;    then for f in "${ZED_SOURCES[@]}";    do require_file "$f"; done; fi
+if wants_claude; then for f in "${CLAUDE_SOURCES[@]}"; do require_file "$f"; done; fi
 ok "Teaching sources OK (runtime: ${GITNEXUS_RUNTIME})"
 
 # ── 4. teaching bundle (skills symlinks + manifest) ─────────────────────────
@@ -143,7 +153,7 @@ bash scripts/sync-cursor-gitnexus-teaching.sh
 
 # ── 4b. Cursor MCP (when runtime includes cursor) ───────────────────────────
 
-if [[ "$GITNEXUS_RUNTIME" != "zed" ]]; then
+if wants_cursor; then
 info "Ensuring GitNexus MCP in .cursor/mcp.json"
 
 node <<'NODE'
@@ -161,12 +171,12 @@ fi
 
 # ── 5. global MCP (optional, Cursor) ─────────────────────────────────────────
 
-if [[ "$GITNEXUS_RUNTIME" != "zed" ]] && [[ "$SKIP_GLOBAL_MCP" == false ]]; then
+if wants_cursor && [[ "$SKIP_GLOBAL_MCP" == false ]]; then
   info "Global GitNexus MCP (optional — all Cursor projects)"
   "${GITNEXUS_CLI[@]}" setup 2>/dev/null && ok "Global MCP configured" \
     || warn "Global setup skipped — project .cursor/mcp.json is sufficient"
-elif [[ "$GITNEXUS_RUNTIME" == "zed" ]]; then
-  ok "Skipped global Cursor MCP (zed runtime)"
+elif ! wants_cursor; then
+  ok "Skipped global Cursor MCP (runtime: ${GITNEXUS_RUNTIME})"
 else
   ok "Skipped global MCP (--skip-global-mcp)"
 fi

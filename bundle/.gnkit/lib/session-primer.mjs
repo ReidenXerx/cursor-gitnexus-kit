@@ -7,18 +7,18 @@ import path from 'node:path';
 import { playbookForHint, mcpReadContext, repoName, clearDenyCache } from './hook-helpers.mjs';
 
 export function sessionPaths(root) {
-  const cursorDir = path.join(root, '.cursor');
+  const stateDir = path.join(root, '.gnkit');
   return {
-    cursorDir,
-    primedFlag: path.join(cursorDir, '.gitnexus-session-primed.flag'),
-    promptHint: path.join(cursorDir, '.gitnexus-prompt-hint.json'),
-    refreshPendingFlag: path.join(cursorDir, '.gitnexus-refresh-pending.flag'),
-    refreshFailedFlag: path.join(cursorDir, '.gitnexus-refresh-failed.flag'),
-    mcpUsedFlag: path.join(cursorDir, '.gitnexus-mcp-used.flag'),
-    impactUsedFlag: path.join(cursorDir, '.gitnexus-impact-used.flag'),
-    detectUsedFlag: path.join(cursorDir, '.gitnexus-detect-used.flag'),
-    stalenessCacheFile: path.join(cursorDir, '.gitnexus-staleness-cache.json'),
-    scorecardFile: path.join(cursorDir, '.gitnexus-scorecard.json'),
+    stateDir,
+    primedFlag: path.join(stateDir, '.gitnexus-session-primed.flag'),
+    promptHint: path.join(stateDir, '.gitnexus-prompt-hint.json'),
+    refreshPendingFlag: path.join(stateDir, '.gitnexus-refresh-pending.flag'),
+    refreshFailedFlag: path.join(stateDir, '.gitnexus-refresh-failed.flag'),
+    mcpUsedFlag: path.join(stateDir, '.gitnexus-mcp-used.flag'),
+    impactUsedFlag: path.join(stateDir, '.gitnexus-impact-used.flag'),
+    detectUsedFlag: path.join(stateDir, '.gitnexus-detect-used.flag'),
+    stalenessCacheFile: path.join(stateDir, '.gitnexus-staleness-cache.json'),
+    scorecardFile: path.join(stateDir, '.gitnexus-scorecard.json'),
   };
 }
 
@@ -29,8 +29,8 @@ export function sessionPaths(root) {
  * @param {string} toolName e.g. "gitnexus_impact" / "mcp_gitnexus_detect_changes"
  */
 export function setMcpToolUsed(root, toolName) {
-  const { cursorDir, mcpUsedFlag, impactUsedFlag, detectUsedFlag } = sessionPaths(root);
-  fs.mkdirSync(cursorDir, { recursive: true });
+  const { stateDir, mcpUsedFlag, impactUsedFlag, detectUsedFlag } = sessionPaths(root);
+  fs.mkdirSync(stateDir, { recursive: true });
   const stamp = new Date().toISOString();
   try {
     fs.writeFileSync(mcpUsedFlag, stamp);
@@ -67,9 +67,9 @@ export function clearStalenessCache(root) {
  * @param {string} key
  */
 export function bumpScore(root, key) {
-  const { cursorDir, scorecardFile } = sessionPaths(root);
+  const { stateDir, scorecardFile } = sessionPaths(root);
   try {
-    fs.mkdirSync(cursorDir, { recursive: true });
+    fs.mkdirSync(stateDir, { recursive: true });
     let card = {};
     try {
       card = JSON.parse(fs.readFileSync(scorecardFile, 'utf8'));
@@ -96,8 +96,8 @@ export function readScorecard(root) {
 }
 
 export function setRefreshPending(root, pending, detail = '') {
-  const { cursorDir, refreshPendingFlag } = sessionPaths(root);
-  fs.mkdirSync(cursorDir, { recursive: true });
+  const { stateDir, refreshPendingFlag } = sessionPaths(root);
+  fs.mkdirSync(stateDir, { recursive: true });
   if (pending) {
     fs.writeFileSync(refreshPendingFlag, JSON.stringify({ at: new Date().toISOString(), detail }, null, 2));
   } else {
@@ -115,8 +115,8 @@ export function isRefreshPending(root) {
 }
 
 export function setRefreshFailed(root, failed, detail = '') {
-  const { cursorDir, refreshFailedFlag } = sessionPaths(root);
-  fs.mkdirSync(cursorDir, { recursive: true });
+  const { stateDir, refreshFailedFlag } = sessionPaths(root);
+  fs.mkdirSync(stateDir, { recursive: true });
   if (failed) {
     fs.writeFileSync(refreshFailedFlag, JSON.stringify({ at: new Date().toISOString(), detail }, null, 2));
   } else {
@@ -135,7 +135,7 @@ export function isRefreshFailed(root) {
 
 export function clearSessionState(root) {
   const {
-    cursorDir,
+    stateDir,
     primedFlag,
     promptHint,
     mcpUsedFlag,
@@ -145,7 +145,7 @@ export function clearSessionState(root) {
     stalenessCacheFile,
     scorecardFile,
   } = sessionPaths(root);
-  fs.mkdirSync(cursorDir, { recursive: true });
+  fs.mkdirSync(stateDir, { recursive: true });
   for (const f of [
     primedFlag,
     promptHint,
@@ -164,7 +164,7 @@ export function clearSessionState(root) {
   }
   for (const rel of ['.gitnexus-session-user-notified.flag']) {
     try {
-      fs.unlinkSync(path.join(cursorDir, rel));
+      fs.unlinkSync(path.join(stateDir, rel));
     } catch {
       /* ignore */
     }
@@ -173,8 +173,8 @@ export function clearSessionState(root) {
 }
 
 export function writePromptHint(root, hint) {
-  const { cursorDir, promptHint } = sessionPaths(root);
-  fs.mkdirSync(cursorDir, { recursive: true });
+  const { stateDir, promptHint } = sessionPaths(root);
+  fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(promptHint, JSON.stringify({ ...hint, at: new Date().toISOString() }, null, 2));
 }
 

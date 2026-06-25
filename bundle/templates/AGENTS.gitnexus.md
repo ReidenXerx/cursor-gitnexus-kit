@@ -118,13 +118,13 @@ Symbol grep → `context`. **Field/property grep → READ schema → `cypher` (`
 - **Edit runtime source** → blocked until one `impact` (or `rename`) call this session. Run blast radius first; warn on HIGH/CRITICAL.
 - **`git commit`** → blocked until one `detect_changes` call this session. Confirm affected processes match intent.
 
-Enforcement is **polyglot** — JS/TS, Python, Rust, Go, Java, and more count as source (configure `sourceExts` in `.cursor/gitnexus-hooks.json`).
+Enforcement is **polyglot** — JS/TS, Python, Rust, Go, Java, and more count as source (configure `sourceExts` in `.gnkit/gitnexus-hooks.json`).
 
 ## Fallback
 
 **Only after refresh fails** (or MCP down / GN wrong after `uid` retry): classical Grep/Read OK — one-sentence why. While stale and refresh not yet attempted/failed: **deny classical** — run `agent-refresh` first.
 
-Optional: `GITNEXUS_MODE=guide` (nudge-only). Paths: `.cursor/gitnexus-hooks.json`. Playbooks: `gitnexus-enforcement` skill.
+Optional: `GITNEXUS_MODE=guide` (nudge-only). Paths: `.gnkit/gitnexus-hooks.json`. Playbooks: `gitnexus-enforcement` skill.
 
 ## Zed + local models (Ollama)
 

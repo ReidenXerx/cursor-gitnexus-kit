@@ -13,7 +13,7 @@ try {
 }
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 const lib = (rel) =>
-  import(pathToFileURL(path.join(root, ".cursor/hooks/lib", rel)).href);
+  import(pathToFileURL(path.join(root, ".gnkit/lib", rel)).href);
 
 const { gnContext, emitContext } = await lib("claude-emit.mjs");
 const { clearSessionState } = await lib("session-primer.mjs");

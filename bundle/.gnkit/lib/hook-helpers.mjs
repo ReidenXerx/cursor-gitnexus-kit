@@ -41,7 +41,7 @@ export {
   playbookRenameForHint,
 } from "./rename-helpers.mjs";
 
-export const CONFIG_FILE = ".cursor/gitnexus-hooks.json";
+export const CONFIG_FILE = ".gnkit/gitnexus-hooks.json";
 
 /** @typedef {'enforce' | 'guide'} HookMode */
 /** @typedef {'none' | 'light' | 'medium' | 'full'} EditSensitivity */
@@ -64,7 +64,7 @@ const DEFAULT_BROAD_GLOB_RES = [
 ];
 
 // Polyglot: GitNexus indexes many languages — enforcement should not be JS/TS-only.
-// Override in .cursor/gitnexus-hooks.json via "sourceExts": ["js","py","rs", …].
+// Override in .gnkit/gitnexus-hooks.json via "sourceExts": ["js","py","rs", …].
 const DEFAULT_SOURCE_EXT_RE =
   /\.(js|mjs|cjs|jsx|ts|tsx|mts|cts|py|pyi|rb|go|rs|java|kt|kts|swift|php|cs|cpp|cc|cxx|hpp|hh|c|h|cu|cuh|scala|m|mm|dart|lua|ex|exs|clj)$/i;
 
@@ -175,7 +175,7 @@ export function editSensitivity(filePath, config) {
   ) {
     return "light";
   }
-  if (/\.cursor\/hooks\//.test(norm) || /(?:^|\/)bundle\//.test(norm))
+  if (/(\.cursor\/hooks|\.claude\/hooks|\.gnkit)\//.test(norm) || /(?:^|\/)bundle\//.test(norm))
     return "light";
   if (/(?:^|\/)tests?\//.test(norm)) return "medium";
   if (/(?:^|\/)scripts\//.test(norm)) return "medium";
@@ -277,7 +277,7 @@ const DENY_CACHE_FILE = ".gitnexus-deny-cache.json";
 
 /** @param {string} root */
 function denyCachePath(root) {
-  return path.join(root, ".cursor", DENY_CACHE_FILE);
+  return path.join(root, ".gnkit", DENY_CACHE_FILE);
 }
 
 /** @param {string} root */
