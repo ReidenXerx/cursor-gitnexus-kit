@@ -24,11 +24,14 @@ const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const stale = JSON.parse(process.env.GITNEXUS_STALENESS || '{"fresh":false}');
 const nudge = process.env.GITNEXUS_FIRST_NUDGE || '';
 const command = input.command ?? input.tool_input?.command ?? '';
+const config = helpers.loadHookConfig(root);
 const policy = evaluateStalePolicy(stale, root);
 
 function out(obj) {
-  if (obj.agent_message) obj.agent_message = appendNudge(obj.agent_message, nudge);
-  process.stdout.write(JSON.stringify(obj));
+  // Route through guide mode so `mode: "guide"` nudges instead of hard-blocking.
+  const applied = helpers.applyHookMode(obj, config.mode);
+  if (applied.agent_message) applied.agent_message = appendNudge(applied.agent_message, nudge);
+  process.stdout.write(JSON.stringify(applied));
 }
 
 const isGitnexusMaint =

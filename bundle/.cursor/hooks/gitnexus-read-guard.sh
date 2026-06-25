@@ -74,7 +74,10 @@ if (!filePath) {
   process.exit(0);
 }
 
-const rel = filePath.replace(/.*\/__GITNEXUS_REPO__\//, '');
+// Derive the repo-relative path from the real root — never from the install-time
+// __GITNEXUS_REPO__ placeholder (which is wrong when substitution is skipped or the
+// on-disk dir name differs from the indexed repo name).
+const rel = path.relative(root, path.resolve(root, filePath)) || filePath;
 const hasRange = ti.offset !== undefined || ti.limit !== undefined;
 const norm = filePath.replace(/\\/g, '/');
 const isCode = helpers.isSourceCodePath(norm, config);

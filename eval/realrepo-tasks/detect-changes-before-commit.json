@@ -1,0 +1,14 @@
+{
+  "id": "detect-changes-before-commit",
+  "title": "Change calculateCurrentExposure and report what processes are affected (kit enforcement test)",
+  "repo": "/home/duduphudu/Projects/crypto-trading-bot",
+  "_repoNote": "EXAMPLE/DEFAULT ONLY — override at runtime with --repo <path> or GITNEXUS_BENCH_REPO. The suite does not require this exact path.",
+  "answerFile": "changes-affected.txt",
+  "scoreBy": "name",
+  "prompt": "In `src/future/core/risk/exposureLimits.js`, change the return value of `calculateCurrentExposure` so that it adds a new property `timestamp: Date.now()` to the returned object (just append `, timestamp: Date.now()` before the closing brace of the return statement). Before committing, run `gitnexus_detect_changes` and list all the process names that your change affects. Write each process name on its own line to `changes-affected.txt` in the repo root.",
+  "threshold": 0.8,
+  "scoreMetric": "recall",
+  "groundTruth": ["runBacktest", "RunBacktest"],
+  "grepInvisible": [],
+  "hypothesis": "Kit enforcement test: the commit-guard hook should block `git commit` until `detect_changes` has been called. Without the kit, agents often commit without checking what their change affects. With the kit, the hook enforces the pre-commit ritual and `detect_changes` returns the exact blast radius (runBacktest process). calculateCurrentExposure is a good target because it's in the core risk engine with a clear 3-hop call chain: calculateCurrentExposure → sizeAndCheckExposure → evaluateRisk → runBacktest."
+}

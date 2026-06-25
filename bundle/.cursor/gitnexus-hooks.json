@@ -1,30 +1,7 @@
 {
-  "comment": "Optional hook tuning. mode: enforce (block) | guide (nudge only). sourceGlobs: gitignore-style roots for graph-first paths. sourceExts: language file extensions that count as graph-first source (polyglot — GitNexus indexes many languages). stalenessCacheTtlMs: reuse staleness within N ms to cut per-tool-call latency.",
+  "comment": "Optional hook tuning. mode: enforce (block) | guide (nudge only). sourceGlobs: gitignore-style roots for graph-first paths. stalenessCacheTtlMs: reuse staleness within N ms to cut per-tool-call latency. sourceExts is intentionally omitted — the built-in polyglot default (see hook-helpers.mjs DEFAULT_SOURCE_EXT_RE) is the single source of truth; add a \"sourceExts\": [\"js\",\"py\", …] array here only to narrow/override it.",
   "mode": "enforce",
   "readLineThreshold": 60,
-  "graceCommitsBehind": 2,
   "stalenessCacheTtlMs": 2500,
-  "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"],
-  "sourceExts": [
-    "js",
-    "mjs",
-    "cjs",
-    "jsx",
-    "ts",
-    "tsx",
-    "py",
-    "rb",
-    "go",
-    "rs",
-    "java",
-    "kt",
-    "swift",
-    "php",
-    "cs",
-    "cpp",
-    "c",
-    "cu",
-    "cuh",
-    "scala"
-  ]
+  "sourceGlobs": ["src/**", "lib/**", "apps/**", "packages/**"]
 }

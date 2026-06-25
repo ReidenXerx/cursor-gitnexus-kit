@@ -3,3 +3,14 @@ node_modules/
 *.tar.gz
 eval/report.md
 eval/BENCHMARK-realrepo.md
+eval/swebench/results/*/trajectories/
+eval/swebench/results/*/config.yaml
+
+# Python build artifacts
+__pycache__/
+*.pyc
+.venv/
+
+# Local databases / graph indexes
+*.db
+*.sqlite

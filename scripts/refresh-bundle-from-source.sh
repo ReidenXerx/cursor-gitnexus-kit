@@ -19,15 +19,23 @@ info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
 
 info "Refreshing bundle from $SRC"
 
-rm -rf "$KIT_ROOT/bundle"
-mkdir -p "$KIT_ROOT/bundle/.cursor/rules" "$KIT_ROOT/bundle/.claude/skills"
+# NOTE: bundle/skills/ and bundle/docs/ are kit-owned sources of truth and are
+# NOT derived from $SRC. Never `rm -rf bundle` wholesale — that would wipe the
+# canonical skill store (incl. gitnexus-local) and the team docs. We only
+# refresh the subtrees that genuinely come from the source repo.
+rm -rf \
+  "$KIT_ROOT/bundle/.cursor" \
+  "$KIT_ROOT/bundle/.githooks" \
+  "$KIT_ROOT/bundle/.vscode" \
+  "$KIT_ROOT/bundle/scripts" \
+  "$KIT_ROOT/bundle/.gitnexusignore"
+mkdir -p "$KIT_ROOT/bundle/.cursor/rules"
 
 cp -a "$SRC/.cursor/rules/"* "$KIT_ROOT/bundle/.cursor/rules/"
 cp "$SRC/.cursor/hooks.json" "$KIT_ROOT/bundle/.cursor/"
 cp -a "$SRC/.cursor/hooks" "$KIT_ROOT/bundle/.cursor/"
-cp -a "$SRC/.claude/skills/gitnexus" "$KIT_ROOT/bundle/.claude/skills/"
-cp -a "$SRC/.claude/skills/gitnexus-workspace" "$KIT_ROOT/bundle/.claude/skills/"
-cp -a "$SRC/.claude/skills/gitnexus-enforcement" "$KIT_ROOT/bundle/.claude/skills/"
+# Skills are NOT copied from $SRC. The shipped store is bundle/skills/ — edit it
+# directly. There is no bundle/.claude/skills/ tree anymore.
 mkdir -p "$KIT_ROOT/bundle/.githooks" "$KIT_ROOT/bundle/.vscode" "$KIT_ROOT/bundle/scripts/lib" "$KIT_ROOT/bundle/scripts/gitnexus-teaching" "$KIT_ROOT/bundle/docs"
 cp "$SRC/.githooks/pre-commit" "$KIT_ROOT/bundle/.githooks/"
 cp "$SRC/.vscode/settings.json" "$KIT_ROOT/bundle/.vscode/"
@@ -37,12 +45,16 @@ for f in gitnexus-setup.sh sync-cursor-gitnexus-teaching.sh pack-gitnexus-teachi
 done
 cp "$SRC/scripts/lib/project-tmp.mjs" "$KIT_ROOT/bundle/scripts/lib/"
 cp "$SRC/scripts/gitnexus-teaching/"* "$KIT_ROOT/bundle/scripts/gitnexus-teaching/"
-if [[ -f "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
-  cp "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
-elif [[ -f "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" ]]; then
-  cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md"
-  cp "$SRC/docs/GITNEXUS-TEAM-BUNDLE.md" "$KIT_ROOT/docs/TEAM-BUNDLE.md"
-fi
+# Docs flow ONE WAY: docs/ (current, vendor-neutral) is the source of truth.
+# The bundle ships team handouts under bundle/docs/GITNEXUS-*.md, which are
+# REGENERATED from docs/ here — never copied back over docs/, and never sourced
+# from $SRC (the source repo's docs are stale Cursor-only copies).
+#   docs/TEAM-BUNDLE.md -> bundle/docs/GITNEXUS-TEAM-BUNDLE.md
+#   docs/SKILLS.md      -> bundle/docs/GITNEXUS-SKILLS.md
+# bundle/docs/GITNEXUS-CURSOR-GUIDE.md is kit-owned (Cursor handout, no neutral
+# twin) and is left as-is.
+cp "$KIT_ROOT/docs/TEAM-BUNDLE.md" "$KIT_ROOT/bundle/docs/GITNEXUS-TEAM-BUNDLE.md"
+cp "$KIT_ROOT/docs/SKILLS.md" "$KIT_ROOT/bundle/docs/GITNEXUS-SKILLS.md"
 
 # Strip region enforcement from refreshed bundle (kit no longer ships regions)
 for f in \
@@ -51,14 +63,12 @@ for f in \
   bundle/.cursor/hooks/lib/region-picker-context.mjs \
   bundle/.cursor/hooks/lib/region-session.mjs \
   bundle/.cursor/hooks/lib/region-user-guide.mjs \
-  bundle/.claude/skills/agent-region/SKILL.md \
   bundle/docs/AGENT-REGIONS-GUIDE.md \
   bundle/docs/regions.overlay.stub.json \
   bundle/docs/AGENT-PROFILES.stub.md \
   bundle/scripts/gitnexus-teaching/generate-regions.mjs; do
   rm -rf "$KIT_ROOT/$f" 2>/dev/null || true
 done
-rmdir "$KIT_ROOT/bundle/.claude/skills/agent-region" 2>/dev/null || true
 
 SOURCE_REPO_NAME="$(basename "$SRC")"
 find "$KIT_ROOT/bundle" -type f \( -name '*.mdc' -o -name '*.sh' -o -name '*.mjs' -o -name 'SKILL.md' -o -name '*.md' \) -print0 \

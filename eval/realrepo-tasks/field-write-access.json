@@ -1,0 +1,14 @@
+{
+  "id": "field-write-access",
+  "title": "Find all functions that write to the notional/liquidationPrice variables in planExecution",
+  "repo": "/home/duduphudu/Projects/crypto-trading-bot",
+  "_repoNote": "EXAMPLE/DEFAULT ONLY — override at runtime with --repo <path> or GITNEXUS_BENCH_REPO. The suite does not require this exact path.",
+  "answerFile": "field-writers.txt",
+  "scoreBy": "path",
+  "prompt": "Find every function that contains a WRITE access to the `notional` or `liquidationPrice` variables inside the `planExecution` function (in `src/future/core/backtest/executionSimulator.js`). Only include functions that assign to or mutate these variables — NOT functions that only read them. Use `gitnexus_cypher` with ACCESSES edges filtered by `reason` containing 'write' to get the exact writers. Write one repo-relative path per line to `field-writers.txt` in the repo root.",
+  "threshold": 0.9,
+  "scoreMetric": "f1",
+  "groundTruth": ["src/future/core/backtest/executionSimulator.js"],
+  "grepInvisible": [],
+  "hypothesis": "Field writes are hard to distinguish from reads with grep — `notional = ...` vs `const x = notional` both contain the variable name. `gitnexus_cypher` with ACCESSES edges and `reason` containing 'write' returns exactly the writer function(s). Grep over-includes (finds both reads and writes in the same file), making precision suffer. The ground truth is small (only planExecution writes these consts) but grep would return many false positives from the same file's reads, or from other files that merely reference the names."
+}

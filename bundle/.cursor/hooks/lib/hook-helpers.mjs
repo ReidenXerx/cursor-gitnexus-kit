@@ -85,7 +85,6 @@ export function loadHookConfig(root) {
   const cfg = {
     mode: hookModeFromEnv(),
     readLineThreshold: 60,
-    graceCommitsBehind: 2,
     sourcePathRes: DEFAULT_SOURCE_RES,
     broadGlobRes: DEFAULT_BROAD_GLOB_RES,
     sourceExtRe: DEFAULT_SOURCE_EXT_RE,
@@ -100,8 +99,6 @@ export function loadHookConfig(root) {
     if (file.mode) cfg.mode = file.mode === "guide" ? "guide" : "enforce";
     if (typeof file.readLineThreshold === "number")
       cfg.readLineThreshold = file.readLineThreshold;
-    if (typeof file.graceCommitsBehind === "number")
-      cfg.graceCommitsBehind = file.graceCommitsBehind;
     if (typeof file.stalenessCacheTtlMs === "number")
       cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
     if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
@@ -330,17 +327,6 @@ export function midSessionGraphNudge(graphUsedThisSession, root = "") {
     "MID-SESSION: query (graph+embeddings) for orient; context/impact for symbols and edits; cypher for field access / N-hop chains / overrides.",
     "",
   );
-}
-
-/**
- * @param {object} stale from check-staleness
- * @param {ReturnType<typeof loadHookConfig>} config
- */
-export function isGraceStale(stale, config) {
-  if (stale?.fresh) return false;
-  if (stale?.reason !== "behind") return false;
-  const n = stale.commitsBehind ?? 0;
-  return n > 0 && n <= (config.graceCommitsBehind ?? 0);
 }
 
 /**

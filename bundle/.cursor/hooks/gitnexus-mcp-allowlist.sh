@@ -27,13 +27,15 @@ const { setMcpToolUsed, bumpScore } = await import(
   pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
 );
 
+const config = helpers.loadHookConfig(root);
 const isGitnexus =
   /gitnexus/i.test(tool) ||
   /gitnexus/i.test(url) ||
   /gitnexus/i.test(cmd);
 
 function out(obj) {
-  process.stdout.write(JSON.stringify(obj));
+  // Route through guide mode so `mode: "guide"` nudges instead of hard-blocking.
+  process.stdout.write(JSON.stringify(helpers.applyHookMode(obj, config.mode)));
 }
 
 if (!isGitnexus) {

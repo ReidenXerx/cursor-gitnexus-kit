@@ -1,0 +1,20 @@
+{
+  "id": "call-chain-impact",
+  "title": "Trace the full call chain from calculateCurrentExposure to the backtest entry point",
+  "repo": "/home/duduphudu/Projects/crypto-trading-bot",
+  "_repoNote": "EXAMPLE/DEFAULT ONLY — override at runtime with --repo <path> or GITNEXUS_BENCH_REPO. The suite does not require this exact path.",
+  "answerFile": "call-chain.txt",
+  "scoreBy": "name",
+  "prompt": "Trace the complete call chain from `calculateCurrentExposure` (in `src/future/core/risk/exposureLimits.js`) to the top-level backtest entry point. List every function name in the chain, in order from callee to caller: calculateCurrentExposure → ... → top-level entry point. Write one function name per line to `call-chain.txt` in the repo root.",
+  "threshold": 0.85,
+  "scoreMetric": "recall",
+  "groundTruth": [
+    "calculateCurrentExposure",
+    "sizeAndCheckExposure",
+    "evaluateRisk",
+    "runBacktest",
+    "runBacktestFromSource"
+  ],
+  "grepInvisible": ["runBacktestFromSource"],
+  "hypothesis": "Call chains with transitive depth > 2 are hard to trace with grep — you need to read each intermediate function to find the next caller. `gitnexus_impact(upstream, depth 3)` or `gitnexus_context` on each symbol gives the full chain in one query. Grep finds direct callers but misses the chain's end (runBacktestFromSource at depth 3) because that function never mentions 'calculateCurrentExposure'."
+}

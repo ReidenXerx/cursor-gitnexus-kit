@@ -35,12 +35,12 @@ Portable **rules + hooks + skills + scripts** for graph-first agents (Cursor hoo
 
 ## Large generated caches (recommended)
 
-If the repo has thousands of non-source files (e.g. OHLCV candle shards, backtest reports), add them to **both**:
+If the repo has thousands of non-source files (e.g. large data shards, generated reports, fixtures), add them to **both**:
 
 - **`.gitignore`** — keep git clean
 - **`.gitnexusignore`** — same gitignore syntax; keeps `gitnexus analyze` fast
 
-This repo ignores `data/candles/` and `reports/` in both files. After changing ignores, re-index:
+Example: ignore `data/` and `reports/` in both files. After changing ignores, re-index:
 
 ```bash
 npm run gitnexus:agent-refresh

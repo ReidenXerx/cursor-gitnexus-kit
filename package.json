@@ -24,7 +24,7 @@
     "node": ">=22.9.0"
   },
   "scripts": {
-    "install": "./bin/install.sh",
+    "kit:install": "./bin/install.sh",
     "install:target": "./bin/install.sh",
     "update:target": "./bin/update.sh",
     "uninstall:target": "./bin/uninstall.sh",

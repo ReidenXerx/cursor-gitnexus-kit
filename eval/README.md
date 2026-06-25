@@ -1,12 +1,13 @@
-# Eval harness (internal / WIP)
+# Eval harness
 
-A developer tool for experimenting with the kit's effect on agent behavior. It runs the same
-task twice — **kit ON** vs **kit OFF** — through a pluggable agent runner and reports pass-rate
-and token usage.
+Two complementary approaches to measuring GitNexus value:
 
-> Status: exploratory. These are not published benchmarks — they're for finding the
-> scenarios where graph-first enforcement clearly helps. Treat any local numbers as
-> direction, not claims.
+1. **Real-repo benchmark** (`bench-realrepo.mjs`) — tests **your kit** (hooks + rules + skills + MCP + PDG)
+2. **SWE-bench Verified** (`swebench/`) — tests **GitNexus MCP** alone (industry-standard comparison)
+
+> ⚠️ These measure different things. The real-repo benchmark proves your kit's enforcement
+> adds value ON TOP of MCP. SWE-bench proves MCP helps agents explore code. See the
+> [two-tier breakdown](#what-each-tier-proves) below.
 
 ## Quick start
 
@@ -92,21 +93,109 @@ explaining the expected kit advantage. Add your own — keep them small and obje
 Toy fixtures are too easy for capable models. To probe real lift, run against a real codebase:
 
 ```bash
+# 2-arm (OFF vs KIT — proves total kit value):
 node eval/bench-realrepo.mjs \
-  --task eval/realrepo-tasks/<task>.json \
-  --model <model> --trials 2
+  --task eval/realrepo-tasks/transitive-callers-impact.json \
+  --repo /path/to/your/repo \
+  --model composer-2.5-fast --trials 2
+
+# 3-arm (OFF vs MCP vs KIT — proves kit enforcement adds value ON TOP of MCP):
+node eval/bench-realrepo.mjs \
+  --task eval/realrepo-tasks/transitive-callers-impact.json \
+  --repo /path/to/your/repo \
+  --model composer-2.5-fast --trials 2 --arms 3
 ```
+
+**Choosing the repo.** The `repo` field in each task JSON is only an example/default
+(it points at one author's local clone). Override it for your machine with **either**:
+
+```bash
+node eval/bench-realrepo.mjs --task <task.json> --repo /path/to/your/repo ...
+# or
+GITNEXUS_BENCH_REPO=/path/to/your/repo node eval/bench-realrepo.mjs --task <task.json> ...
+```
+
+`--repo` takes precedence over `GITNEXUS_BENCH_REPO`, which takes precedence over the
+task JSON's `repo` field. The ground-truth sets in the bundled tasks were derived against
+the example repo, so for a different repo you'll need to regenerate `groundTruth` (via
+`gitnexus_impact` / `gitnexus_cypher`) for the scores to be meaningful.
 
 This is **read-only** — it never mutates your project (the task only writes a small answer file,
 deleted after each trial):
 
-- **ON** = your original repo, used in place. It's already kit-installed and indexed, so the
-  graph is reused as-is — *no copy, no re-index* (only a one-time refresh if the index is stale).
-  GitNexus bakes an absolute `repoPath` into the graph, so the indexed dir must never be moved.
-- **OFF** = a quick source-only copy with `.cursor`/`.gitnexus` stripped — a clean grep-only
-  baseline. No index needed.
+Every arm runs against an isolated `rsync` copy of `repo` under `~/.cache/gn-bench/` —
+the original repo is never touched. The graph for the MCP/KIT arms is (re)built inside a
+Docker container. If a graph build fails, the run **aborts** rather than letting that arm
+silently score against an empty graph (which would masquerade as the OFF baseline).
+
+- **OFF** = a source-only copy with `.cursor`/`.agents`/`.gitnexus` stripped — a clean grep-only
+  baseline. No graph built.
+- **MCP** = a source copy with `.cursor`/`.agents` stripped; the graph is built in Docker — the
+  agent has graph access but no hooks, rules, or skills. Proves MCP-only value.
+- **KIT** = a source copy with `.cursor`/`.agents` kept and the graph built in Docker — the agent
+  has the graph **plus** kit enforcement (hooks/rules/skills). Proves total kit value.
+
+Stale `gn-bench-*` copies and leftover `gn-bench-*` Docker containers from crashed prior
+runs are best-effort pruned at startup (skipped silently if Docker isn't installed).
 
 Scoring is recall (name mode) or precision/recall/F1 (`"scoreBy": "path"`) against a
 graph-derived ground-truth set baked into the task spec. Write a task spec (see
 `eval/realrepo-tasks/`) with: `repo`, `prompt`, `answerFile`, `threshold`, and a `groundTruth`
 list (derive it once via `gitnexus_impact` / `gitnexus_cypher`).
+
+### Available real-repo tasks
+
+The bundled tasks were authored against a `crypto-trading-bot` repo (the `repo` field in each
+JSON is just that example/default path). Point them at your own repo with `--repo` /
+`GITNEXUS_BENCH_REPO` as described above.
+
+| Task | What it tests | grep ceiling | graph ceiling | **kit ceiling** |
+|------|-------------|-------------|---------------|-----------------|
+| `enter-control-useauth-impact` | Transitive callers in mirrored monorepo | 0.87 | 1.0 | Same — MCP-only |
+| `transitive-callers-impact` | 3-level call chain (formatResearchApiError) | ~86% | 1.0 | Same — MCP-only |
+| `call-chain-impact` | Call chain tracing (calculateCurrentExposure) | ~80% | 1.0 | Same — MCP-only |
+| `field-write-access` | ACCESSES write edges (planExecution vars) | Can't distinguish read/write | 1.0 | Same — MCP-only |
+| `pdg-control-dependence` | PDG control dependence (exposure limits) | Can't determine control | 1.0 | Same — PDG-only |
+| **`safe-rename-kit-enforced`** | Coordinated rename (formatResearchApiError) | Misses indirect refs | 1.0 via `rename` | **Kit forces `rename` instead of StrReplace** |
+| **`detect-changes-before-commit`** | Pre-commit blast radius (calculateCurrentExposure) | No enforcement | Agent *can* run it | **Kit blocks commit until `detect_changes` runs** |
+
+The **bold** rows are where your kit adds value on top of MCP. These are the ones to focus on for proving the kit's contribution.
+
+## What each tier proves
+
+| Tier | Harness | Measures | Proves |
+|------|---------|----------|--------|
+| **Kit value** | `bench-realrepo.mjs` + `cursor-agent` | Hooks + rules + skills + MCP + PDG vs bare agent | **Your product** adds measurable value on top of raw MCP |
+| **MCP value** | `swebench/` (SWE-bench) | Agent + MCP vs agent alone (no hooks) | GitNexus graph helps agents explore code (d3thshot proved: 30% fewer tokens) |
+
+The kit value tier is what you need for your product claims. The MCP value tier reproduces d3thshot's result.
+
+### 3-arm design (OFF / MCP / KIT)
+
+The 3-arm design lets you decompose the kit's contribution:
+
+```
+KIT lift  = KIT score − MCP score   (hooks + rules + skills on top of MCP)
+MCP lift  = MCP score − OFF score   (graph alone, no enforcement)
+Total lift = KIT score − OFF score   (everything vs nothing)
+```
+
+- **MCP-only tasks** (transitive callers, PDG, field-write) should show MCP lift ≈ total lift
+  (kit adds little because the task doesn't require enforcement).
+- **Kit enforcement tasks** (safe-rename, detect-changes) should show KIT lift > MCP lift
+  (the hooks force behavior that an ungated agent skips).
+
+## SWE-bench Verified benchmark
+
+Industry-standard comparison: run SWE-bench Verified with and without GitNexus MCP.
+This measures **MCP value** (graph helps agents explore), NOT kit enforcement value.
+
+```bash
+# Quick test (50 instances)
+./eval/swebench/run-benchmark.sh --model deepseek/deepseek-chat-v3-0324 --instances 50
+
+# Full SWE-bench Verified (500 instances)
+./eval/swebench/run-benchmark.sh --model deepseek/deepseek-chat-v3-0324
+```
+
+See [`eval/swebench/README.md`](swebench/README.md) for full documentation.

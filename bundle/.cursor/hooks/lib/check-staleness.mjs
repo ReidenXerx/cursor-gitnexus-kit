@@ -52,7 +52,10 @@ out.indexedCommit = meta.lastCommit ?? null;
 out.indexedAt = meta.indexedAt ?? null;
 out.nodeCount = meta.stats?.nodes ?? 0;
 out.embeddingCount = meta.stats?.embeddings ?? 0;
-out.embeddingsReady = out.embeddingCount > 0 || out.nodeCount === 0;
+// Truthful: an index with symbols but no vectors is not embeddings-ready. (An
+// empty 0-node index leaves this false but does not flip `fresh` below — the
+// missing_embeddings branch requires nodeCount > 0 — so docs-only repos never wedge.)
+out.embeddingsReady = out.embeddingCount > 0;
 
 if (!out.indexedCommit) {
   out.fresh = false;
