@@ -14,6 +14,11 @@ const input = JSON.parse(process.env.GITNEXUS_HOOK_INPUT || '{}');
 const prompt = input.prompt ?? '';
 const root = process.env.GITNEXUS_ROOT;
 
+// Single source of truth for "what counts as a source file" — the hook config's
+// sourceExtRe (built-in polyglot default, overridable in gitnexus-hooks.json).
+const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
+const sourceExtRe = helpers.loadHookConfig(root).sourceExtRe;
+
 const architecture =
   /\b(how does|how do|architecture|pipeline|data flow|call chain|what calls|walk me through|end.to.end|cross.module|execution flow|business flow|trace|who calls|where does .+ flow|deep dive|gather context|full context|map the|audit)\b/i.test(
     prompt
@@ -37,7 +42,11 @@ const codeTask =
     prompt
   );
 
-const pathMatch = prompt.match(/(?:^|[\s(])([\w./-]+\.(?:js|mjs|cjs|ts|tsx|jsx|py|rb|go|rs|java|kt|swift|php|cs|cpp|cc|c|cu|cuh))/);
+// Grab the first file-like token, then validate its extension against the shared
+// sourceExtRe instead of a duplicated inline extension list.
+const pathTokenMatch = prompt.match(/(?:^|[\s(])([\w./-]+\.[A-Za-z]{1,6})\b/);
+const pathMatch =
+  pathTokenMatch && sourceExtRe.test(pathTokenMatch[1]) ? pathTokenMatch : null;
 const symbolMatch = prompt.match(/\b([A-Z][A-Za-z0-9]+)\b/);
 const fieldMatch =
   prompt.match(/\b(?:field|property)\s+[`'"]?([a-z][a-zA-Z0-9]*)[`'"]?/i) ||
