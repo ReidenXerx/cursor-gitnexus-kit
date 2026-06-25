@@ -20,11 +20,13 @@ const ROOT = path.resolve(HERE, "..");
 
 export const CONTRACT_SRC = path.join(HERE, "contract/enforcement-contract.md");
 export const ZED_FOOTER_SRC = path.join(HERE, "contract/agents-zed-footer.md");
+export const CLAUDE_FOOTER_SRC = path.join(HERE, "contract/claude-footer.md");
 export const CURSOR_RULE_OUT = path.join(
   ROOT,
   "bundle/.cursor/rules/00-gitnexus-enforcement.mdc",
 );
 export const AGENTS_OUT = path.join(ROOT, "bundle/templates/AGENTS.gitnexus.md");
+export const CLAUDE_OUT = path.join(ROOT, "bundle/templates/CLAUDE.gitnexus.md");
 
 const CURSOR_FRONTMATTER = `---
 description: North-star contract — graph + embeddings + cypher on every task when fresh, autonomous refresh when stale, classical fallback when GN fails.
@@ -40,17 +42,29 @@ export function renderCursorRule(body) {
   return `${CURSOR_FRONTMATTER}\n${GENERATED_NOTE}\n\n# GitNexus enforcement\n\n${body.trim()}\n`;
 }
 
+/** @param {string} body @param {string} footer @param {string} title */
+function renderWithFooter(body, footer, title) {
+  return `${GENERATED_NOTE}\n\n# ${title}\n\n${body.trim()}\n\n${footer.trim()}\n`;
+}
+
 /** @param {string} body @param {string} zedFooter */
 export function renderAgents(body, zedFooter) {
-  return `${GENERATED_NOTE}\n\n# GitNexus agent kit — always-on instructions\n\n${body.trim()}\n\n${zedFooter.trim()}\n`;
+  return renderWithFooter(body, zedFooter, "GitNexus agent kit — always-on instructions");
+}
+
+/** @param {string} body @param {string} claudeFooter */
+export function renderClaude(body, claudeFooter) {
+  return renderWithFooter(body, claudeFooter, "GitNexus agent kit — always-on instructions");
 }
 
 export function renderAll() {
   const body = fs.readFileSync(CONTRACT_SRC, "utf8");
-  const footer = fs.readFileSync(ZED_FOOTER_SRC, "utf8");
+  const zedFooter = fs.readFileSync(ZED_FOOTER_SRC, "utf8");
+  const claudeFooter = fs.readFileSync(CLAUDE_FOOTER_SRC, "utf8");
   return {
     [CURSOR_RULE_OUT]: renderCursorRule(body),
-    [AGENTS_OUT]: renderAgents(body, footer),
+    [AGENTS_OUT]: renderAgents(body, zedFooter),
+    [CLAUDE_OUT]: renderClaude(body, claudeFooter),
   };
 }
 

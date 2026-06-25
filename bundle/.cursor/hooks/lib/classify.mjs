@@ -264,7 +264,8 @@ export function classifyGrep(req, ctx) {
 export function classifyRead(req, ctx) {
   const { toolInput: ti = {} } = req;
   const { phase, config, repo, root, graphUsed } = ctx;
-  const filePath = ti.path ?? ti.target_file ?? "";
+  // path (Cursor) | target_file (Cursor StrReplace) | file_path (Claude Code Read).
+  const filePath = ti.path ?? ti.target_file ?? ti.file_path ?? "";
   const norm = String(filePath).replace(/\\/g, "/");
   const isSmallConfig =
     /\.(json|md|yaml|yml|mdc|sh)$/.test(filePath) || /package\.json$/.test(filePath);
@@ -343,11 +344,14 @@ export function classifyRead(req, ctx) {
  * @returns {Verdict}
  */
 export function classifyEdit(req, ctx) {
-  const { tool, toolInput: ti = {} } = req;
+  const { toolInput: ti = {} } = req;
   const { phase, config, repo } = ctx;
   const filePath = (ti.path ?? ti.file_path ?? "").replace(/\\/g, "/");
   const sensitivity = helpers.editSensitivity(filePath, config);
   const staleDetail = ctx.staleDetail || "GitNexus index is not fresh.";
+  // Rename is detected by an old→new identifier swap, regardless of which edit
+  // tool fired it (Cursor StrReplace or Claude Edit).
+  const hasReplace = ti.old_string !== undefined && ti.new_string !== undefined;
 
   // Staleness gate — runtime source/tests/scripts (medium|full) wait for refresh.
   if (sensitivity !== "none" && sensitivity !== "light" && phase !== "fresh") {
@@ -372,7 +376,7 @@ export function classifyEdit(req, ctx) {
   // Impact-before-edit — runtime source edits require one impact/rename call/session.
   if (sensitivity === "full" && !ctx.impactUsed) {
     const renameAhead =
-      tool === "StrReplace" ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
+      hasReplace ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
     const widen = helpers.isDataFlowReadContext({}, filePath);
     const impactOpts = widen ? { relationTypes: ["CALLS", "IMPORTS", "ACCESSES"] } : {};
     const playbook = renameAhead
@@ -393,7 +397,7 @@ export function classifyEdit(req, ctx) {
 
   // Allow with a tiered reminder.
   const renamePair =
-    tool === "StrReplace" ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
+    hasReplace ? helpers.detectIdentifierRename(ti.old_string, ti.new_string) : null;
   let agentMessage;
   if (renamePair && sensitivity !== "none") {
     const impact = helpers.mcpImpact(renamePair.oldName, repo);
