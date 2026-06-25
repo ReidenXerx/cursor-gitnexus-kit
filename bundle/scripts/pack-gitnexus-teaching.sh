@@ -59,7 +59,9 @@ BUNDLE_PATHS=(
   .cursor/hooks/gitnexus-after-git-commit.sh
   .gnkit/lib/check-staleness.mjs
   .gnkit/lib/load-staleness.mjs
-  .gnkit/lib/graph-session.mjs
+  .gnkit/lib/classify.mjs
+  .gnkit/lib/cursor-emit.mjs
+  .gnkit/lib/claude-emit.mjs
   .gnkit/lib/session-primer.mjs
   .gnkit/lib/first-nudge.mjs
   .gnkit/lib/clear-session.mjs
