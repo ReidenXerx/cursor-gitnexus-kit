@@ -96,9 +96,10 @@ Read `.cursor/skills/gitnexus-scenarios/SKILL.md` for full checklists. Quick map
 | `explain` | Taint analysis — injection, path traversal, XSS source→sink paths. |
 | `api_impact` | Pre-change report for a framework route: consumers, response shape, middleware, risk. |
 | `route_map` / `shape_check` | Route→handler→consumer map; response keys vs consumer access (framework routers). |
-| `tool_map` | MCP/RPC tool definitions. |
-| `list_repos` | Registry + staleness + embedding counts. |
-| `group_list` / `group_sync` | Cross-repo groups: `repo: "@<groupName>"`. |
+| `tool_map` | MCP/RPC tool definitions → handler files + descriptions. Tool-API work / impact of a tool-contract change. |
+| `check` | Read-only structural integrity — detects circular File `IMPORTS` cycles (health / CI gate). |
+| `list_repos` | Registry + staleness + embedding counts. Disambiguate before `repo:` when multiple repos indexed. |
+| `group_list` / `group_sync` | Cross-repo groups — **out of scope for this single-repo kit; skip.** |
 
 ## Resources (lightweight — read before heavy tools)
 
@@ -120,7 +121,7 @@ Read `.cursor/skills/gitnexus-scenarios/SKILL.md` for full checklists. Quick map
 ## Index freshness (graph + embeddings)
 
 - After meaningful code changes: `npm run gitnexus:refresh` (includes `--embeddings`)
-- Pre-commit hook runs PDG refresh when hooks installed (`npm run hooks:install`)
+- Pre-commit hook runs a full PDG re-index when hooks installed (`npm run hooks:install`)
 - **Missing embeddings** (`stats.embeddings === 0` with symbols indexed) = stale — `agent-refresh` rebuilds vectors
 - Embeddings preserved on incremental refresh; `--drop-embeddings` only when rebuilding vectors intentionally
 - If MCP says stale after refresh, restart Cursor to reload the MCP server

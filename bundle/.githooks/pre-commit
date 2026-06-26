@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# Refresh GitNexus knowledge graph with PDG before each commit; smoke-test graph integrity.
+# Full GitNexus re-index (force) with PDG before each commit; smoke-test graph integrity.
+# Full --force rebuild keeps control/data-dependence + taint flows accurate at commit
+# boundaries (vs. the lighter incremental gitnexus:pdg used mid-session).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-npm run gitnexus:pdg
+npm run gitnexus:full-pdg
 npm run gitnexus:graph-smoke

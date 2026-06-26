@@ -274,7 +274,7 @@ Agents still **`query` first** for fuzzy work — Cypher is gate #4, not a grep 
 | Cypher integration | `cypher-helpers.mjs`; field grep → ACCESSES |
 | `.gitnexus/agent-kit/skills/` + symlinks | Canonical skill store → `.cursor/skills/`, `.agents/skills/` |
 | `scripts/gitnexus-*` | Setup, sync, agent CLI, pack, git hooks |
-| `.githooks/pre-commit` | Optional PDG index refresh on commit (`gitnexus:pdg`) |
+| `.githooks/pre-commit` | Full PDG re-index on commit (`gitnexus:full-pdg`) |
 | `.cursor/mcp.json` | Merges `gitnexus` MCP server (Cursor) |
 | Gated `package.json` scripts | `gitnexus:health`, `gitnexus:verify`, gate docs |
 

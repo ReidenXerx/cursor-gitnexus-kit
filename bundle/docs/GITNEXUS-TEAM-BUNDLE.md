@@ -29,7 +29,7 @@ Portable **rules + hooks + skills + scripts** for graph-first agents (Cursor hoo
 
 | Excluded | Why |
 | --- | --- |
-| `.gitnexus/` index | Built locally via `npm run gitnexus:refresh`; pre-commit upgrades it with `npm run gitnexus:pdg` |
+| `.gitnexus/` index | Built locally via `npm run gitnexus:refresh`; pre-commit upgrades it with `npm run gitnexus:full-pdg` |
 | `.cursor/skills/generated/` | Area skills from `gitnexus analyze --skills` on **that** codebase |
 | IDE skill symlinks | Created by install/update from canonical store |
 

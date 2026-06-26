@@ -69,7 +69,7 @@ In a real target repo after update:
 ## 6. GitNexus v1.6.8 capability smoke
 
 - [ ] Agent brief shows routing for `trace`, `pdg_query`, `explain`, and Cypher.
-- [ ] Pre-commit hook calls `npm run gitnexus:pdg` before `gitnexus:graph-smoke`.
+- [ ] Pre-commit hook calls `npm run gitnexus:full-pdg` before `gitnexus:graph-smoke`.
 - [ ] Security review skill warns that no taint/PDG layer is not proof of safety.
 - [ ] MCP snippets use current parameter names:
   - `gitnexus_query({ search_query: ... })`

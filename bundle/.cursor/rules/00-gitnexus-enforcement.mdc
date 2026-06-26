@@ -69,6 +69,30 @@ When `cypher` isn't enough, escalate to statement-level tools (require a PDG ind
 | Source → sink path between two symbols | `trace` |
 | Taint review — injection, path traversal, XSS | `explain` |
 
+## Full tool surface — reach for the right one
+
+Know every tool and *when* it wins (single-repo; cross-repo `group_*` is out of scope for this kit). Don't stop at `query`/`context` — the advanced tools answer in one call what takes many manual hops.
+
+| Tool | Reach for it when |
+| --- | --- |
+| `query` | Orient — "how does X work?", find the execution flow for a concept (BM25 + vectors). Always first for fuzzy work. |
+| `context` | 360° on ONE symbol — callers, callees, categorized refs, the processes it's in. After `query`, or when the symbol is known. |
+| `cypher` | Precise structural questions the canned tools don't express — field `ACCESSES`, N-hop `CALLS`, `METHOD_OVERRIDES`, `STEP_IN_PROCESS`. READ schema first. |
+| `impact` | BEFORE editing a symbol — upstream blast radius + risk + affected processes. `mode: "pdg"` for statement-level (control+data) precision. |
+| `trace` | "How does A reach B?" — shortest call/member path between two symbols in ONE call (replaces 3–8 manual `context` hops). |
+| `pdg_query` | "What condition gates this line?" (`mode: "controls"`) / "where does this variable flow?" (`mode: "flows"`). Intra-function; needs PDG. |
+| `explain` | Security review — taint source→sink (command/code/sql injection, path-traversal, XSS), intra- AND inter-procedural. Needs PDG. |
+| `detect_changes` | BEFORE commit / "what did my edits affect?" — diff → affected symbols/processes/risk. `scope`: unstaged \| staged \| all \| compare. |
+| `rename` | Coordinated multi-file symbol rename — `dry_run: true` first. Never find-and-replace identifiers. |
+| `api_impact` | BEFORE changing an HTTP route handler (framework router) — consumers, response-shape mismatches, middleware chain, risk. |
+| `route_map` | Map routes → consumers + handler + middleware; find orphaned routes. (Custom router → `context` on the dispatcher instead.) |
+| `shape_check` | Detect API response-shape drift — keys a route returns vs keys consumers access (flags MISMATCH). |
+| `tool_map` | Map MCP/RPC tool definitions → handler files + descriptions (tool-API work, impact of a tool-contract change). |
+| `check` | Structural integrity — detect circular File `IMPORTS` cycles (health / CI gate). |
+| `list_repos` | Only when multiple repos are indexed — discover/disambiguate before passing `repo:` to other tools. |
+
+Cheap resource reads (prefer before heavy tools): `READ gitnexus://repo/__GITNEXUS_REPO__/{context|schema|clusters|processes|process/<name>}`.
+
 ## MCP defaults (generous — local LLM)
 
 Run hook copy-paste calls verbatim; expand freely when needed:
