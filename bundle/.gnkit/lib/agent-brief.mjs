@@ -126,6 +126,11 @@ async function main() {
   lines.push("  PR / branch review → gitnexus-pr-review");
   lines.push("  Rename/refactor → gitnexus-refactoring");
   lines.push("  Bug/failure path → gitnexus-debugging");
+  lines.push("  Add a feature / new code → gitnexus-feature-dev");
+  lines.push("  What to test / coverage → gitnexus-testing");
+  lines.push("  Slow / hot path → gitnexus-performance");
+  lines.push("  Judge structure (coupling/cycles) → gitnexus-architecture-review");
+  lines.push("  Work across layers → gitnexus-layered-systems");
   lines.push(
     "  Unknown feature/codebase map → gitnexus-exploring or gitnexus-imaging",
   );

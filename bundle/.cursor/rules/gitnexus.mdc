@@ -159,6 +159,11 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | Blast radius | `.cursor/skills/gitnexus-impact-analysis/SKILL.md` |
 | Debugging | `.cursor/skills/gitnexus-debugging/SKILL.md` |
 | Refactoring | `.cursor/skills/gitnexus-refactoring/SKILL.md` |
+| Add a feature / new code | `.cursor/skills/gitnexus-feature-dev/SKILL.md` |
+| What to test / coverage | `.cursor/skills/gitnexus-testing/SKILL.md` |
+| Slow / hot path | `.cursor/skills/gitnexus-performance/SKILL.md` |
+| Judge structure (coupling/cycles) | `.cursor/skills/gitnexus-architecture-review/SKILL.md` |
+| Work across layers | `.cursor/skills/gitnexus-layered-systems/SKILL.md` |
 | Scenario playbooks | `.cursor/skills/gitnexus-scenarios/SKILL.md` |
 | PR review | `.cursor/skills/gitnexus-pr-review/SKILL.md` |
 | Custom HTTP routes (this repo) | `.cursor/skills/gitnexus-api-routes/SKILL.md` |

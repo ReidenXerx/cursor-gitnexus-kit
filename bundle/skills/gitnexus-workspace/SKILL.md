@@ -52,6 +52,11 @@ Run `npm run gitnexus:detect-api` to refresh the profile after major server chan
 | Before editing / blast radius | `gitnexus-impact-analysis` |
 | Bug / failure / wrong behavior | `gitnexus-debugging` |
 | Rename / extract / refactor | `gitnexus-refactoring` + **`rename` MCP** |
+| Add a feature / new code (reuse + wire in) | `gitnexus-feature-dev` |
+| What to test / coverage gaps | `gitnexus-testing` |
+| Slow path / hot path / cost | `gitnexus-performance` |
+| Judge structure (coupling, cycles, god objects) | `gitnexus-architecture-review` |
+| Work across layers (controller→service→repo→model) | `gitnexus-layered-systems` |
 | Structured task (pre-commit, PR, cross-module) | `gitnexus-scenarios` |
 | PR or branch review | `gitnexus-pr-review` |
 | Security / taint / injection review | `gitnexus-security-review` |

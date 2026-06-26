@@ -25,6 +25,11 @@ For any task involving code understanding, debugging, impact analysis, or refact
 | Blast radius / "What breaks if I change X?"  | `gitnexus-impact-analysis`   |
 | Trace bugs / "Why is X failing?"             | `gitnexus-debugging`         |
 | Rename / extract / split / refactor          | `gitnexus-refactoring`       |
+| Add a feature / new code (reuse + wire in)   | `gitnexus-feature-dev`       |
+| What to test / coverage gaps                 | `gitnexus-testing`           |
+| Slow / hot path / cost optimization          | `gitnexus-performance`       |
+| Judge structure (coupling, cycles, god objs) | `gitnexus-architecture-review` |
+| Work across layers (controller→repo→model)   | `gitnexus-layered-systems`   |
 | Tools, resources, schema reference           | `gitnexus-guide` (this file) |
 | Security / taint / injection review          | `gitnexus-security-review`   |
 | Index, status, clean, wiki CLI commands      | `gitnexus-cli`               |
