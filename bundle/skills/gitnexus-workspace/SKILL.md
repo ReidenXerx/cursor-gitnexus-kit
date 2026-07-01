@@ -66,22 +66,24 @@ Run `npm run gitnexus:detect-api` to refresh the profile after major server chan
 | Hook blocked Grep/Read | `gitnexus-enforcement` (staleness + suspicion fallback) |
 | Full agent contract | `.cursor/rules/gitnexus.mdc` + `00-gitnexus-enforcement.mdc` |
 
-## Smart query habits
+## Smart query habits (use the embeddings, don't grep-in-disguise)
 
-Always pass context to rank results better:
+`query` is **hybrid**: BM25 keyword + **embedding vectors** (RRF). The embedding half is the point — it matches *meaning*, so it finds code that a keyword search misses.
+
+- **Phrase `search_query` as a natural-language concept, not a symbol/keyword.** `"where auth tokens are validated"` ✓ — not `"validateToken"` ✗ (that's a `context` lookup). Concept phrasing feeds the vector ranker.
+- **Always pass `task_context` + `goal`** — they steer the embedding ranking, not just keyword match.
+- **Embeddings win when:** you don't know the symbol name · you want "code that *does* X even if named differently" · fuzzy/conceptual exploration. (Exact known symbol → skip to `context`.)
 
 ```javascript
 query({
-  search_query: "<concept or feature you are working on>",
-  task_context: "what you are doing in this chat",
-  goal: "what you need to find",
+  search_query: "how retry/backoff is applied to outbound requests",  // concept, not a keyword
+  task_context: "adding a circuit breaker",
+  goal: "find existing retry logic to reuse",
   repo: "__GITNEXUS_REPO__",
   limit: 5,
   max_symbols: 12
 })
 ```
-
-Pass `task_context` + `goal` — they improve **embedding** ranking, not just keyword match.
 
 ## Anti-patterns (grep is wrong tool)
 

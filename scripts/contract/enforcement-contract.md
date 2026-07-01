@@ -91,7 +91,7 @@ Run hook copy-paste calls verbatim; expand freely when needed:
 | Tool | Default | Notes |
 | --- | --- | --- |
 | `context` | `include_content: false` | Need body → Read offset/limit |
-| `query` | `limit: 5`, `max_symbols: 12` | Primary semantic+graph orient tool |
+| `query` | `limit: 5`, `max_symbols: 12` | Phrase `search_query` as a natural-language **concept** ("where tokens are validated"), not a keyword — that feeds the embedding ranker; always pass `task_context` + `goal`. Known symbol name → use `context` instead. |
 | `cypher` | READ schema first | Use `$params` for symbol/field names |
 | `impact` | `summaryOnly: false`, `limit: 100` | Full blast radius before edits; `mode: "pdg"` for statement-level |
 | `pdg_query` | `mode: "controls"` / `"flows"` | Statement-level control/data dependence |
