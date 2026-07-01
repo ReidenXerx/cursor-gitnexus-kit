@@ -141,6 +141,7 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | `npm run gitnexus:map` | Regenerate `docs/ARCHITECTURE.gitnexus.md` from the graph (offline, no API key) |
 | `npm run gitnexus:ci` | Merge-time impact gate (blocks high-blast-radius changes with no tests) — see `.github/workflows/gitnexus-ci.yml` |
 | `npm run gitnexus:scorecard` | Session enforcement tally (grep→graph, impact/commit gates) |
+| `npm run gitnexus:stats` | Persistent telemetry across ALL sessions — totals, per-session averages, trend |
 | `npm run gitnexus:verify` | Full install verification before demoing |
 
 ## Workspace contract (non-negotiable)

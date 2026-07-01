@@ -95,6 +95,112 @@ export function readScorecard(root) {
   }
 }
 
+// ── Persistent telemetry ─────────────────────────────────────────────────────
+// The scorecard is per-session (cleared on session start). Before clearing, we
+// archive each finished session's tally to an append-only .jsonl so aggregate
+// trends survive across sessions. Read/aggregate via `npm run gitnexus:stats`.
+
+const TELEMETRY_FILE = '.gitnexus-telemetry.jsonl';
+
+/** @param {string} root — append-only telemetry log (gitignored, never cleared). */
+export function telemetryPath(root) {
+  return path.join(root, '.gnkit', TELEMETRY_FILE);
+}
+
+/** Best-effort index stats snapshot for context on a telemetry record. */
+function indexSnapshot(root) {
+  try {
+    const s = JSON.parse(fs.readFileSync(path.join(root, '.gitnexus/meta.json'), 'utf8')).stats || {};
+    return {
+      files: s.files ?? null,
+      nodes: s.nodes ?? null,
+      embeddings: s.embeddings ?? null,
+      processes: s.processes ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Archive the finished session's scorecard to the persistent telemetry log.
+ * No-op when the session recorded nothing. Never throws (telemetry must not
+ * block session start).
+ * @param {string} root
+ * @returns {boolean} whether a record was written
+ */
+export function flushScorecardToTelemetry(root) {
+  const card = readScorecard(root);
+  if (!card?.counts || Object.keys(card.counts).length === 0) return false;
+  const startedAt = card.startedAt ?? null;
+  const endedAt = card.updatedAt ?? null;
+  const durationMs =
+    startedAt && endedAt ? Math.max(0, Date.parse(endedAt) - Date.parse(startedAt)) : null;
+  const rec = { startedAt, endedAt, durationMs, counts: card.counts, index: indexSnapshot(root) };
+  try {
+    fs.mkdirSync(path.join(root, '.gnkit'), { recursive: true });
+    fs.appendFileSync(telemetryPath(root), JSON.stringify(rec) + '\n');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Parse the telemetry log into records (skips blank/malformed lines). */
+export function readTelemetry(root) {
+  let text = '';
+  try {
+    text = fs.readFileSync(telemetryPath(root), 'utf8');
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      out.push(JSON.parse(t));
+    } catch {
+      /* skip malformed line */
+    }
+  }
+  return out;
+}
+
+/** Aggregate telemetry records into totals / per-session averages / recent. */
+export function summarizeTelemetry(records) {
+  const sessions = records.length;
+  const totals = {};
+  let totalDurationMs = 0;
+  let durCount = 0;
+  let firstAt = null;
+  let lastAt = null;
+  for (const r of records) {
+    for (const [k, v] of Object.entries(r.counts || {})) {
+      totals[k] = (totals[k] ?? 0) + (Number(v) || 0);
+    }
+    if (typeof r.durationMs === 'number') {
+      totalDurationMs += r.durationMs;
+      durCount++;
+    }
+    if (r.startedAt && (!firstAt || r.startedAt < firstAt)) firstAt = r.startedAt;
+    if (r.endedAt && (!lastAt || r.endedAt > lastAt)) lastAt = r.endedAt;
+  }
+  const avgPerSession = {};
+  for (const [k, v] of Object.entries(totals)) {
+    avgPerSession[k] = sessions ? Math.round((v / sessions) * 100) / 100 : 0;
+  }
+  return {
+    sessions,
+    firstAt,
+    lastAt,
+    totals,
+    avgPerSession,
+    avgDurationMs: durCount ? Math.round(totalDurationMs / durCount) : null,
+    recent: records.slice(-5),
+  };
+}
+
 export function setRefreshPending(root, pending, detail = '') {
   const { stateDir, refreshPendingFlag } = sessionPaths(root);
   fs.mkdirSync(stateDir, { recursive: true });
@@ -146,6 +252,8 @@ export function clearSessionState(root) {
     scorecardFile,
   } = sessionPaths(root);
   fs.mkdirSync(stateDir, { recursive: true });
+  // Archive the finishing session's tally BEFORE wiping the scorecard.
+  flushScorecardToTelemetry(root);
   for (const f of [
     primedFlag,
     promptHint,

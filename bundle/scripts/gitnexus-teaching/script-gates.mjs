@@ -35,6 +35,7 @@ export const GITNEXUS_SCRIPT_GATES = [
       "gitnexus:graph-smoke": "node scripts/gitnexus-agent.mjs graph-smoke",
       "gitnexus:detect-api": "node scripts/gitnexus-agent.mjs detect-api",
       "gitnexus:scorecard": "node scripts/gitnexus-agent.mjs scorecard",
+      "gitnexus:stats": "node scripts/gitnexus-agent.mjs stats",
       "gitnexus:map": "node scripts/gitnexus-agent.mjs map",
     },
   },

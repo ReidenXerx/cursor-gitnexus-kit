@@ -491,7 +491,61 @@ if (cmd === "scorecard") {
   process.exit(0);
 }
 
+if (cmd === "stats") {
+  const { readTelemetry, summarizeTelemetry, readScorecard } = await import(
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
+  );
+  const records = readTelemetry(ROOT);
+  // Fold in the current (not-yet-archived) session so nothing is missing.
+  const live = readScorecard(ROOT);
+  if (live?.counts && Object.keys(live.counts).length) {
+    records.push({
+      startedAt: live.startedAt ?? null,
+      endedAt: live.updatedAt ?? null,
+      counts: live.counts,
+      live: true,
+    });
+  }
+  const labels = {
+    graphCalls: "GitNexus MCP calls",
+    grepRedirects: "Grep → graph redirects",
+    readRedirects: "Large Read → graph redirects",
+    impactGate: "Impact-before-edit gates",
+    commitGate: "detect_changes-before-commit gates",
+    editStaleBlocks: "Stale-edit blocks",
+  };
+  const s = summarizeTelemetry(records);
+  console.log("GitNexus telemetry — all sessions");
+  if (!s.sessions) {
+    console.log("  No sessions recorded yet. A session is archived on the NEXT");
+    console.log("  session start; run some tools + start a new chat to accrue data.");
+    process.exit(0);
+  }
+  console.log(`  sessions: ${s.sessions}  |  ${s.firstAt ?? "?"} → ${s.lastAt ?? "?"}`);
+  if (s.avgDurationMs != null) {
+    console.log(`  avg session length: ${Math.round(s.avgDurationMs / 1000)}s`);
+  }
+  console.log("  metric".padEnd(38) + "total   avg/session");
+  const keys = Object.keys(labels).filter((k) => s.totals[k]);
+  if (!keys.length) {
+    console.log("  (no enforcement events across recorded sessions)");
+  } else {
+    for (const k of keys) {
+      console.log(
+        `  ${labels[k].padEnd(36)}${String(s.totals[k]).padEnd(8)}${s.avgPerSession[k]}`,
+      );
+    }
+  }
+  const gate = (s.totals.impactGate ?? 0) + (s.totals.commitGate ?? 0);
+  const redir = (s.totals.grepRedirects ?? 0) + (s.totals.readRedirects ?? 0);
+  console.log(
+    `\n  Value: ${redir} lazy-search redirect(s) to the graph, ${gate} pre-edit/commit gate(s) fired.`,
+  );
+  console.log(`  Log: ${path.join(".gnkit", ".gitnexus-telemetry.jsonl")}`);
+  process.exit(0);
+}
+
 console.error(
-  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | graph-smoke | detect-api`,
+  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | stats | graph-smoke | detect-api`,
 );
 process.exit(2);
