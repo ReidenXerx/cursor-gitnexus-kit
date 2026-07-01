@@ -58,6 +58,7 @@ Run `npm run gitnexus:detect-api` to refresh the profile after major server chan
 | Judge structure (coupling, cycles, god objects) | `gitnexus-architecture-review` |
 | Work across layers (controller→service→repo→model) | `gitnexus-layered-systems` |
 | Structured task (pre-commit, PR, cross-module) | `gitnexus-scenarios` |
+| Milestone deep audit (feature done, pre-ship, big refactor) | **`gitnexus-microscope`** — multi-lens, opinionated, verified |
 | PR or branch review | `gitnexus-pr-review` |
 | Security / taint / injection review | `gitnexus-security-review` |
 | Research HTTP API change | See **HTTP API routing** above |

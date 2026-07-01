@@ -30,6 +30,7 @@ For any task involving code understanding, debugging, impact analysis, or refact
 | Slow / hot path / cost optimization          | `gitnexus-performance`       |
 | Judge structure (coupling, cycles, god objs) | `gitnexus-architecture-review` |
 | Work across layers (controller→repo→model)   | `gitnexus-layered-systems`   |
+| Milestone deep audit (opinionated, verified) | `gitnexus-microscope`        |
 | Tools, resources, schema reference           | `gitnexus-guide` (this file) |
 | Security / taint / injection review          | `gitnexus-security-review`   |
 | Index, status, clean, wiki CLI commands      | `gitnexus-cli`               |

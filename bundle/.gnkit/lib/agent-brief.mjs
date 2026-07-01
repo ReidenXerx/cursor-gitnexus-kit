@@ -131,6 +131,7 @@ async function main() {
   lines.push("  Slow / hot path → gitnexus-performance");
   lines.push("  Judge structure (coupling/cycles) → gitnexus-architecture-review");
   lines.push("  Work across layers → gitnexus-layered-systems");
+  lines.push("  Milestone deep audit (feature done / pre-ship / big refactor) → gitnexus-microscope");
   lines.push(
     "  Unknown feature/codebase map → gitnexus-exploring or gitnexus-imaging",
   );
