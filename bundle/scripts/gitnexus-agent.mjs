@@ -101,14 +101,14 @@ function markRefreshOutcome(success, detail = "") {
 
 if (cmd === "refresh") {
   console.log(
-    "==> GitNexus agent refresh (incremental analyze + embeddings + PDG + sync teaching bundle)",
+    "==> GitNexus agent refresh (full analyze --force + embeddings + PDG + sync teaching bundle)",
   );
   console.log(tmpSpaceReport(ROOT));
   try {
-    // Incremental + PDG: builds the control/data-dependence + taint layer that
-    // pdg_query/explain/impact(mode:pdg) need, without the --force full-rebuild
-    // cost on every mid-session staleness. (Pre-commit hook uses full-pdg.)
-    run("npm", ["run", "gitnexus:pdg"], { stdio: "inherit" });
+    // Full --force + PDG: guarantees a complete control/data-dependence + taint
+    // layer (pdg_query/explain/impact(mode:pdg)) on every autonomous refresh, same
+    // as the pre-commit hook — no partial-incremental PDG risk.
+    run("npm", ["run", "gitnexus:full-pdg"], { stdio: "inherit" });
     if (
       fs.existsSync(path.join(ROOT, "scripts/sync-cursor-gitnexus-teaching.sh"))
     ) {
