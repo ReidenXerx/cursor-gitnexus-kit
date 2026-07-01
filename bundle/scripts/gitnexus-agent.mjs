@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|graph-smoke|detect-api
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -515,6 +515,11 @@ if (cmd === "stats") {
     editStaleBlocks: "Stale-edit blocks",
   };
   const s = summarizeTelemetry(records);
+  if (process.argv.includes("--json")) {
+    const latestIndex = [...records].reverse().find((r) => r.index)?.index ?? null;
+    process.stdout.write(JSON.stringify({ ...s, latestIndex }, null, 2) + "\n");
+    process.exit(0);
+  }
   console.log("GitNexus telemetry — all sessions");
   if (!s.sessions) {
     console.log("  No sessions recorded yet. A session is archived on the NEXT");
