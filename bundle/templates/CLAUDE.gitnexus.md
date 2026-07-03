@@ -148,6 +148,10 @@ Enforcement is **polyglot** — JS/TS, Python, Rust, Go, Java, and more count as
 
 At a **milestone** — feature done / big-task checkpoint / shared-code refactor / pre-ship, or "audit / find real bugs / is this solid?" — **and** only when the work is *substantial* (multi-file or high `impact` blast-radius): run a **microscope-waves** pass → load the `gitnexus-microscope` skill. Multi-lens, opinionated (not just defects), adversarially verified, iterated in waves. Skip it for small localized changes.
 
+## Durable memory (survives compaction + sessions)
+
+Maintain **`.gnkit/MEMORY.md`** as your running project memory — task, key decisions, findings, open items, important `file:line`. Update it at milestones and whenever you conclude something that must outlive the current transcript. Context compaction and new sessions drop the conversation; this file does not. On recovery (post-compaction/resume) READ it first and reconcile it with reality — **nothing important may be lost.**
+
 ## Fallback
 
 **Only after refresh fails** (or MCP down / GN wrong after `uid` retry): classical Grep/Read OK — one-sentence why. While stale and refresh not yet attempted/failed: **deny classical** — run `agent-refresh` first.

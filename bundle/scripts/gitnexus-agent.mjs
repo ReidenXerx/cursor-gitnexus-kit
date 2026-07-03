@@ -475,6 +475,7 @@ if (cmd === "scorecard") {
     impactGate: "Impact-before-edit gates",
     commitGate: "detect_changes-before-commit gates",
     editStaleBlocks: "Stale-edit blocks",
+    compactions: "Context compactions",
   };
   console.log("GitNexus enforcement scorecard (this session)");
   console.log(
@@ -513,6 +514,7 @@ if (cmd === "stats") {
     impactGate: "Impact-before-edit gates",
     commitGate: "detect_changes-before-commit gates",
     editStaleBlocks: "Stale-edit blocks",
+    compactions: "Context compactions",
   };
   const s = summarizeTelemetry(records);
   if (process.argv.includes("--json")) {

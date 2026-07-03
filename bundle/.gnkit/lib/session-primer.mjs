@@ -239,6 +239,48 @@ export function isRefreshFailed(root) {
   return fs.existsSync(refreshFailedFlag);
 }
 
+// ── Durable memory + compaction recovery ────────────────────────────────────
+// Context compaction (auto or manual) drops the middle of a conversation. The
+// per-session gate flags + a running memory file must survive it, so the agent
+// doesn't re-run cleared gates or lose task state after a compaction.
+
+const MEMORY_FILE = 'MEMORY.md';
+
+/** @param {string} root — durable, agent-maintained project memory/journal. */
+export function memoryPath(root) {
+  return path.join(root, '.gnkit', MEMORY_FILE);
+}
+
+/**
+ * Clear per-session state ONLY on a genuinely new session. A compaction/resume
+ * is the SAME task continuing — clearing there would wipe satisfied gates and
+ * re-block the agent mid-task.
+ * @param {string} [source] Claude SessionStart source: startup|clear|compact|resume
+ */
+export function shouldClearOnSource(source) {
+  return source !== 'compact' && source !== 'resume';
+}
+
+/** Append a lightweight state breadcrumb to the memory file (best-effort). */
+export function appendMemoryCheckpoint(root, note = '') {
+  const p = memoryPath(root);
+  try {
+    fs.mkdirSync(path.dirname(p), { recursive: true });
+    if (!fs.existsSync(p)) {
+      fs.writeFileSync(
+        p,
+        `# Project working memory (GitNexus kit)\n\n` +
+          `> Durable across compaction + sessions. Keep this current: task, decisions, ` +
+          `findings, open items, key file:line. Nothing important should live only in the volatile transcript.\n`,
+      );
+    }
+    fs.appendFileSync(p, `\n<!-- checkpoint ${new Date().toISOString()} -->\n${note}\n`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function clearSessionState(root) {
   const {
     stateDir,
