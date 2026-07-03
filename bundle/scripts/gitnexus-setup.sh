@@ -115,8 +115,8 @@ CORE_SOURCES=(
   "scripts/gitnexus-gate-hint.mjs"
   "scripts/gitnexus-teaching/script-gates.mjs"
   "scripts/lib/setup-ui.mjs"
-  ".gitnexus/agent-kit/skills/gitnexus-workspace/SKILL.md"
-  ".gitnexus/agent-kit/skills/gitnexus-enforcement/SKILL.md"
+  ".gnkit/skills/gitnexus-workspace/SKILL.md"
+  ".gnkit/skills/gitnexus-enforcement/SKILL.md"
 )
 
 CURSOR_SOURCES=(

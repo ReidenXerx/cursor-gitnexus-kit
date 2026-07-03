@@ -63,7 +63,7 @@ bin/install.sh
   → stepped banner UI (validate → migrate legacy → copy → merge → manifest → setup)
   → migrate legacy cursor-gitnexus-kit layout (rsync skills, old manifest, zed profile)
   → copy bundle (rules, hooks, skills store, scripts, team guide)
-  → materialize .gitnexus/agent-kit/skills/ + symlink into .cursor/ and/or .agents/
+  → materialize .gnkit/skills/ + symlink into .cursor/ and/or .agents/
   → merge gated package.json gitnexus:* scripts + .cursor/mcp.json (Cursor)
   → merge .zed/settings.json + AGENTS.md (Zed)
   → gitnexus-setup.sh (--skip-global-mcp)
@@ -71,7 +71,7 @@ bin/install.sh
   → npm run gitnexus:verify
 ```
 
-Skills live once in `.gitnexus/agent-kit/skills/` and are **symlinked** — not copied — into IDE skill paths. Updates replace the store and refresh symlinks.
+Skills live once in `.gnkit/skills/` and are **symlinked** — not copied — into IDE skill paths. Updates replace the store and refresh symlinks.
 
 ## Update
 

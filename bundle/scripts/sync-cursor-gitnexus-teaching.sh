@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sync GitNexus teaching bundle into Cursor-native paths (.cursor/skills).
-# Source of truth: .gitnexus/agent-kit/skills/ + .cursor/rules/ + .cursor/hooks/
+# Source of truth: .gnkit/skills/ + .cursor/rules/ + .cursor/hooks/
 # Run via: npm run gitnexus:setup (or directly)
 set -euo pipefail
 
@@ -168,7 +168,7 @@ const manifest = {
     mcp: '.cursor/mcp.json',
     masterSkill: '.agents/skills/gitnexus-workspace/SKILL.md',
     enforcementSkill: '.agents/skills/gitnexus-enforcement/SKILL.md',
-    gitnexusSkills: listSkills('.gitnexus/agent-kit/skills').filter((n) => n.startsWith('gitnexus-')),
+    gitnexusSkills: listSkills('.gnkit/skills').filter((n) => n.startsWith('gitnexus-')),
     generatedAreaSkills: listSkills('.cursor/skills/generated'),
   },
   workflowChain: [
@@ -214,7 +214,7 @@ done
 ok "${#HOOK_SCRIPTS[@]} hook scripts + ${#HOOK_LIBS[@]} lib(s) ready"
 
 info "  [3/5] Link skills (symlinks from canonical store)"
-STORE=".gitnexus/agent-kit/skills"
+STORE=".gnkit/skills"
 if [[ ! -d "$STORE" ]]; then
   fail "Missing $STORE — run gn-agent-kit install or update first"
 fi

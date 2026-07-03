@@ -12,7 +12,7 @@ const jsonOut = process.argv.includes('--json');
 
 const ZED_PROFILE_KEY = 'zed-gitnexus';
 const ZED_PROFILE_NAME = 'Zed + GitNexus';
-const SKILLS_STORE = '.gitnexus/agent-kit/skills';
+const SKILLS_STORE = '.gnkit/skills';
 
 function readRuntime() {
   for (const rel of ['.gitnexus/agent-kit-manifest.json', '.cursor/gn-kit-manifest.json']) {
