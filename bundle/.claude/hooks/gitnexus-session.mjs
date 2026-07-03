@@ -31,6 +31,7 @@ const recovering = !shouldClearOnSource(source);
 if (!recovering) clearSessionState(root);
 
 const ctx = gnContext(root);
+const mp = memoryPath(root); // Claude Code's native project memory
 const staleLine =
   ctx.phase !== "fresh"
     ? "Index is STALE — run `npm run gitnexus:agent-refresh` before graph calls (hooks block until refreshed)."
@@ -43,16 +44,16 @@ if (recovering) {
     `GitNexus: context was ${source === "compact" ? "COMPACTED" : "resumed"} — the task CONTINUES; enforcement and this session's satisfied gates are PRESERVED.`,
     `Gates so far: impact ${isImpactUsed(root) ? "✓ done" : "pending"}, detect_changes ${isDetectUsed(root) ? "✓ done" : "pending"} — do NOT re-run the ✓ ones.`,
     hasMem
-      ? "RECOVER from `.gnkit/MEMORY.md` (your durable working memory): reconcile it with reality NOW and fill gaps — decisions, requirements, open bugs, user intent, key file:line."
-      : "Create `.gnkit/MEMORY.md` and record the task state you still hold (decisions, requirements, open items, key file:line) before continuing.",
-    "NOTHING important from before the compaction may be lost — if the summary dropped a requirement/decision/finding, reconstruct it from MEMORY.md or the code before acting.",
+      ? `RECOVER from your project memory (${mp}): reconcile it with reality NOW and fill gaps — decisions, requirements, open bugs, user intent, key file:line.`
+      : `Record the task state you still hold in your project memory (${mp}) — decisions, requirements, open items, key file:line — before continuing.`,
+    "NOTHING important from before the compaction may be lost — if the summary dropped a requirement/decision/finding, reconstruct it from your memory or the code before acting.",
     staleLine,
   ];
 } else {
   lines = [
     "GitNexus enforcement active (Claude Code). Graph-first on EVERY task — see CLAUDE.md.",
     "Orient with gitnexus_query; drill with gitnexus_context; cypher for structure; impact before edits; detect_changes before commit.",
-    "Keep `.gnkit/MEMORY.md` current as you work — it's your durable memory across compaction + sessions.",
+    `Keep your project memory current as you work (${mp}) — it survives compaction + sessions; the transcript does not.`,
     staleLine,
   ];
 }

@@ -146,7 +146,7 @@ At a **milestone** — feature done / big-task checkpoint / shared-code refactor
 
 ## Durable memory (survives compaction + sessions)
 
-Maintain **`.gnkit/MEMORY.md`** as your running project memory — task, key decisions, findings, open items, important `file:line`. Update it at milestones and whenever you conclude something that must outlive the current transcript. Context compaction and new sessions drop the conversation; this file does not. On recovery (post-compaction/resume) READ it first and reconcile it with reality — **nothing important may be lost.**
+Maintain your **Claude Code project memory** — `~/.claude/projects/<this-project>/memory/MEMORY.md` (Claude Code's native memory; **all agents share this one file** — Claude refers to its own, other agents mirror it). Record task, key decisions, findings, open items, important `file:line`. Update it at milestones and whenever you conclude something that must outlive the current transcript. Context compaction and new sessions drop the conversation; this file does not. On recovery (post-compaction/resume) READ it first and reconcile it with reality — **nothing important may be lost.**
 
 ## Fallback
 

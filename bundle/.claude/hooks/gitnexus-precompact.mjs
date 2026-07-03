@@ -19,7 +19,7 @@ const lib = (rel) =>
   import(pathToFileURL(path.join(root, ".gnkit/lib", rel)).href);
 
 const { gnContext, emitContext } = await lib("claude-emit.mjs");
-const { appendMemoryCheckpoint, isImpactUsed, isDetectUsed, bumpScore } =
+const { appendMemoryCheckpoint, isImpactUsed, isDetectUsed, bumpScore, memoryPath } =
   await lib("session-primer.mjs");
 
 const ctx = gnContext(root);
@@ -30,6 +30,6 @@ appendMemoryCheckpoint(
     `- (transcript about to be summarized — the task/decisions/open-items/file:line above must already be current)`,
 );
 emitContext(
-  "Context is about to be compacted. Preserve EVERYTHING important — decisions, requirements, open bugs, user intent, file:line. Durable record: `.gnkit/MEMORY.md`; nothing critical should exist only in the transcript being summarized.",
+  `Context is about to be compacted. Preserve EVERYTHING important — decisions, requirements, open bugs, user intent, file:line. Durable record: your project memory (${memoryPath(root)}); nothing critical should exist only in the transcript being summarized.`,
   "PreCompact",
 );

@@ -3,6 +3,7 @@
  * Session-first-tool nudge + flag management for GitNexus hooks.
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { playbookForHint, mcpReadContext, repoName, clearDenyCache } from './hook-helpers.mjs';
 
@@ -246,9 +247,17 @@ export function isRefreshFailed(root) {
 
 const MEMORY_FILE = 'MEMORY.md';
 
-/** @param {string} root — durable, agent-maintained project memory/journal. */
+/**
+ * Claude Code's NATIVE per-project memory file — `~/.claude/projects/<slug>/memory/MEMORY.md`,
+ * where <slug> is the project's absolute path with "/" → "-". We reuse it (not a kit-specific
+ * file) so Claude Code refers to its own memory and every other agent mirrors the same file.
+ * Lives outside the repo, so it is never committed/gitignored.
+ * @param {string} root project root (absolute)
+ */
 export function memoryPath(root) {
-  return path.join(root, '.gnkit', MEMORY_FILE);
+  const home = process.env.HOME || os.homedir();
+  const slug = path.resolve(root).replace(/\//g, '-');
+  return path.join(home, '.claude', 'projects', slug, 'memory', MEMORY_FILE);
 }
 
 /**
