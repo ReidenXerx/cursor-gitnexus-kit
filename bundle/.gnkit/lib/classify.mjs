@@ -61,10 +61,10 @@ export function isNonSourcePath(pathArg, config) {
   const pa = String(pathArg || "").replace(/\\/g, "/");
   if (!pa || helpers.isSourceCodePath(pa, config)) return false;
   return (
-    /\.(json|jsonl|ya?ml|toml|ini|cfg|conf|lock|csv|tsv|env|md|mdc|txt|rst|html?|css|scss|less|svg)$/i.test(
+    /\.(json|jsonl|ya?ml|toml|ini|cfg|conf|lock|csv|tsv|env|md|mdc|txt|log|rst|html?|css|scss|less|svg)$/i.test(
       pa,
     ) ||
-    /(?:^|\/)(docs|fixtures?|__snapshots__|test-?data|testdata|public|assets|locales?|i18n)(?:\/|$)/i.test(
+    /(?:^|\/)(docs|fixtures?|__snapshots__|test-?data|testdata|public|assets|locales?|i18n|logs?)(?:\/|$)/i.test(
       pa,
     )
   );
@@ -95,6 +95,42 @@ export function isLiteralPattern(pattern) {
 /** Reduce a token to the symbol an agent should look up (last dotted segment). */
 function symbolOf(token) {
   return token.split(".").pop() || token;
+}
+
+/**
+ * Pull a code symbol out of ONE grep branch — a bare/dotted identifier, or the name
+ * in a decl/assignment search (`function foo`, `const foo`, `foo =`). Null for a
+ * plain literal branch.
+ * @param {string} raw
+ */
+function extractSymbol(raw) {
+  const t = coreToken(raw).trim();
+  if (!t) return null;
+  if (isDottedAccess(t)) return symbolOf(t);
+  if (isPlainIdentifier(t)) return t;
+  let m = t.match(/\b(?:function|class|interface|type|enum)\s+([A-Za-z_$][\w$]{2,})/);
+  if (m) return m[1];
+  m =
+    t.match(/^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]{2,})/) ||
+    t.match(/^([A-Za-z_$][\w$]{2,})\s*=(?!=)/);
+  return m ? m[1] : null;
+}
+
+/**
+ * A grep alternation (`a\|b`, `a|b`) is a symbol search when ANY branch names a
+ * symbol. This was the historical miss — `grep "fooBar\|bazQux" file.js` matched
+ * neither the symbol nor the literal test, so it defaulted to ALLOW.
+ * @param {string} pattern
+ * @returns {string|null} the first symbol found
+ */
+function symbolFromAlternation(pattern) {
+  const core = coreToken(pattern);
+  if (!/\|/.test(core)) return null;
+  for (const branch of core.split(/\\?\|/)) {
+    const s = extractSymbol(branch);
+    if (s) return s;
+  }
+  return null;
 }
 
 /**
@@ -189,10 +225,24 @@ export function classifyGrep(req, ctx) {
   }
 
   const token = coreToken(pattern);
-  const symbolish =
+  let symbolish =
     isDeclSearch(token) || isPlainIdentifier(token) || isDottedAccess(token);
+  // Alternation of symbols (a\|b\|c) — historically slipped through as neither symbol
+  // nor literal. If any branch names a symbol, redirect on the first one.
+  const altSym = symbolish ? null : symbolFromAlternation(pattern);
+  if (altSym) symbolish = true;
 
   if (symbolish) {
+    if (altSym) {
+      const call = helpers.mcpContext(altSym, repo);
+      return {
+        decision: "deny",
+        agentMessage: `Grep blocked (symbol alternation) → ${call}${tail}`,
+        userKey: "block.grep.symbol",
+        userVars: { symbol: altSym },
+        scoreEvent: "grepRedirects",
+      };
+    }
     const seg = symbolOf(token);
     const fieldLike = !isDeclSearch(token) && helpers.isLikelyFieldName(seg);
     if (fieldLike) {
@@ -459,6 +509,152 @@ export function classifyCommit(req, ctx) {
  * @param {ClassifyCtx} ctx
  * @returns {Verdict}
  */
+// ── Shell-command code search ────────────────────────────────────────────────
+// The Grep TOOL is gated by classifyGrep, but an agent can run `grep`/`rg`/`git grep`
+// in the terminal to search source and bypass it entirely (the exact behaviour that
+// looks like "grepping instead of using the graph"). parseShellSearch pulls the
+// (pattern, path) out of such a command so classifyShell can apply the SAME policy.
+
+const SEARCH_TOOL_RE = /^(grep|egrep|fgrep|rg|ripgrep|ag|ack)$/;
+const RECURSIVE_TOOL_RE = /^(rg|ripgrep|ag|ack|git grep)$/;
+const GREP_FAMILY_RE = /^(grep|egrep|fgrep)$/;
+const FLAG_TAKES_VALUE_RE =
+  /^(-m|-A|-B|-C|-d|-g|-t|--max-count|--context|--after-context|--before-context|--glob|--type|--include|--exclude)$/;
+
+/**
+ * Quote/escape-aware split of a shell command into pipeline segments (each a token
+ * list), tracking whether a segment is fed by a pipe (stdin). Keeps `grep "a\|b"`
+ * as ONE segment — the `\|` is inside quotes, not a pipeline separator.
+ * @param {string} command
+ */
+function shellSegments(command) {
+  const segs = [];
+  let cur = [];
+  let tok = "";
+  let hasTok = false;
+  let quote = null;
+  let segPiped = false;
+  const pushTok = () => {
+    if (hasTok) {
+      cur.push(tok);
+      tok = "";
+      hasTok = false;
+    }
+  };
+  const flush = (nextPiped) => {
+    pushTok();
+    if (cur.length) segs.push({ args: cur, piped: segPiped });
+    cur = [];
+    segPiped = nextPiped;
+  };
+  for (let i = 0; i < command.length; i++) {
+    const c = command[i];
+    if (quote) {
+      if (c === quote) quote = null;
+      else if (quote === '"' && c === "\\" && i + 1 < command.length) tok += command[++i];
+      else tok += c;
+      hasTok = true;
+      continue;
+    }
+    if (c === "'" || c === '"') {
+      quote = c;
+      hasTok = true;
+      continue;
+    }
+    if (c === "\\") {
+      if (i + 1 < command.length) {
+        tok += command[++i];
+        hasTok = true;
+      }
+      continue;
+    }
+    if (c === "|") {
+      const dbl = command[i + 1] === "|";
+      flush(!dbl); // single pipe feeds the next segment stdin; `||` is logical
+      if (dbl) i++;
+      continue;
+    }
+    if (c === "&") {
+      if (command[i + 1] === "&") i++;
+      flush(false);
+      continue;
+    }
+    if (c === ";" || c === "\n") {
+      flush(false);
+      continue;
+    }
+    if (/\s/.test(c)) {
+      pushTok();
+      continue;
+    }
+    tok += c;
+    hasTok = true;
+  }
+  flush(false);
+  return segs;
+}
+
+/**
+ * If a segment is a source-searching grep/rg/ag/ack/git-grep, return {tool, pattern,
+ * path}. Returns null for a stdin filter (`ps aux | grep node`) or a non-search command.
+ * @param {{ args: string[], piped: boolean }} seg
+ */
+function segSearch(seg) {
+  const a = seg.args;
+  if (!a.length) return null;
+  let tool = a[0];
+  let rest = a.slice(1);
+  if (tool === "git" && rest[0] === "grep") {
+    tool = "git grep";
+    rest = rest.slice(1);
+  } else if (!SEARCH_TOOL_RE.test(tool)) {
+    return null;
+  }
+
+  let patternFromE = null;
+  let recursive = RECURSIVE_TOOL_RE.test(tool);
+  const positionals = [];
+  for (let i = 0; i < rest.length; i++) {
+    const t = rest[i];
+    if (t === "--") {
+      positionals.push(...rest.slice(i + 1));
+      break;
+    }
+    if (t.length > 1 && t[0] === "-") {
+      if (t === "-e" || t === "--regexp") {
+        patternFromE = patternFromE ?? rest[++i];
+        continue;
+      }
+      if (t.startsWith("--regexp=")) {
+        patternFromE = patternFromE ?? t.slice(9);
+        continue;
+      }
+      if (FLAG_TAKES_VALUE_RE.test(t) || t === "-f" || t === "--file") {
+        i++; // consume the flag's value
+        continue;
+      }
+      if (/^-[A-Za-z]*[rR]/.test(t)) recursive = true;
+      continue; // other flags carry no positional
+    }
+    positionals.push(t);
+  }
+  const pattern = patternFromE ?? positionals.shift();
+  if (pattern == null) return null;
+  const paths = positionals;
+  // grep-family with no path and not recursive = a stdin filter, not a file search.
+  if (GREP_FAMILY_RE.test(tool) && !recursive && paths.length === 0) return null;
+  return { tool, pattern, path: paths[0] ?? "" };
+}
+
+/** First source-code search in a shell command, else null. */
+function parseShellSearch(command) {
+  for (const seg of shellSegments(command)) {
+    const s = segSearch(seg);
+    if (s) return s;
+  }
+  return null;
+}
+
 export function classifyShell(req, ctx) {
   const command = req.command || "";
   const { phase } = ctx;
@@ -475,7 +671,26 @@ export function classifyShell(req, ctx) {
       agentMessage: isGitnexusMaint ? "GitNexus maintenance pre-approved." : undefined,
     };
   }
-  if (phase === "fresh") return { decision: "allow" };
+  if (phase === "fresh") {
+    // Close the terminal escape hatch: a shell code-symbol search gets the SAME
+    // graph-first redirect as the Grep tool. Piped filters / non-source / literal
+    // searches fall through to allow (classifyGrep decides).
+    const s = parseShellSearch(command);
+    if (s) {
+      const g = classifyGrep(
+        { tool: "Grep", toolInput: { pattern: s.pattern, path: s.path } },
+        ctx,
+      );
+      if (g.decision === "deny") {
+        return {
+          ...g,
+          userKey: "block.shell.search",
+          agentMessage: `Shell \`${s.tool}\` for a code symbol bypasses the graph → ${g.agentMessage}`,
+        };
+      }
+    }
+    return { decision: "allow" };
+  }
   if (phase === "classical_fallback") {
     return { decision: "allow", agentMessage: ctx.staleFallbackMsg };
   }
