@@ -23,6 +23,7 @@ const {
   isImpactUsed,
   isDetectUsed,
   memoryPath,
+  fallbackGrant,
 } = await lib("session-primer.mjs");
 
 const source = input.source || "startup";
@@ -32,8 +33,10 @@ if (!recovering) clearSessionState(root);
 
 const ctx = gnContext(root);
 const mp = memoryPath(root); // Claude Code's native project memory
-const staleLine =
-  ctx.phase !== "fresh"
+const grant = fallbackGrant(root);
+const staleLine = grant
+  ? `⚠ CLASSICAL FALLBACK active (${grant.reason || "GitNexus distrusted"}) — classical Grep/Read/shell allowed for ~${Math.max(1, Math.round(grant.remainingMs / 60000))} min. RE-CONFIRM findings with the graph once GitNexus is reliable; end early with \`npm run gitnexus:fallback:off\`.`
+  : ctx.phase !== "fresh"
     ? "Index is STALE — run `npm run gitnexus:agent-refresh` before graph calls (hooks block until refreshed)."
     : "Index is fresh — hooks redirect symbol Grep / large Read / blind edits to the graph.";
 

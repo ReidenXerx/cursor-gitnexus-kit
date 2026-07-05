@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api|fallback "<why>"|fallback:off
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -17,6 +17,14 @@ const { withProjectTmpEnv, tmpSpaceReport, enospcHelp } = await import(
 const { inspectPersistence, classifyPersistenceOutput } = await import(
   pathToFileURL(path.join(ROOT, ".gnkit/lib/persistence-health.mjs"))
     .href
+);
+const {
+  grantClassicalFallback,
+  revokeClassicalFallback,
+  fallbackGrant,
+  bumpScore,
+} = await import(
+  pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
 );
 
 function loadStaleness() {
@@ -51,7 +59,42 @@ function run(cmd, args, opts = {}) {
 
 const cmd = process.argv[2] ?? "status";
 
+if (cmd === "fallback") {
+  const reason = process.argv.slice(3).join(" ").trim();
+  if (!reason) {
+    console.error(
+      'Usage: npm run gitnexus:fallback -- "<why GitNexus can\'t be trusted here>"\n' +
+        '   or: node scripts/gitnexus-agent.mjs fallback "<why>"',
+    );
+    process.exit(2);
+  }
+  grantClassicalFallback(ROOT, reason);
+  bumpScore(ROOT, "classicalFallbackGranted");
+  const g = fallbackGrant(ROOT);
+  const mins = g ? Math.max(1, Math.round(g.remainingMs / 60000)) : 15;
+  console.log(`⚠ Classical fallback GRANTED for ~${mins} min — reason: ${reason}`);
+  console.log(
+    "  Classical Grep/Read/shell are now allowed. Re-confirm findings with the graph once GitNexus is reliable.",
+  );
+  console.log("  End early: npm run gitnexus:fallback:off");
+  process.exit(0);
+}
+
+if (cmd === "fallback:off" || cmd === "unfallback") {
+  revokeClassicalFallback(ROOT);
+  console.log("Classical fallback ended — graph-first enforcement re-armed.");
+  process.exit(0);
+}
+
 if (cmd === "status") {
+  const grant = fallbackGrant(ROOT);
+  if (grant) {
+    const mins = Math.max(1, Math.round(grant.remainingMs / 60000));
+    console.log(
+      `⚠ CLASSICAL FALLBACK active (${grant.reason || "GitNexus distrusted"}) — classical tools allowed for ~${mins} min more.`,
+    );
+    console.log("  End early: npm run gitnexus:fallback:off\n");
+  }
   const stale = loadStaleness();
   const systemTmp = tmpSpaceReport(ROOT);
   if (stale.fresh) {
@@ -476,6 +519,7 @@ if (cmd === "scorecard") {
     commitGate: "detect_changes-before-commit gates",
     editStaleBlocks: "Stale-edit blocks",
     compactions: "Context compactions",
+    classicalFallbackGranted: "Classical-fallback grants (GN distrusted)",
   };
   console.log("GitNexus enforcement scorecard (this session)");
   console.log(

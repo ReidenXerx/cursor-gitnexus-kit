@@ -37,6 +37,8 @@ export const GITNEXUS_SCRIPT_GATES = [
       "gitnexus:scorecard": "node scripts/gitnexus-agent.mjs scorecard",
       "gitnexus:stats": "node scripts/gitnexus-agent.mjs stats",
       "gitnexus:map": "node scripts/gitnexus-agent.mjs map",
+      "gitnexus:fallback": "node scripts/gitnexus-agent.mjs fallback",
+      "gitnexus:fallback:off": "node scripts/gitnexus-agent.mjs fallback:off",
     },
   },
   {

@@ -20,6 +20,66 @@ export function sessionPaths(root) {
     detectUsedFlag: path.join(stateDir, '.gitnexus-detect-used.flag'),
     stalenessCacheFile: path.join(stateDir, '.gitnexus-staleness-cache.json'),
     scorecardFile: path.join(stateDir, '.gitnexus-scorecard.json'),
+    fallbackFlag: path.join(stateDir, '.gitnexus-fallback.json'),
+  };
+}
+
+// ── Classical fallback escape hatch ──────────────────────────────────────────
+// When GitNexus returns wrong / suspicious / incomplete info while the index is
+// FRESH, graph-first enforcement would otherwise trap the agent. grantClassicalFallback
+// opens a BOUNDED, REASONED, LOGGED window where classical Grep/Read/shell are allowed
+// (evaluateStalePolicy honours it → phase classical_fallback). It is surfaced in the
+// session brief + `gitnexus:status`, so it can never be a silent lazy bypass.
+
+const FALLBACK_TTL_MS = 15 * 60 * 1000; // 15 min, then enforcement auto-resumes
+
+/** @param {string} root @param {string} reason @param {number} [ttlMs] */
+export function grantClassicalFallback(root, reason = '', ttlMs = FALLBACK_TTL_MS) {
+  const { stateDir, fallbackFlag } = sessionPaths(root);
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(
+    fallbackFlag,
+    JSON.stringify(
+      { at: new Date().toISOString(), reason: String(reason).slice(0, 300), ttlMs },
+      null,
+      2,
+    ),
+  );
+}
+
+/** @param {string} root */
+export function revokeClassicalFallback(root) {
+  try {
+    fs.unlinkSync(sessionPaths(root).fallbackFlag);
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Active classical-fallback grant, or null. Auto-expires (and self-cleans) after ttlMs.
+ * @param {string} root
+ * @returns {{ reason: string, remainingMs: number, expiresAt: string } | null}
+ */
+export function fallbackGrant(root) {
+  let rec;
+  try {
+    rec = JSON.parse(fs.readFileSync(sessionPaths(root).fallbackFlag, 'utf8'));
+  } catch {
+    return null;
+  }
+  const startedAt = Date.parse(rec.at);
+  if (!Number.isFinite(startedAt)) return null;
+  const ttl = typeof rec.ttlMs === 'number' ? rec.ttlMs : FALLBACK_TTL_MS;
+  const remainingMs = startedAt + ttl - Date.now();
+  if (remainingMs <= 0) {
+    revokeClassicalFallback(root);
+    return null;
+  }
+  return {
+    reason: rec.reason || '',
+    remainingMs,
+    expiresAt: new Date(startedAt + ttl).toISOString(),
   };
 }
 
@@ -301,6 +361,7 @@ export function clearSessionState(root) {
     refreshFailedFlag,
     stalenessCacheFile,
     scorecardFile,
+    fallbackFlag,
   } = sessionPaths(root);
   fs.mkdirSync(stateDir, { recursive: true });
   // Archive the finishing session's tally BEFORE wiping the scorecard.
@@ -314,6 +375,7 @@ export function clearSessionState(root) {
     refreshFailedFlag,
     stalenessCacheFile,
     scorecardFile,
+    fallbackFlag,
   ]) {
     try {
       fs.unlinkSync(f);
