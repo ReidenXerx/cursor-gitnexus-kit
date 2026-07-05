@@ -42,7 +42,10 @@ if (recovering) {
   const hasMem = existsSync(memoryPath(root));
   lines = [
     `GitNexus: context was ${source === "compact" ? "COMPACTED" : "resumed"} — the task CONTINUES; enforcement and this session's satisfied gates are PRESERVED.`,
-    `Gates so far: impact ${isImpactUsed(root) ? "✓ done" : "pending"}, detect_changes ${isDetectUsed(root) ? "✓ done" : "pending"} — do NOT re-run the ✓ ones.`,
+    // Graph-first discipline MUST be re-stated here, not only on fresh start: post-compaction is
+    // exactly where agents drift back to grep/blind-read. "Gates preserved" ≠ "stop using the graph".
+    "Graph-first STILL applies — do NOT fall back to grep or blind Read: orient with gitnexus_query, drill with gitnexus_context, cypher for structure, impact before edits, detect_changes before commit.",
+    `Gates already satisfied: impact ${isImpactUsed(root) ? "✓ done" : "pending"}, detect_changes ${isDetectUsed(root) ? "✓ done" : "pending"} — don't redo those for work you ALREADY analyzed, but DO run impact before any NEW edit and detect_changes before every commit.`,
     hasMem
       ? `RECOVER from your project memory (${mp}): reconcile it with reality NOW and fill gaps — decisions, requirements, open bugs, user intent, key file:line.`
       : `Record the task state you still hold in your project memory (${mp}) — decisions, requirements, open items, key file:line — before continuing.`,
