@@ -2,7 +2,7 @@
 
 # gitnexus-agent-kit
 
-**The enforcement layer for GitNexus — Cursor, Zed, and Ollama**
+**The enforcement layer for GitNexus — Cursor, Zed, Claude Code, and Ollama**
 
 Hooks (Cursor) · Agent profiles (Zed) · MCP · Skills · Cypher · Autonomous refresh — graph-first reasoning on **every task**, not only when code is unfamiliar.
 
@@ -49,7 +49,11 @@ This kit closes that gap with **IDE-specific enforcement** — Cursor hooks, Zed
 | --- | --- | --- |
 | **Cursor** (`--runtime cursor`) | Hooks, rules, `.cursor/mcp.json`, skills | Hard — hooks deny grep/read when graph is fresh |
 | **Zed** (`--runtime zed`) | `.zed/settings.json`, **Zed + GitNexus** agent profile, `.agents/skills/`, `AGENTS.md` | Profile — grep disabled; Zed model + gitnexus MCP |
-| **Both** (`--runtime both`, default) | Everything above | Cursor hard gates + Zed profile for the same repo |
+| **Claude Code** (`--runtime claude`) | `.mcp.json`, `.claude/settings.json` hooks, `.claude/skills/`, `CLAUDE.md` | Hard — PreToolUse hooks deny symbol grep / large read / blind edits; commit gated on `detect_changes` |
+| **Both** (`--runtime both`, default) | Cursor + Zed | Cursor hard gates + Zed profile for the same repo |
+| **All** (`--runtime all`) | Cursor + Zed + Claude Code | Every adapter (also any comma list, e.g. `--runtime cursor,claude`) |
+
+Claude Code shares the **same enforcement core** as Cursor — the `classify.mjs` policy decides allow/deny, and a small `claude-emit` adapter maps the verdict to Claude Code's `PreToolUse` hook protocol. Same gates, same graph-first loop.
 
 Skills live once in `.gitnexus/agent-kit/skills/` and are **symlinked** into `.cursor/skills/` and/or `.agents/skills/` — one source of truth, both IDEs stay in sync on update.
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Sync GitNexus teaching bundle into Cursor-native paths (.cursor/skills).
-# Source of truth: .gitnexus/agent-kit/skills/ + .cursor/rules/ + .cursor/hooks/
+# Source of truth: .gnkit/skills/ + .cursor/rules/ + .cursor/hooks/
 # Run via: npm run gitnexus:setup (or directly)
 set -euo pipefail
 
@@ -28,28 +28,30 @@ HOOK_SCRIPTS=(
 )
 
 HOOK_LIBS=(
-  ".cursor/hooks/lib/check-staleness.mjs"
-  ".cursor/hooks/lib/load-staleness.mjs"
-  ".cursor/hooks/lib/graph-session.mjs"
-  ".cursor/hooks/lib/session-primer.mjs"
-  ".cursor/hooks/lib/first-nudge.mjs"
-  ".cursor/hooks/lib/clear-session.mjs"
-  ".cursor/hooks/lib/set-refresh-pending.mjs"
-  ".cursor/hooks/lib/hook-helpers.mjs"
-  ".cursor/hooks/lib/cypher-helpers.mjs"
-  ".cursor/hooks/lib/rename-helpers.mjs"
-  ".cursor/hooks/lib/stale-policy.mjs"
-  ".cursor/hooks/lib/cypher-cli.mjs"
-  ".cursor/hooks/lib/generate-arch-doc.mjs"
-  ".cursor/hooks/lib/commit-message.mjs"
-  ".cursor/hooks/lib/detect-api-router.mjs"
-  ".cursor/hooks/lib/graph-smoke.mjs"
-  ".cursor/hooks/lib/agent-brief.mjs"
-  ".cursor/hooks/lib/agent-health.mjs"
-  ".cursor/hooks/lib/session-health-audit.mjs"
-  ".cursor/hooks/lib/session-health-context.mjs"
-  ".cursor/hooks/lib/verify-kit.mjs"
-  ".cursor/gitnexus-hooks.json"
+  ".gnkit/lib/check-staleness.mjs"
+  ".gnkit/lib/load-staleness.mjs"
+  ".gnkit/lib/classify.mjs"
+  ".gnkit/lib/cursor-emit.mjs"
+  ".gnkit/lib/claude-emit.mjs"
+  ".gnkit/lib/session-primer.mjs"
+  ".gnkit/lib/first-nudge.mjs"
+  ".gnkit/lib/clear-session.mjs"
+  ".gnkit/lib/set-refresh-pending.mjs"
+  ".gnkit/lib/hook-helpers.mjs"
+  ".gnkit/lib/cypher-helpers.mjs"
+  ".gnkit/lib/rename-helpers.mjs"
+  ".gnkit/lib/stale-policy.mjs"
+  ".gnkit/lib/cypher-cli.mjs"
+  ".gnkit/lib/generate-arch-doc.mjs"
+  ".gnkit/lib/commit-message.mjs"
+  ".gnkit/lib/detect-api-router.mjs"
+  ".gnkit/lib/graph-smoke.mjs"
+  ".gnkit/lib/agent-brief.mjs"
+  ".gnkit/lib/agent-health.mjs"
+  ".gnkit/lib/session-health-audit.mjs"
+  ".gnkit/lib/session-health-context.mjs"
+  ".gnkit/lib/verify-kit.mjs"
+  ".gnkit/gitnexus-hooks.json"
   "scripts/gitnexus-agent.mjs"
   "scripts/gitnexus-gate-hint.mjs"
   "scripts/gitnexus-teaching/script-gates.mjs"
@@ -166,7 +168,7 @@ const manifest = {
     mcp: '.cursor/mcp.json',
     masterSkill: '.agents/skills/gitnexus-workspace/SKILL.md',
     enforcementSkill: '.agents/skills/gitnexus-enforcement/SKILL.md',
-    gitnexusSkills: listSkills('.gitnexus/agent-kit/skills').filter((n) => n.startsWith('gitnexus-')),
+    gitnexusSkills: listSkills('.gnkit/skills').filter((n) => n.startsWith('gitnexus-')),
     generatedAreaSkills: listSkills('.cursor/skills/generated'),
   },
   workflowChain: [
@@ -212,7 +214,7 @@ done
 ok "${#HOOK_SCRIPTS[@]} hook scripts + ${#HOOK_LIBS[@]} lib(s) ready"
 
 info "  [3/5] Link skills (symlinks from canonical store)"
-STORE=".gitnexus/agent-kit/skills"
+STORE=".gnkit/skills"
 if [[ ! -d "$STORE" ]]; then
   fail "Missing $STORE — run gn-agent-kit install or update first"
 fi
@@ -233,13 +235,11 @@ link_skills() {
   ok "$label → $dest_root ($count skills symlinked)"
 }
 
+# Runtime may be cursor|zed|claude|both|all or a comma-list. both = cursor+zed.
 RUNTIME="${GITNEXUS_RUNTIME:-both}"
-case "$RUNTIME" in
-  cursor) link_skills ".cursor/skills" "Cursor skills" ;;
-  zed)    link_skills ".agents/skills" "Zed skills" ;;
-  *)      link_skills ".cursor/skills" "Cursor skills"
-          link_skills ".agents/skills" "Zed skills" ;;
-esac
+case "$RUNTIME" in *cursor*|*both*|*all*) link_skills ".cursor/skills" "Cursor skills" ;; esac
+case "$RUNTIME" in *zed*|*both*|*all*)    link_skills ".agents/skills" "Zed skills" ;; esac
+case "$RUNTIME" in *claude*|*all*)        link_skills ".claude/skills" "Claude skills" ;; esac
 
 info "  [4/5] Teaching bundle manifest"
 write_manifest

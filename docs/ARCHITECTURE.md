@@ -193,7 +193,7 @@ flowchart TD
 flowchart TB
   I["bin/install.sh"] --> M[migrate legacy skills/manifest/zed profile]
   M --> B[Copy bundle]
-  B --> SK[".gitnexus/agent-kit/skills + symlinks"]
+  B --> SK[".gnkit/skills + symlinks"]
   SK --> MC[Merge Cursor hooks + MCP]
   SK --> MZ[Merge Zed profile + AGENTS.md]
   MC --> S[gitnexus-setup.sh]
@@ -272,9 +272,9 @@ Agents still **`query` first** for fuzzy work — Cypher is gate #4, not a grep 
 | `AGENTS.md` (kit block) | Always-on instructions for Zed agents |
 | Session health hooks | New chat audit + agent confirms kit on first reply |
 | Cypher integration | `cypher-helpers.mjs`; field grep → ACCESSES |
-| `.gitnexus/agent-kit/skills/` + symlinks | Canonical skill store → `.cursor/skills/`, `.agents/skills/` |
+| `.gnkit/skills/` + symlinks | Canonical skill store → `.cursor/skills/`, `.agents/skills/` |
 | `scripts/gitnexus-*` | Setup, sync, agent CLI, pack, git hooks |
-| `.githooks/pre-commit` | Optional PDG index refresh on commit (`gitnexus:pdg`) |
+| `.githooks/pre-commit` | Full PDG re-index on commit (`gitnexus:full-pdg`) |
 | `.cursor/mcp.json` | Merges `gitnexus` MCP server (Cursor) |
 | Gated `package.json` scripts | `gitnexus:health`, `gitnexus:verify`, gate docs |
 
@@ -294,7 +294,7 @@ Per-target repo (built locally): `.gitnexus/` index, `.cursor/skills/generated/`
 
 ```
 bundle/
-├── skills/                 # canonical flat skill store (copied to .gitnexus/agent-kit/skills)
+├── skills/                 # canonical flat skill store (copied to .gnkit/skills)
 ├── .cursor/rules/ hooks.json hooks/
 │   └── hooks/lib/          # cypher, rename, verify, graph-smoke, …
 ├── templates/              # AGENTS.gitnexus.md fragment

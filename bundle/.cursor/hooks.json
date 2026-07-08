@@ -42,7 +42,7 @@
       },
       {
         "command": ".cursor/hooks/gitnexus-commit-guard.sh",
-        "matcher": "git\\s+commit"
+        "matcher": "git\\b.*\\bcommit\\b"
       }
     ],
     "beforeMCPExecution": [

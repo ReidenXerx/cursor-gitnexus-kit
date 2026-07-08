@@ -10,7 +10,7 @@ disable-model-invocation: false
 
 ## Rules (short)
 
-1. **Orient:** `query({ query, task_context, goal, repo: "__GITNEXUS_REPO__", limit: 3, max_symbols: 8 })`
+1. **Orient:** `query({ search_query, task_context, goal, repo: "__GITNEXUS_REPO__", limit: 3, max_symbols: 8 })`
 2. **Symbol:** `context({ name, repo: "__GITNEXUS_REPO__", include_content: false })`
 3. **Before edit:** `impact({ target, direction: "upstream", repo: "__GITNEXUS_REPO__", summaryOnly: true })`
 4. **Path:** `trace({from, to})` when both endpoints are known

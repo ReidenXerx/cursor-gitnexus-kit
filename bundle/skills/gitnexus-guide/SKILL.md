@@ -15,7 +15,7 @@ For any task involving code understanding, debugging, impact analysis, or refact
 2. **Match your task to a skill below** and **read that skill file**
 3. **Follow the skill's workflow and checklist**
 
-> If step 1 warns the index is stale, run `node .gitnexus/run.cjs analyze` in the terminal first.
+> If step 1 warns the index is stale, run `npm run gitnexus:agent-refresh` (autonomous, hook-pre-approved) — never ask the user to analyze.
 
 ## Skills
 
@@ -25,24 +25,52 @@ For any task involving code understanding, debugging, impact analysis, or refact
 | Blast radius / "What breaks if I change X?"  | `gitnexus-impact-analysis`   |
 | Trace bugs / "Why is X failing?"             | `gitnexus-debugging`         |
 | Rename / extract / split / refactor          | `gitnexus-refactoring`       |
+| Add a feature / new code (reuse + wire in)   | `gitnexus-feature-dev`       |
+| What to test / coverage gaps                 | `gitnexus-testing`           |
+| Slow / hot path / cost optimization          | `gitnexus-performance`       |
+| Judge structure (coupling, cycles, god objs) | `gitnexus-architecture-review` |
+| Work across layers (controller→repo→model)   | `gitnexus-layered-systems`   |
+| Milestone deep audit (opinionated, verified) | `gitnexus-microscope`        |
 | Tools, resources, schema reference           | `gitnexus-guide` (this file) |
 | Security / taint / injection review          | `gitnexus-security-review`   |
 | Index, status, clean, wiki CLI commands      | `gitnexus-cli`               |
 
-## Tools Reference
+## Tools Reference (full surface — `group_list`/`group_sync` cross-repo are out of scope)
 
-| Tool             | What it gives you                                                        |
+**Core navigation & safety**
+
+| Tool             | What it gives you / when to reach for it                                 |
 | ---------------- | ------------------------------------------------------------------------ |
-| `query`          | Process-grouped code intelligence — execution flows related to a concept |
-| `context`        | 360-degree symbol view — categorized refs, processes it participates in  |
-| `impact`         | Symbol blast radius; `mode: "pdg"` for precise control/data affectedness |
-| `detect_changes` | Git-diff impact — what do your current changes affect                    |
-| `trace`          | Shortest directed call path between two symbols                          |
-| `pdg_query`      | Control/data dependence (`controls`, `flows`) when indexed with `--pdg`  |
-| `explain`        | Persisted taint findings/source→sink paths                               |
-| `rename`         | Multi-file coordinated rename with confidence-tagged edits               |
-| `cypher`         | Raw graph queries (read `gitnexus://repo/{name}/schema` first)           |
-| `list_repos`     | Discover indexed repos (paginated — `limit`/`offset`)                    |
+| `query`          | Orient — process-grouped execution flows for a concept (BM25 + vectors). First move for fuzzy work. |
+| `context`        | 360° on one symbol — callers, callees, categorized refs, processes. After `query`, or when symbol is known. |
+| `cypher`         | Raw structural traversals the canned tools can't express — `ACCESSES`, N-hop `CALLS`, `METHOD_OVERRIDES`, `STEP_IN_PROCESS`. READ schema first. |
+| `impact`         | Pre-edit blast radius + risk + affected processes. `mode: "pdg"` for statement-level control/data affectedness. |
+| `detect_changes` | Git-diff impact — what your current/staged/compared changes affect. Pre-commit + PR review. |
+| `rename`         | Multi-file coordinated rename, confidence-tagged. `dry_run: true` first — never find-and-replace. |
+
+**Deep precision (need `analyze --pdg`)**
+
+| Tool          | What it gives you / when                                                     |
+| ------------- | --------------------------------------------------------------------------- |
+| `trace`       | Shortest directed call/member path between two symbols — "how does A reach B?" in one call. |
+| `pdg_query`   | Control dependence (`mode:"controls"` — what gates a line) / data dependence (`mode:"flows"` — where a variable flows). Anchored to a function. |
+| `explain`     | Persisted taint findings — source→sink (injection, path-traversal, XSS), intra- and inter-procedural. Security review. |
+
+**HTTP API (framework routers)**
+
+| Tool          | What it gives you / when                                                     |
+| ------------- | --------------------------------------------------------------------------- |
+| `api_impact`  | Pre-change report for a route handler — consumers, response-shape mismatches, middleware, risk. BEFORE editing a route. |
+| `route_map`   | Routes → consumers + handler + middleware chain; find orphaned routes. (Custom router → `context` on the dispatcher.) |
+| `shape_check` | Response-shape drift — keys a route returns vs keys consumers access (flags MISMATCH). |
+
+**Meta / health**
+
+| Tool          | What it gives you / when                                                     |
+| ------------- | --------------------------------------------------------------------------- |
+| `tool_map`    | MCP/RPC tool definitions → handler files + descriptions. Tool-API work, impact of a tool-contract change. |
+| `check`       | Read-only structural integrity — detects circular File `IMPORTS` cycles (health / CI). |
+| `list_repos`  | Discover/disambiguate indexed repos (paginated — `limit`/`offset`). Only when multiple repos are indexed. |
 
 ### Paginating `list_repos`
 
@@ -90,10 +118,18 @@ Lightweight reads (~100-500 tokens) for navigation:
 
 ## Graph Schema
 
-**Nodes:** File, Function, Class, Interface, Method, Community, Process
-**Edges (via CodeRelation.type):** CALLS, IMPORTS, EXTENDS, IMPLEMENTS, DEFINES, MEMBER_OF, STEP_IN_PROCESS
+Always `READ gitnexus://repo/{name}/schema` before writing Cypher — it's authoritative for this repo.
+
+**Nodes:** File, Function, Class, Interface, Method, Community, Process (PDG layer adds BasicBlock).
+**Edges (via CodeRelation.type):** CALLS, IMPORTS, EXTENDS, IMPLEMENTS, DEFINES, MEMBER_OF, HAS_METHOD, METHOD_OVERRIDES, STEP_IN_PROCESS, **ACCESSES** (field read/write — carries `reason: "read"|"write"`). PDG layer adds CONTROL_DEP, REACHING_DEF, TAINTED.
 
 ```cypher
+// Who calls myFunc?
 MATCH (caller)-[:CodeRelation {type: 'CALLS'}]->(f:Function {name: "myFunc"})
 RETURN caller.name, caller.filePath
+
+// Who writes the `balance` field? (use ACCESSES, not field grep)
+MATCH (s)-[r:CodeRelation {type: 'ACCESSES'}]->(field {name: "balance"})
+WHERE r.reason = "write"
+RETURN s.name, s.filePath, s.kind
 ```

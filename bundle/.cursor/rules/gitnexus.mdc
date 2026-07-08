@@ -91,11 +91,15 @@ Read `.cursor/skills/gitnexus-scenarios/SKILL.md` for full checklists. Quick map
 | `detect_changes` | Diff → symbols → processes → risk. Scopes: unstaged, staged, all, compare. |
 | `rename` | Graph + text_search edits. Always `dry_run: true` first. |
 | `cypher` | ACCESSES, HAS_METHOD, STEP_IN_PROCESS, METHOD_OVERRIDES. READ schema first. |
+| `pdg_query` | Statement-level control/data dependence. `mode: "controls"` (what gates a line) / `"flows"` (where a value reaches). Needs PDG index. |
+| `trace` | Source → sink path between two symbols. |
+| `explain` | Taint analysis — injection, path traversal, XSS source→sink paths. |
 | `api_impact` | Pre-change report for a framework route: consumers, response shape, middleware, risk. |
 | `route_map` / `shape_check` | Route→handler→consumer map; response keys vs consumer access (framework routers). |
-| `tool_map` | MCP/RPC tool definitions. |
-| `list_repos` | Registry + staleness + embedding counts. |
-| `group_list` / `group_sync` | Cross-repo groups: `repo: "@<groupName>"`. |
+| `tool_map` | MCP/RPC tool definitions → handler files + descriptions. Tool-API work / impact of a tool-contract change. |
+| `check` | Read-only structural integrity — detects circular File `IMPORTS` cycles (health / CI gate). |
+| `list_repos` | Registry + staleness + embedding counts. Disambiguate before `repo:` when multiple repos indexed. |
+| `group_list` / `group_sync` | Cross-repo groups — **out of scope for this single-repo kit; skip.** |
 
 ## Resources (lightweight — read before heavy tools)
 
@@ -117,7 +121,7 @@ Read `.cursor/skills/gitnexus-scenarios/SKILL.md` for full checklists. Quick map
 ## Index freshness (graph + embeddings)
 
 - After meaningful code changes: `npm run gitnexus:refresh` (includes `--embeddings`)
-- Pre-commit hook runs PDG refresh when hooks installed (`npm run hooks:install`)
+- Pre-commit hook runs a full PDG re-index when hooks installed (`npm run hooks:install`)
 - **Missing embeddings** (`stats.embeddings === 0` with symbols indexed) = stale — `agent-refresh` rebuilds vectors
 - Embeddings preserved on incremental refresh; `--drop-embeddings` only when rebuilding vectors intentionally
 - If MCP says stale after refresh, restart Cursor to reload the MCP server
@@ -137,6 +141,7 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | `npm run gitnexus:map` | Regenerate `docs/ARCHITECTURE.gitnexus.md` from the graph (offline, no API key) |
 | `npm run gitnexus:ci` | Merge-time impact gate (blocks high-blast-radius changes with no tests) — see `.github/workflows/gitnexus-ci.yml` |
 | `npm run gitnexus:scorecard` | Session enforcement tally (grep→graph, impact/commit gates) |
+| `npm run gitnexus:stats` | Persistent telemetry across ALL sessions — totals, per-session averages, trend |
 | `npm run gitnexus:verify` | Full install verification before demoing |
 
 ## Workspace contract (non-negotiable)
@@ -155,6 +160,12 @@ If GitNexus MCP fails, tell the user: _"GitNexus MCP is unreachable — impact/d
 | Blast radius | `.cursor/skills/gitnexus-impact-analysis/SKILL.md` |
 | Debugging | `.cursor/skills/gitnexus-debugging/SKILL.md` |
 | Refactoring | `.cursor/skills/gitnexus-refactoring/SKILL.md` |
+| Add a feature / new code | `.cursor/skills/gitnexus-feature-dev/SKILL.md` |
+| What to test / coverage | `.cursor/skills/gitnexus-testing/SKILL.md` |
+| Slow / hot path | `.cursor/skills/gitnexus-performance/SKILL.md` |
+| Judge structure (coupling/cycles) | `.cursor/skills/gitnexus-architecture-review/SKILL.md` |
+| Work across layers | `.cursor/skills/gitnexus-layered-systems/SKILL.md` |
+| Milestone deep audit (microscope waves) | `.cursor/skills/gitnexus-microscope/SKILL.md` |
 | Scenario playbooks | `.cursor/skills/gitnexus-scenarios/SKILL.md` |
 | PR review | `.cursor/skills/gitnexus-pr-review/SKILL.md` |
 | Custom HTTP routes (this repo) | `.cursor/skills/gitnexus-api-routes/SKILL.md` |

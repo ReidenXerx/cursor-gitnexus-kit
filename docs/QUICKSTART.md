@@ -63,7 +63,7 @@ bin/install.sh
   → stepped banner UI (validate → migrate legacy → copy → merge → manifest → setup)
   → migrate legacy cursor-gitnexus-kit layout (rsync skills, old manifest, zed profile)
   → copy bundle (rules, hooks, skills store, scripts, team guide)
-  → materialize .gitnexus/agent-kit/skills/ + symlink into .cursor/ and/or .agents/
+  → materialize .gnkit/skills/ + symlink into .cursor/ and/or .agents/
   → merge gated package.json gitnexus:* scripts + .cursor/mcp.json (Cursor)
   → merge .zed/settings.json + AGENTS.md (Zed)
   → gitnexus-setup.sh (--skip-global-mcp)
@@ -71,7 +71,7 @@ bin/install.sh
   → npm run gitnexus:verify
 ```
 
-Skills live once in `.gitnexus/agent-kit/skills/` and are **symlinked** — not copied — into IDE skill paths. Updates replace the store and refresh symlinks.
+Skills live once in `.gnkit/skills/` and are **symlinked** — not copied — into IDE skill paths. Updates replace the store and refresh symlinks.
 
 ## Update
 
@@ -107,7 +107,8 @@ npm run gitnexus:agent-status    # staleness (agents)
 npm run gitnexus:agent-refresh   # re-index when stale
 npm run gitnexus:branch-status   # branch/base summary + branch-aware MCP calls
 npm run gitnexus:pr-impact       # branch-aware PR review playbook
-npm run gitnexus:pdg             # embeddings + skills + PDG (pre-commit uses this)
+npm run gitnexus:pdg             # incremental embeddings + skills + PDG (mid-session)
+npm run gitnexus:full-pdg        # full --force rebuild + PDG (pre-commit hook uses this)
 npm run gitnexus:graph-smoke     # Cypher / ACCESSES sanity (CI)
 npm run gitnexus:detect-api      # HTTP router profile
 npm run gitnexus:sync-teaching   # after pulling kit updates
@@ -133,7 +134,7 @@ Source: `scripts/gitnexus-teaching/script-gates.mjs`
 | **`rename` MCP** | Graph-coordinated rename — `edit-guard`, prompt-router |
 | **API router profile** | `npm run gitnexus:detect-api` → `.cursor/gitnexus-api-profile.json` |
 | **Branch-aware PR review** | `npm run gitnexus:branch-status -- main`; `npm run gitnexus:pr-impact -- main` |
-| **PDG pre-commit refresh** | `.githooks/pre-commit` runs `npm run gitnexus:pdg` before `gitnexus:graph-smoke` |
+| **PDG pre-commit refresh** | `.githooks/pre-commit` runs `npm run gitnexus:full-pdg` before `gitnexus:graph-smoke` |
 | **Graph smoke test** | `npm run gitnexus:graph-smoke`; pre-commit after PDG refresh |
 | **Zed + Ollama** | See [ZED.md](./ZED.md) — **Zed + GitNexus** profile, local model hints |
 

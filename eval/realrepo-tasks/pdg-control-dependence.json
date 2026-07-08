@@ -1,0 +1,19 @@
+{
+  "id": "pdg-control-dependence",
+  "title": "Find all code paths guarded by the exposure limit conditions in the risk engine (PDG-powered)",
+  "repo": "/home/duduphudu/Projects/crypto-trading-bot",
+  "_repoNote": "EXAMPLE/DEFAULT ONLY — override at runtime with --repo <path> or GITNEXUS_BENCH_REPO. The suite does not require this exact path.",
+  "answerFile": "control-dependence.txt",
+  "scoreBy": "path",
+  "prompt": "Find every function that is control-dependent on the condition checks in `src/future/core/risk/exposureLimits.js`. The file has three guard functions: `exceedsSymbolExposure`, `exceedsTotalExposure`, and `exceedsMaxOpenPositions` — each returns false (guard) or true. Use `gitnexus_pdg_query(mode='controls')` to find what statements these conditions gate. Write one repo-relative path per line to `control-dependence.txt` in the repo root.",
+  "threshold": 0.85,
+  "scoreMetric": "f1",
+  "groundTruth": [
+    "src/future/core/risk/exposureLimits.js",
+    "src/future/core/risk/riskEngine.js",
+    "src/future/core/backtest/replayEngine.js",
+    "src/future/core/backtest/backtestRunner.js"
+  ],
+  "grepInvisible": ["src/future/core/backtest/backtestRunner.js"],
+  "hypothesis": "Control dependence is invisible to grep — you can't tell which if-branch a function call sits under without understanding the program's control flow. `gitnexus_pdg_query(mode='controls')` on exposureLimits.js shows that exceedsSymbolExposure/exceedsTotalExposure/exceedsMaxOpenPositions guard code in riskEngine.js, and their callers in replayEngine.js and backtestRunner.js are transitively affected. Grep finds the function names but cannot determine what they control. The transitive caller backtestRunner.js (depth 3) is invisible to grep."
+}

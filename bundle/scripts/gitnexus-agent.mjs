@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|graph-smoke|detect-api
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api|fallback "<why>"|fallback:off
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -15,14 +15,22 @@ const { withProjectTmpEnv, tmpSpaceReport, enospcHelp } = await import(
   pathToFileURL(path.join(ROOT, "scripts/lib/project-tmp.mjs")).href
 );
 const { inspectPersistence, classifyPersistenceOutput } = await import(
-  pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/persistence-health.mjs"))
+  pathToFileURL(path.join(ROOT, ".gnkit/lib/persistence-health.mjs"))
     .href
+);
+const {
+  grantClassicalFallback,
+  revokeClassicalFallback,
+  fallbackGrant,
+  bumpScore,
+} = await import(
+  pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
 );
 
 function loadStaleness() {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/check-staleness.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/check-staleness.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -51,7 +59,42 @@ function run(cmd, args, opts = {}) {
 
 const cmd = process.argv[2] ?? "status";
 
+if (cmd === "fallback") {
+  const reason = process.argv.slice(3).join(" ").trim();
+  if (!reason) {
+    console.error(
+      'Usage: npm run gitnexus:fallback -- "<why GitNexus can\'t be trusted here>"\n' +
+        '   or: node scripts/gitnexus-agent.mjs fallback "<why>"',
+    );
+    process.exit(2);
+  }
+  grantClassicalFallback(ROOT, reason);
+  bumpScore(ROOT, "classicalFallbackGranted");
+  const g = fallbackGrant(ROOT);
+  const mins = g ? Math.max(1, Math.round(g.remainingMs / 60000)) : 15;
+  console.log(`⚠ Classical fallback GRANTED for ~${mins} min — reason: ${reason}`);
+  console.log(
+    "  Classical Grep/Read/shell are now allowed. Re-confirm findings with the graph once GitNexus is reliable.",
+  );
+  console.log("  End early: npm run gitnexus:fallback:off");
+  process.exit(0);
+}
+
+if (cmd === "fallback:off" || cmd === "unfallback") {
+  revokeClassicalFallback(ROOT);
+  console.log("Classical fallback ended — graph-first enforcement re-armed.");
+  process.exit(0);
+}
+
 if (cmd === "status") {
+  const grant = fallbackGrant(ROOT);
+  if (grant) {
+    const mins = Math.max(1, Math.round(grant.remainingMs / 60000));
+    console.log(
+      `⚠ CLASSICAL FALLBACK active (${grant.reason || "GitNexus distrusted"}) — classical tools allowed for ~${mins} min more.`,
+    );
+    console.log("  End early: npm run gitnexus:fallback:off\n");
+  }
   const stale = loadStaleness();
   const systemTmp = tmpSpaceReport(ROOT);
   if (stale.fresh) {
@@ -80,7 +123,7 @@ if (cmd === "status") {
 function markRefreshOutcome(success, detail = "") {
   const setPending = path.join(
     ROOT,
-    ".cursor/hooks/lib/set-refresh-pending.mjs",
+    ".gnkit/lib/set-refresh-pending.mjs",
   );
   spawnSync(
     process.execPath,
@@ -93,17 +136,22 @@ function markRefreshOutcome(success, detail = "") {
   );
   // Invalidate the short-TTL staleness cache so the next tool call sees fresh state.
   try {
-    fs.unlinkSync(path.join(ROOT, ".cursor/.gitnexus-staleness-cache.json"));
+    fs.unlinkSync(path.join(ROOT, ".gnkit/.gitnexus-staleness-cache.json"));
   } catch {
     /* ignore */
   }
 }
 
 if (cmd === "refresh") {
-  console.log("==> GitNexus agent refresh (analyze + sync teaching bundle)");
+  console.log(
+    "==> GitNexus agent refresh (full analyze --force + embeddings + PDG + sync teaching bundle)",
+  );
   console.log(tmpSpaceReport(ROOT));
   try {
-    run("npm", ["run", "gitnexus:refresh"], { stdio: "inherit" });
+    // Full --force + PDG: guarantees a complete control/data-dependence + taint
+    // layer (pdg_query/explain/impact(mode:pdg)) on every autonomous refresh, same
+    // as the pre-commit hook — no partial-incremental PDG risk.
+    run("npm", ["run", "gitnexus:full-pdg"], { stdio: "inherit" });
     if (
       fs.existsSync(path.join(ROOT, "scripts/sync-cursor-gitnexus-teaching.sh"))
     ) {
@@ -123,7 +171,7 @@ if (cmd === "refresh") {
     try {
       const { generateArchDoc } = await import(
         pathToFileURL(
-          path.join(ROOT, ".cursor/hooks/lib/generate-arch-doc.mjs"),
+          path.join(ROOT, ".gnkit/lib/generate-arch-doc.mjs"),
         ).href
       );
       const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
@@ -144,7 +192,7 @@ if (cmd === "refresh") {
 if (cmd === "brief") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/agent-brief.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/agent-brief.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -158,7 +206,7 @@ if (cmd === "brief") {
 if (cmd === "health") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/agent-health.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/agent-health.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -172,7 +220,7 @@ if (cmd === "health") {
 if (cmd === "graph-smoke") {
   const r = spawnSync(
     process.execPath,
-    [path.join(ROOT, ".cursor/hooks/lib/graph-smoke.mjs"), ROOT],
+    [path.join(ROOT, ".gnkit/lib/graph-smoke.mjs"), ROOT],
     {
       encoding: "utf8",
       env: withProjectTmpEnv(ROOT),
@@ -185,7 +233,7 @@ if (cmd === "graph-smoke") {
 
 if (cmd === "detect-api") {
   const { writeApiRouterProfile } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/detect-api-router.mjs"))
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/detect-api-router.mjs"))
       .href
   );
   const profile = writeApiRouterProfile(ROOT);
@@ -203,7 +251,7 @@ if (cmd === "detect-api") {
 
 if (cmd === "verify") {
   const verifyPath = path.join(ROOT, "scripts/gitnexus-verify.mjs");
-  const fallback = path.join(ROOT, ".cursor/hooks/lib/verify-kit.mjs");
+  const fallback = path.join(ROOT, ".gnkit/lib/verify-kit.mjs");
   const script = fs.existsSync(verifyPath) ? verifyPath : fallback;
   const r = spawnSync(
     process.execPath,
@@ -432,7 +480,7 @@ if (cmd === "doctor") {
 
 if (cmd === "map") {
   const { generateArchDoc } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/generate-arch-doc.mjs"))
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/generate-arch-doc.mjs"))
       .href
   );
   const res = generateArchDoc(ROOT, undefined, withProjectTmpEnv(ROOT));
@@ -446,7 +494,7 @@ if (cmd === "map") {
 
 if (cmd === "commit-msg") {
   const { draftCommitMessage } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/commit-message.mjs")).href
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/commit-message.mjs")).href
   );
   const { message } = draftCommitMessage(
     ROOT,
@@ -459,7 +507,7 @@ if (cmd === "commit-msg") {
 
 if (cmd === "scorecard") {
   const { readScorecard } = await import(
-    pathToFileURL(path.join(ROOT, ".cursor/hooks/lib/session-primer.mjs")).href
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
   );
   const card = readScorecard(ROOT);
   const counts = card.counts ?? {};
@@ -470,6 +518,8 @@ if (cmd === "scorecard") {
     impactGate: "Impact-before-edit gates",
     commitGate: "detect_changes-before-commit gates",
     editStaleBlocks: "Stale-edit blocks",
+    compactions: "Context compactions",
+    classicalFallbackGranted: "Classical-fallback grants (GN distrusted)",
   };
   console.log("GitNexus enforcement scorecard (this session)");
   console.log(
@@ -486,7 +536,67 @@ if (cmd === "scorecard") {
   process.exit(0);
 }
 
+if (cmd === "stats") {
+  const { readTelemetry, summarizeTelemetry, readScorecard } = await import(
+    pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
+  );
+  const records = readTelemetry(ROOT);
+  // Fold in the current (not-yet-archived) session so nothing is missing.
+  const live = readScorecard(ROOT);
+  if (live?.counts && Object.keys(live.counts).length) {
+    records.push({
+      startedAt: live.startedAt ?? null,
+      endedAt: live.updatedAt ?? null,
+      counts: live.counts,
+      live: true,
+    });
+  }
+  const labels = {
+    graphCalls: "GitNexus MCP calls",
+    grepRedirects: "Grep → graph redirects",
+    readRedirects: "Large Read → graph redirects",
+    impactGate: "Impact-before-edit gates",
+    commitGate: "detect_changes-before-commit gates",
+    editStaleBlocks: "Stale-edit blocks",
+    compactions: "Context compactions",
+  };
+  const s = summarizeTelemetry(records);
+  if (process.argv.includes("--json")) {
+    const latestIndex = [...records].reverse().find((r) => r.index)?.index ?? null;
+    process.stdout.write(JSON.stringify({ ...s, latestIndex }, null, 2) + "\n");
+    process.exit(0);
+  }
+  console.log("GitNexus telemetry — all sessions");
+  if (!s.sessions) {
+    console.log("  No sessions recorded yet. A session is archived on the NEXT");
+    console.log("  session start; run some tools + start a new chat to accrue data.");
+    process.exit(0);
+  }
+  console.log(`  sessions: ${s.sessions}  |  ${s.firstAt ?? "?"} → ${s.lastAt ?? "?"}`);
+  if (s.avgDurationMs != null) {
+    console.log(`  avg session length: ${Math.round(s.avgDurationMs / 1000)}s`);
+  }
+  console.log("  metric".padEnd(38) + "total   avg/session");
+  const keys = Object.keys(labels).filter((k) => s.totals[k]);
+  if (!keys.length) {
+    console.log("  (no enforcement events across recorded sessions)");
+  } else {
+    for (const k of keys) {
+      console.log(
+        `  ${labels[k].padEnd(36)}${String(s.totals[k]).padEnd(8)}${s.avgPerSession[k]}`,
+      );
+    }
+  }
+  const gate = (s.totals.impactGate ?? 0) + (s.totals.commitGate ?? 0);
+  const redir = (s.totals.grepRedirects ?? 0) + (s.totals.readRedirects ?? 0);
+  console.log(
+    `\n  Value: ${redir} lazy-search redirect(s) to the graph, ${gate} pre-edit/commit gate(s) fired.`,
+  );
+  console.log(`  Log: ${path.join(".gnkit", ".gitnexus-telemetry.jsonl")}`);
+  process.exit(0);
+}
+
 console.error(
-  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | graph-smoke | detect-api`,
+  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | stats | graph-smoke | detect-api`,
 );
 process.exit(2);

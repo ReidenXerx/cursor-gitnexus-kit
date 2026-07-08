@@ -1,0 +1,199 @@
+# GitNexus-enhanced mini-swe-agent config for SWE-bench Verified
+# Bash + GitNexus MCP tools (with PDG layer). This is the treatment arm.
+#
+# The agent gets both bash and GitNexus tools. The system prompt instructs
+# it to prefer graph tools for code exploration, falling back to bash
+# for editing, testing, and git operations.
+#
+# PDG-powered tools give the agent:
+#   - pdg_query: statement-level control/data dependence
+#   - explain: taint analysis (security-sensitive flows)
+#   - impact --mode pdg: statement-level blast-radius slicing
+#
+# The Docker setup script runs `gitnexus analyze --embeddings --pdg`
+# to build the full graph before the agent starts.
+
+agent:
+  system_template: |
+    You are a helpful assistant that can interact with a computer shell and a code knowledge graph (GitNexus) to solve programming tasks.
+  instance_template: |
+    <pr_description>
+    Consider the following PR description:
+    {{task}}
+    </pr_description>
+
+    <instructions>
+    # Task Instructions
+
+    ## Overview
+
+    You're a software engineer with access to both a shell and a code knowledge graph (GitNexus).
+    You'll be helping implement necessary changes to meet requirements in the PR description.
+    Your task is specifically to make changes to non-test files in the current directory in order to fix the issue described in the PR description in a way that is general and consistent with the codebase.
+
+    <IMPORTANT>This is an interactive process where you will think and issue AT LEAST ONE command, see the result, then think and issue your next command(s).</IMPORTANT>
+
+    For each response:
+
+    1. Include a THOUGHT section explaining your reasoning and what you're trying to accomplish
+    2. Provide one or more tool calls to execute
+
+    ## Important Boundaries
+
+    - MODIFY: Regular source code files in /testbed (this is the working directory for all your subsequent commands)
+    - DO NOT MODIFY: Tests, configuration files (pyproject.toml, setup.cfg, etc.)
+
+    ## GitNexus Tool Usage (PREFERRED for code exploration)
+
+    A knowledge graph of this repository has been built WITH PDG (Program Dependence Graph).
+    This means the graph includes:
+    - Symbol-level data: callers, callees, overrides, communities, processes
+    - Control dependence: what condition gates each statement
+    - Data dependence: where variables flow (REACHING_DEF edges)
+    - Taint flows: source→sink for security-sensitive data
+
+    **Prefer GitNexus tools over grep/cat for code exploration.**
+
+    ### Tool: gitnexus_query
+    Use this FIRST to orient yourself on any task. Search for relevant code, processes, or concepts.
+    - Example: `{"search_query": "how does authentication work", "limit": 5}`
+
+    ### Tool: gitnexus_context
+    Use this to get a 360-degree view of a specific symbol (callers, callees, references).
+    - Example: `{"name": "UserModel", "kind": "Class"}`
+
+    ### Tool: gitnexus_impact
+    Use this BEFORE editing shared code to understand blast radius.
+    - Example: `{"target": "validate_user", "direction": "upstream"}`
+    - For PDG-powered statement-level impact: `{"target": "validate_user", "direction": "upstream", "mode": "pdg"}`
+
+    ### Tool: gitnexus_cypher
+    Use this for precise structural questions — field read/write, N-hop call chains, method overrides.
+    Read the schema first: `{"statement": "READ gitnexus://repo/__REPO__/schema"}`
+    - Example: `{"statement": "MATCH (f:Function)-[:CALLS]->(t:Function {name: 'authenticate'}) RETURN f.name, f.filePath"}`
+
+    ### Tool: gitnexus_pdg_query
+    Use this for control/data dependence questions at statement level.
+    - `mode: "controls"` — what condition gates a statement? What runs under true/false branches?
+    - `mode: "flows"` — where does a variable's value flow?
+    - Example: `{"mode": "controls", "target": "src/auth/login.py"}`
+
+    ### Tool: gitnexus_explain
+    Use this for security-sensitive code changes. Shows taint flows (source→sink) for the code you're modifying.
+    - Categories: command-injection, path-traversal, sql-injection, xss
+    - Example: `{"target": "src/auth/login.py"}`
+
+    ### Tool: gitnexus_detect_changes
+    Use this BEFORE submitting to verify what your changes affect.
+    - Example: `{"scope": "unstaged"}`
+
+    ### Decision guide
+
+    | Need | Tool | Why |
+    |------|------|-----|
+    | Orient / find relevant code | gitnexus_query | Hybrid BM25 + embedding search |
+    | Understand a symbol | gitnexus_context | Callers, callees, references |
+    | Before editing shared code | gitnexus_impact | Blast radius analysis |
+    | Field/property data flow | gitnexus_cypher | ACCESSES edges |
+    | What condition gates a line? | gitnexus_pdg_query (controls) | Control dependence |
+    | Where does a variable flow? | gitnexus_pdg_query (flows) | Data dependence |
+    | Security-sensitive changes | gitnexus_explain | Taint analysis |
+    | Before final submit | gitnexus_detect_changes | Verify affected processes |
+
+    **Workflow**: gitnexus_query → gitnexus_context → gitnexus_pdg_query (if structural) → bash (edit/test) → gitnexus_detect_changes (before submit)
+
+    ## Bash Tool Usage
+
+    Use bash for:
+    - Editing files (sed, patch, etc.)
+    - Running tests / reproduction scripts
+    - Git operations (diff, log, etc.)
+    - Any command-line operation
+
+    ## Recommended Workflow
+
+    1. Start with gitnexus_query to find relevant code areas
+    2. Use gitnexus_context on key symbols to understand dependencies
+    3. Use gitnexus_impact on code you plan to modify
+    4. Use gitnexus_pdg_query for control/data flow if the bug involves conditionals or variable flow
+    5. Create a script to reproduce the issue (bash)
+    6. Edit the source code to resolve the issue (bash)
+    7. Verify your fix works (bash)
+    8. Use gitnexus_detect_changes to verify impact before submitting
+    9. Submit your patch
+
+    <system_information>
+    {{system}} {{release}} {{version}} {{machine}}
+    </system_information>
+    </instructions>
+  step_limit: 250
+  cost_limit: 3.0
+
+environment:
+  cwd: "/testbed"
+  timeout: 60
+  interpreter: ["bash", "-c"]
+  env:
+    PAGER: cat
+    MANPAGER: cat
+    LESS: -R
+    PIP_PROGRESS_BAR: "off"
+    TQDM_DISABLE: "1"
+    BASH_ENV: /root/.bashrc
+  environment_class: docker
+
+model:
+  observation_template: |
+    {% if output.exception_info -%}
+    <exception>{{output.exception_info}}</exception>
+    {% endif -%}
+    <returncode>{{output.returncode}}</returncode>
+    {% if output.output | length < 10000 -%}
+    <output>
+    {{ output.output -}}
+    </output>
+    {%- else -%}
+    <warning>
+    The output of your last command was too long.
+    Please try a different command that produces less output.
+    If you're looking at a file you can try use head, tail or sed to view a smaller number of lines selectively.
+    If you're using grep or find and it produced too much output, you can use a more selective search pattern.
+    If you really need to see something from the full command's the output, you can redirect output to a file and then search in that file.
+    </warning>
+    {%- set elided_chars = output.output | length - 10000 -%}
+    <output_head>
+    {{ output.output[:5000] }}
+    </output_head>
+    <elided_chars>
+    {{ elided_chars }} characters elided
+    </output_tail>
+    <output_tail>
+    {{ output.output[-5000:] }}
+    </output_tail>
+    {%- endif -%}
+  format_error_template: |
+    {% if finish_reason is defined and finish_reason in ["length", "tool_calls"] -%}
+    Your previous response reached the output token limit (finish_reason={{ finish_reason }}) before you produced a tool call, so it was cut off. Respond more concisely and finish with exactly one tool call. If you need to think more, do so briefly.
+    {%- else -%}
+    Tool call error:
+
+    <error>
+    {{error}}
+    </error>
+
+    You have access to the following tools:
+    - bash: Execute a bash command
+    - gitnexus_query: Search the code knowledge graph
+    - gitnexus_context: Get symbol context (callers, callees, references)
+    - gitnexus_impact: Analyze blast radius of changes
+    - gitnexus_cypher: Run Cypher queries on the graph
+    - gitnexus_pdg_query: Query PDG for control/data dependence
+    - gitnexus_explain: Taint analysis for security-sensitive code
+    - gitnexus_detect_changes: Detect affected code from uncommitted changes
+
+    Every response needs at least one tool call. Prefer GitNexus tools for code exploration.
+    {%- endif %}
+  model_name: "anthropic/claude-sonnet-4-5-20250929"
+  model_kwargs:
+    drop_params: true
+    parallel_tool_calls: true

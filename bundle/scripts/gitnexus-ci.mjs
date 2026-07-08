@@ -44,7 +44,7 @@ function fail(msg) {
 
 async function main() {
   const { runCypher, parseCount } = await import(
-    pathToFileURL(path.join(ROOT, '.cursor/hooks/lib/cypher-cli.mjs')).href
+    pathToFileURL(path.join(ROOT, '.gnkit/lib/cypher-cli.mjs')).href
   );
   const repo = repoName();
 

@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 export GITNEXUS_HOOK_INPUT="$(cat)"
 export GITNEXUS_ROOT="$ROOT"
-export GITNEXUS_STALENESS="$(node "$ROOT/.cursor/hooks/lib/load-staleness.mjs" "$ROOT" 2>/dev/null || echo '{"fresh":false,"reason":"check_failed"}')"
+export GITNEXUS_STALENESS="$(node "$ROOT/.gnkit/lib/load-staleness.mjs" "$ROOT" 2>/dev/null || echo '{"fresh":false,"reason":"check_failed"}')"
 
 node <<'NODE'
 import fs from 'node:fs';
@@ -19,21 +19,23 @@ const tool = input.tool_name ?? '';
 const url = input.url ?? '';
 const cmd = input.command ?? '';
 
-const helpers = await import(pathToFileURL(path.join(root, '.cursor/hooks/lib/hook-helpers.mjs')).href);
+const helpers = await import(pathToFileURL(path.join(root, '.gnkit/lib/hook-helpers.mjs')).href);
 const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
-  pathToFileURL(path.join(root, '.cursor/hooks/lib/stale-policy.mjs')).href
+  pathToFileURL(path.join(root, '.gnkit/lib/stale-policy.mjs')).href
 );
 const { setMcpToolUsed, bumpScore } = await import(
-  pathToFileURL(path.join(root, '.cursor/hooks/lib/session-primer.mjs')).href
+  pathToFileURL(path.join(root, '.gnkit/lib/session-primer.mjs')).href
 );
 
+const config = helpers.loadHookConfig(root);
 const isGitnexus =
   /gitnexus/i.test(tool) ||
   /gitnexus/i.test(url) ||
   /gitnexus/i.test(cmd);
 
 function out(obj) {
-  process.stdout.write(JSON.stringify(obj));
+  // Route through guide mode so `mode: "guide"` nudges instead of hard-blocking.
+  process.stdout.write(JSON.stringify(helpers.applyHookMode(obj, config.mode)));
 }
 
 if (!isGitnexus) {
