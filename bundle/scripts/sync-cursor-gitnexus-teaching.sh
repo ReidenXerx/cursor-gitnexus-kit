@@ -43,6 +43,7 @@ HOOK_LIBS=(
   ".gnkit/lib/stale-policy.mjs"
   ".gnkit/lib/cypher-cli.mjs"
   ".gnkit/lib/generate-arch-doc.mjs"
+  ".gnkit/lib/stabilize-agent-docs.mjs"
   ".gnkit/lib/commit-message.mjs"
   ".gnkit/lib/detect-api-router.mjs"
   ".gnkit/lib/graph-smoke.mjs"
@@ -243,6 +244,12 @@ case "$RUNTIME" in *claude*|*all*)        link_skills ".claude/skills" "Claude s
 
 info "  [4/5] Teaching bundle manifest"
 write_manifest
+
+# Drop the volatile GitNexus stats block from AGENTS.md/CLAUDE.md so committed
+# agent docs stay stable across machines (the `analyze` tool re-adds it each refresh).
+if [[ -f ".gnkit/lib/stabilize-agent-docs.mjs" ]]; then
+  node .gnkit/lib/stabilize-agent-docs.mjs . || true
+fi
 
 info "  [5/5] Quick hook smoke test"
 if printf '%s' '{"tool_name":"SemanticSearch","tool_input":{"query":"test"}}' \

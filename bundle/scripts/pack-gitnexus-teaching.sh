@@ -72,6 +72,7 @@ BUNDLE_PATHS=(
   .gnkit/lib/stale-policy.mjs
   .gnkit/lib/cypher-cli.mjs
   .gnkit/lib/generate-arch-doc.mjs
+  .gnkit/lib/stabilize-agent-docs.mjs
   .gnkit/lib/commit-message.mjs
   .gnkit/lib/detect-api-router.mjs
   .gnkit/lib/graph-smoke.mjs
