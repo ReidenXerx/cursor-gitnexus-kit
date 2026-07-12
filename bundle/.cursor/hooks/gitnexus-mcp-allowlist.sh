@@ -26,6 +26,9 @@ const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
 const { setMcpToolUsed, bumpScore } = await import(
   pathToFileURL(path.join(root, '.gnkit/lib/session-primer.mjs')).href
 );
+const { classifyMcpDrift } = await import(
+  pathToFileURL(path.join(root, '.gnkit/lib/classify.mjs')).href
+);
 
 const config = helpers.loadHookConfig(root);
 const isGitnexus =
@@ -50,6 +53,18 @@ if (policy.phase === 'must_refresh') {
     permission: 'deny',
     agent_message: staleRefreshAgentMessage(stale, policy),
     user_message: helpers.userMessage('stale.must_refresh'),
+  });
+  process.exit(0);
+}
+
+// Commit-fresh but working tree drifted? A graph QUERY tool would ignore the agent's
+// uncommitted edits → require a fast incremental refresh (must_refresh handled above).
+const drift = classifyMcpDrift(tool, stale, config);
+if (drift.decision === 'deny') {
+  out({
+    permission: 'deny',
+    agent_message: drift.agentMessage,
+    user_message: helpers.userMessage('drift.refresh'),
   });
   process.exit(0);
 }

@@ -89,6 +89,9 @@ export function loadHookConfig(root) {
     broadGlobRes: DEFAULT_BROAD_GLOB_RES,
     sourceExtRe: DEFAULT_SOURCE_EXT_RE,
     stalenessCacheTtlMs: 2500,
+    // Working-tree drift: after this many uncommitted source edits since the index,
+    // graph query tools require a fast incremental refresh. 0 disables the drift gate.
+    driftRefreshThreshold: 3,
   };
 
   const cfgPath = path.join(root, CONFIG_FILE);
@@ -101,6 +104,8 @@ export function loadHookConfig(root) {
       cfg.readLineThreshold = file.readLineThreshold;
     if (typeof file.stalenessCacheTtlMs === "number")
       cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
+    if (typeof file.driftRefreshThreshold === "number")
+      cfg.driftRefreshThreshold = file.driftRefreshThreshold;
     if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
       cfg.sourcePathRes = file.sourceGlobs.map((g) => globToRegExp(g));
     }
@@ -366,6 +371,8 @@ export function userMessage(key, vars = {}) {
       "GitNexus index is behind — the agent must refresh the graph first (not grep/read). Hooks enforce refresh-then-graph, not skip-to-classical.",
     "stale.classical":
       "GitNexus refresh failed — the agent may use classic search now and must say why the graph could not be updated.",
+    "drift.refresh":
+      "The agent edited code since the last index, so graph queries would be stale — it will run a fast incremental refresh before continuing.",
   };
   return (
     templates[key] ??

@@ -13,6 +13,47 @@ function git(cmd) {
   return execSync(cmd, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
+const SOURCE_RE =
+  /\.(m?[jt]sx?|cjs|py|go|rs|java|rb|php|c|h|cc|cpp|hpp|cs|kt|kts|swift|scala|dart|vue|svelte)$/i;
+
+/**
+ * Count git-dirty SOURCE files modified since the index was built (mtime > indexedAt).
+ * Commit-equality can't see UNCOMMITTED edits (HEAD unchanged → "fresh" forever), so this
+ * is the working-tree drift that lets guards require a fast incremental resync. Only stats
+ * the handful of dirty files (fast), and RESETS on refresh because indexedAt advances.
+ * @param {string|null} at meta.indexedAt (ISO)
+ */
+function countDrift(at) {
+  const atMs = at ? Date.parse(at) : NaN;
+  if (!Number.isFinite(atMs)) return 0;
+  let porcelain = '';
+  try {
+    // NOTE: no .trim() — porcelain status is 2 chars + a space, so a leading-space
+    // status (" M path") must keep its column alignment for slice(3) to be correct.
+    porcelain = execSync('git status --porcelain', {
+      cwd: root,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+  } catch {
+    return 0;
+  }
+  let n = 0;
+  for (const line of porcelain.split('\n')) {
+    if (line.length < 4) continue; // "XY path" is ≥4 chars
+    let f = line.slice(3).trim();
+    if (f.startsWith('"') && f.endsWith('"')) f = f.slice(1, -1);
+    if (f.includes(' -> ')) f = f.split(' -> ').pop().trim(); // rename → new path
+    if (!SOURCE_RE.test(f)) continue;
+    try {
+      if (fs.statSync(path.join(root, f)).mtimeMs > atMs) n++;
+    } catch {
+      /* deleted/renamed source — skip */
+    }
+  }
+  return n;
+}
+
 const staleHookNote =
   'Hooks block Grep/Read/MCP/shell until refresh succeeds or fails.';
 const agentFix =
@@ -28,6 +69,7 @@ const out = {
   nodeCount: 0,
   embeddingCount: 0,
   embeddingsReady: false,
+  driftingFiles: 0,
 };
 
 const metaPath = path.join(root, '.gitnexus/meta.json');
@@ -72,6 +114,9 @@ try {
   process.stdout.write(JSON.stringify(out));
   process.exit(0);
 }
+
+// Working-tree drift (uncommitted edits since the index) — orthogonal to commit-staleness.
+out.driftingFiles = countDrift(out.indexedAt);
 
 if (out.indexedCommit === out.headCommit) {
   if (out.nodeCount > 0 && !out.embeddingsReady) {

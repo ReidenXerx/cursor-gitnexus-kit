@@ -105,6 +105,12 @@ if (cmd === "status") {
     if ((stale.embeddingCount ?? 0) > 0) {
       console.log(`  embeddings: ${stale.embeddingCount} vectors`);
     }
+    if ((stale.driftingFiles ?? 0) > 0) {
+      console.log(
+        `  ⚠ working tree: ${stale.driftingFiles} source file(s) edited since index — graph queries may be stale.`,
+      );
+      console.log("    Resync: npm run gitnexus:refresh (fast, incremental)");
+    }
     console.log(systemTmp);
     process.exit(0);
   }
@@ -520,6 +526,7 @@ if (cmd === "scorecard") {
     editStaleBlocks: "Stale-edit blocks",
     compactions: "Context compactions",
     classicalFallbackGranted: "Classical-fallback grants (GN distrusted)",
+    driftRefreshBlocks: "Graph-drift refresh blocks (edited since index)",
   };
   console.log("GitNexus enforcement scorecard (this session)");
   console.log(
