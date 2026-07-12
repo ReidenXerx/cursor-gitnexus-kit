@@ -726,14 +726,18 @@ export function mcpToolSuffix(name) {
  * Drift gate for graph QUERY tools. When ≥threshold source files changed since the index
  * (stale.driftingFiles), those tools return results that ignore the edits → deny with a
  * nudge to a FAST incremental refresh. Allow for non-query tools, under threshold, or when
- * disabled (threshold ≤ 0). Called from the MCP guards AFTER the must_refresh check, so it
- * only applies when the index is otherwise commit-fresh.
+ * disabled (threshold ≤ 0), or when the phase isn't `fresh`.
  * @param {string} toolName
  * @param {{ driftingFiles?: number }} stale
  * @param {{ driftRefreshThreshold?: number }} config
+ * @param {string} [phase] staleness phase — drift only applies on `fresh`
  * @returns {Verdict}
  */
-export function classifyMcpDrift(toolName, stale, config) {
+export function classifyMcpDrift(toolName, stale, config, phase) {
+  // Drift applies ONLY on a commit-FRESH index. Never in classical_fallback (a failed refresh
+  // OR a user-granted fallback) — forcing a refresh there would loop or override the escape
+  // hatch — nor must_refresh (already handled). Undefined phase = caller pre-checked (allow through).
+  if (phase != null && phase !== "fresh") return { decision: "allow" };
   const threshold = Number(config?.driftRefreshThreshold);
   if (!Number.isFinite(threshold) || threshold <= 0) return { decision: "allow" };
   const count = Number(stale?.driftingFiles) || 0;
@@ -745,7 +749,7 @@ export function classifyMcpDrift(toolName, stale, config) {
     agentMessage:
       `Graph is ${count} uncommitted edit(s) behind your working tree — gitnexus_${suffix} would ` +
       "return STALE results that ignore your changes. Resync first: `npm run gitnexus:refresh` " +
-      "(fast — incremental, reindexes only changed files), then retry.",
+      "(incremental — reindexes only your changed files; usually quick), then retry.",
     userKey: "drift.refresh",
     scoreEvent: "driftRefreshBlocks",
   };

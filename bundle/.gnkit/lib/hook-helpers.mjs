@@ -336,7 +336,7 @@ export function midSessionGraphNudge(graphUsedThisSession, root = "") {
 
 /**
  * Human-facing hook messages — enforcement stays on; voice explains the benefit.
- * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.grep.field'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.must_refresh'|'stale.classical'} key
+ * @param {'block.glob'|'block.semantic'|'block.grep.noGraph'|'block.grep.symbol'|'block.grep.likely'|'block.grep.field'|'block.read.full'|'block.edit.stale'|'block.shell.stale'|'stale.must_refresh'|'stale.classical'|'drift.refresh'} key
  * @param {Record<string, string | number>} [vars]
  */
 export function userMessage(key, vars = {}) {

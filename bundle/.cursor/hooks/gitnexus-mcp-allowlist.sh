@@ -57,10 +57,12 @@ if (policy.phase === 'must_refresh') {
   process.exit(0);
 }
 
-// Commit-fresh but working tree drifted? A graph QUERY tool would ignore the agent's
-// uncommitted edits → require a fast incremental refresh (must_refresh handled above).
-const drift = classifyMcpDrift(tool, stale, config);
+// Drift gate (classifyMcpDrift enforces phase === 'fresh' itself, so never fires during
+// classical_fallback). A graph QUERY tool on a drifted-but-fresh index would ignore the
+// agent's uncommitted edits → require a fast incremental refresh.
+const drift = classifyMcpDrift(tool, stale, config, policy.phase);
 if (drift.decision === 'deny') {
+  bumpScore(root, 'driftRefreshBlocks');
   out({
     permission: 'deny',
     agent_message: drift.agentMessage,

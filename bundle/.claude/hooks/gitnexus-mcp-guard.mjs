@@ -32,9 +32,10 @@ if (ctx.phase === "must_refresh") {
     { root, mode: ctx.config.mode },
   );
 } else {
-  // Commit-fresh but working tree drifted? A graph QUERY tool would return stale
-  // results that ignore the agent's uncommitted edits → require a fast incremental refresh.
-  const drift = classifyMcpDrift(tool, ctx.stale, ctx.config);
+  // Drift gate (classifyMcpDrift enforces phase === "fresh" itself): on a commit-fresh index a
+  // graph QUERY tool would return stale results that ignore the agent's uncommitted edits →
+  // require a fast incremental refresh.
+  const drift = classifyMcpDrift(tool, ctx.stale, ctx.config, ctx.phase);
   if (drift.decision === "deny") {
     emitVerdict(drift, { root, mode: ctx.config.mode });
   } else {
