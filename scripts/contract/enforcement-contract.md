@@ -116,6 +116,8 @@ stale → agent-refresh (Shell, pre-approved)
 
 Session start runs auto-refresh when stale. Do **not** grep/read “while refreshing” — refresh is the next tool, not a background hint.
 
+**Mid-session drift (your own edits):** commit-equality can't see uncommitted edits, so after you change a few source files the graph silently falls behind your working tree. Don't wait for the block — once you've edited code and are about to `query`/`context`/`impact`/`cypher`/`pdg_query` again, run **`npm run gitnexus:refresh`** (**incremental** — reindexes only your changed files; quick for a few edits, longer on large batches / first run) so graph answers reflect your changes. Graph query tools hard-block past a small drift threshold until you do.
+
 ## Gates (do not skip — every task)
 
 ```

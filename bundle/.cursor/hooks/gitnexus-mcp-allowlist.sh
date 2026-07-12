@@ -26,6 +26,9 @@ const { evaluateStalePolicy, staleRefreshAgentMessage } = await import(
 const { setMcpToolUsed, bumpScore } = await import(
   pathToFileURL(path.join(root, '.gnkit/lib/session-primer.mjs')).href
 );
+const { classifyMcpDrift } = await import(
+  pathToFileURL(path.join(root, '.gnkit/lib/classify.mjs')).href
+);
 
 const config = helpers.loadHookConfig(root);
 const isGitnexus =
@@ -50,6 +53,20 @@ if (policy.phase === 'must_refresh') {
     permission: 'deny',
     agent_message: staleRefreshAgentMessage(stale, policy),
     user_message: helpers.userMessage('stale.must_refresh'),
+  });
+  process.exit(0);
+}
+
+// Drift gate (classifyMcpDrift enforces phase === 'fresh' itself, so never fires during
+// classical_fallback). A graph QUERY tool on a drifted-but-fresh index would ignore the
+// agent's uncommitted edits → require a fast incremental refresh.
+const drift = classifyMcpDrift(tool, stale, config, policy.phase);
+if (drift.decision === 'deny') {
+  bumpScore(root, 'driftRefreshBlocks');
+  out({
+    permission: 'deny',
+    agent_message: drift.agentMessage,
+    user_message: helpers.userMessage('drift.refresh'),
   });
   process.exit(0);
 }

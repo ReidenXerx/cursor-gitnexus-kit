@@ -48,10 +48,10 @@ export const GITNEXUS_SCRIPT_GATES = [
     description:
       "Humans/CI refresh the graph. Agents run gitnexus:agent-refresh autonomously when stale (hook pre-approved).",
     scripts: {
-      "gitnexus:refresh": `${WRAP} npx gitnexus@latest analyze --embeddings --skills`,
-      "gitnexus:full": `${WRAP} npx gitnexus@latest analyze --force --embeddings --skills`,
-      "gitnexus:pdg": `${WRAP} npx gitnexus@latest analyze --embeddings --skills --pdg`,
-      "gitnexus:full-pdg": `${WRAP} npx gitnexus@latest analyze --force --embeddings --skills --pdg`,
+      "gitnexus:refresh": `${WRAP} npx gitnexus@latest analyze --embeddings 0 --skills`,
+      "gitnexus:full": `${WRAP} npx gitnexus@latest analyze --force --embeddings 0 --skills`,
+      "gitnexus:pdg": `${WRAP} npx gitnexus@latest analyze --embeddings 0 --skills --pdg`,
+      "gitnexus:full-pdg": `${WRAP} npx gitnexus@latest analyze --force --embeddings 0 --skills --pdg`,
       "gitnexus:status": `${WRAP} npx gitnexus@latest status`,
       "gitnexus:agent-refresh": "node scripts/gitnexus-agent.mjs refresh",
       "gitnexus:agent-review": "node scripts/gitnexus-agent.mjs review",

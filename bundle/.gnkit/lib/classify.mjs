@@ -700,3 +700,57 @@ export function classifyShell(req, ctx) {
     userKey: "block.shell.stale",
   };
 }
+
+// ── Graph query tools gated by working-tree DRIFT ────────────────────────────
+// The grep/shell gates keep the agent ON the graph, but the graph goes stale vs the
+// agent's UNCOMMITTED edits — commit-based staleness can't see them (HEAD unchanged →
+// "fresh" forever). These tools READ graph structure, so after N source edits they
+// return answers that ignore the edits → require a FAST incremental refresh first.
+// Non-query tools (detect_changes, rename, check, tool_map…) always pass.
+const DRIFT_GATED_TOOLS = new Set([
+  "query", "context", "cypher", "impact", "pdg_query",
+  "trace", "explain", "api_impact", "route_map", "shape_check",
+]);
+
+/** Normalize a GitNexus MCP tool name to its bare suffix (query/context/pdg_query/…). */
+export function mcpToolSuffix(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/^mcp__gitnexus__/, "")
+    .replace(/^mcp_gitnexus_/, "")
+    .replace(/^gitnexus[_.]/, "")
+    .trim();
+}
+
+/**
+ * Drift gate for graph QUERY tools. When ≥threshold source files changed since the index
+ * (stale.driftingFiles), those tools return results that ignore the edits → deny with a
+ * nudge to a FAST incremental refresh. Allow for non-query tools, under threshold, or when
+ * disabled (threshold ≤ 0), or when the phase isn't `fresh`.
+ * @param {string} toolName
+ * @param {{ driftingFiles?: number }} stale
+ * @param {{ driftRefreshThreshold?: number }} config
+ * @param {string} [phase] staleness phase — drift only applies on `fresh`
+ * @returns {Verdict}
+ */
+export function classifyMcpDrift(toolName, stale, config, phase) {
+  // Drift applies ONLY on a commit-FRESH index. Never in classical_fallback (a failed refresh
+  // OR a user-granted fallback) — forcing a refresh there would loop or override the escape
+  // hatch — nor must_refresh (already handled). Undefined phase = caller pre-checked (allow through).
+  if (phase != null && phase !== "fresh") return { decision: "allow" };
+  const threshold = Number(config?.driftRefreshThreshold);
+  if (!Number.isFinite(threshold) || threshold <= 0) return { decision: "allow" };
+  const count = Number(stale?.driftingFiles) || 0;
+  if (count < threshold) return { decision: "allow" };
+  const suffix = mcpToolSuffix(toolName);
+  if (!DRIFT_GATED_TOOLS.has(suffix)) return { decision: "allow" };
+  return {
+    decision: "deny",
+    agentMessage:
+      `Graph is ${count} uncommitted edit(s) behind your working tree — gitnexus_${suffix} would ` +
+      "return STALE results that ignore your changes. Resync first: `npm run gitnexus:refresh` " +
+      "(incremental — reindexes only your changed files; usually quick), then retry.",
+    userKey: "drift.refresh",
+    scoreEvent: "driftRefreshBlocks",
+  };
+}
