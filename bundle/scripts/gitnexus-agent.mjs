@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Agent-facing GitNexus maintenance CLI (no MCP required).
- * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api|fallback "<why>"|fallback:off
+ * Usage: node scripts/gitnexus-agent.mjs status|refresh|brief|health|verify|doctor|review [base]|pr-impact [base]|branch-status [base]|commit-msg|map|scorecard|stats [--json]|graph-smoke|detect-api|fallback "<why>"|fallback:off|fallback-log [--json]
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -22,6 +22,8 @@ const {
   grantClassicalFallback,
   revokeClassicalFallback,
   fallbackGrant,
+  appendFallbackReport,
+  readFallbackReports,
   bumpScore,
 } = await import(
   pathToFileURL(path.join(ROOT, ".gnkit/lib/session-primer.mjs")).href
@@ -70,13 +72,40 @@ if (cmd === "fallback") {
   }
   grantClassicalFallback(ROOT, reason);
   bumpScore(ROOT, "classicalFallbackGranted");
+  appendFallbackReport(ROOT, reason); // durable "where GitNexus fell short" report
   const g = fallbackGrant(ROOT);
   const mins = g ? Math.max(1, Math.round(g.remainingMs / 60000)) : 15;
   console.log(`⚠ Classical fallback GRANTED for ~${mins} min — reason: ${reason}`);
   console.log(
     "  Classical Grep/Read/shell are now allowed. Re-confirm findings with the graph once GitNexus is reliable.",
   );
+  console.log("  Logged for review → npm run gitnexus:fallback-log (report these to the GitNexus devs).");
   console.log("  End early: npm run gitnexus:fallback:off");
+  process.exit(0);
+}
+
+if (cmd === "fallback-log") {
+  const reports = readFallbackReports(ROOT);
+  if (process.argv.includes("--json")) {
+    console.log(JSON.stringify(reports, null, 2));
+    process.exit(0);
+  }
+  if (!reports.length) {
+    console.log("No GitNexus fallback reports yet — agents haven't distrusted the graph in this repo.");
+    process.exit(0);
+  }
+  console.log(
+    `GitNexus fallback reports — ${reports.length} time(s) an agent distrusted the graph (report these upstream):\n`,
+  );
+  for (const r of reports.slice(-30)) {
+    const idx = r.index || {};
+    const size = idx.nodes != null ? `${idx.nodes} nodes/${idx.embeddings ?? "?"} emb` : "no index";
+    const ver = r.gitnexusVersion ? ` v${r.gitnexusVersion}` : "";
+    console.log(`• ${r.at} · ${r.repo}${ver} · ${size} · indexed ${(r.indexedCommit || "?").slice(0, 7)}`);
+    console.log(`    ${r.reason}`);
+  }
+  if (reports.length > 30) console.log(`\n(showing last 30 of ${reports.length}; --json for all)`);
+  console.log("\nExport for the GitNexus developers: npm run gitnexus:fallback-log -- --json");
   process.exit(0);
 }
 
@@ -601,10 +630,16 @@ if (cmd === "stats") {
     `\n  Value: ${redir} lazy-search redirect(s) to the graph, ${gate} pre-edit/commit gate(s) fired.`,
   );
   console.log(`  Log: ${path.join(".gnkit", ".gitnexus-telemetry.jsonl")}`);
+  const fb = readFallbackReports(ROOT);
+  if (fb.length) {
+    console.log(
+      `\n  ⚠ GitNexus fallback reports: ${fb.length} — where the graph fell short. See: npm run gitnexus:fallback-log`,
+    );
+  }
   process.exit(0);
 }
 
 console.error(
-  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | stats | graph-smoke | detect-api`,
+  `Unknown command: ${cmd}. Use: status | refresh | brief | health | verify | doctor | review [base] | pr-impact [base] | branch-status [base] | commit-msg | map | scorecard | stats | graph-smoke | detect-api | fallback "<why>" | fallback:off | fallback-log`,
 );
 process.exit(2);
