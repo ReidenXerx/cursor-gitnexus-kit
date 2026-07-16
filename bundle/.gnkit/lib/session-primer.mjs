@@ -21,7 +21,58 @@ export function sessionPaths(root) {
     stalenessCacheFile: path.join(stateDir, '.gitnexus-staleness-cache.json'),
     scorecardFile: path.join(stateDir, '.gitnexus-scorecard.json'),
     fallbackFlag: path.join(stateDir, '.gitnexus-fallback.json'),
+    pressureNudgedFlag: path.join(stateDir, '.gitnexus-pressure-nudged.flag'),
   };
+}
+
+// ── TASK-CORE (compaction-migration save-state) ──────────────────────────────
+// A dense, AI-facing save-state of the CURRENT TASK (goal/constraints/decisions/state/
+// anchors/gotchas/next). The context-pressure hook nudges the agent to refresh it before
+// auto-compaction; the SessionStart(compact) recovery brief reads it back — so the task
+// survives the summary without drift. Lives under .gnkit/ (gitignored, survives compaction
+// AND new sessions since a task can span both; the agent overwrites it when the task changes).
+
+/** @param {string} root */
+export function taskCorePath(root) {
+  return path.join(root, '.gnkit', '.gitnexus-task-core.md');
+}
+
+/** @param {string} root @returns {boolean} does a task-core exist + have content? */
+export function taskCoreExists(root) {
+  try {
+    return fs.statSync(taskCorePath(root)).size > 0;
+  } catch {
+    return false;
+  }
+}
+
+/** Age of the task-core in ms (Infinity if none) — the pressure hook nudges harder when stale. */
+export function taskCoreAgeMs(root) {
+  try {
+    return Date.now() - fs.statSync(taskCorePath(root)).mtimeMs;
+  } catch {
+    return Infinity;
+  }
+}
+
+/** @param {string} root @param {boolean} on — remember we already nudged this pressure zone. */
+export function setPressureNudged(root, on) {
+  const { stateDir, pressureNudgedFlag } = sessionPaths(root);
+  try {
+    if (on) {
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(pressureNudgedFlag, new Date().toISOString());
+    } else {
+      fs.unlinkSync(pressureNudgedFlag);
+    }
+  } catch {
+    /* best effort */
+  }
+}
+
+/** @param {string} root */
+export function isPressureNudged(root) {
+  return fs.existsSync(sessionPaths(root).pressureNudgedFlag);
 }
 
 // ── Classical fallback escape hatch ──────────────────────────────────────────
@@ -362,6 +413,7 @@ export function clearSessionState(root) {
     stalenessCacheFile,
     scorecardFile,
     fallbackFlag,
+    pressureNudgedFlag,
   } = sessionPaths(root);
   fs.mkdirSync(stateDir, { recursive: true });
   // Archive the finishing session's tally BEFORE wiping the scorecard.
@@ -376,6 +428,7 @@ export function clearSessionState(root) {
     stalenessCacheFile,
     scorecardFile,
     fallbackFlag,
+    pressureNudgedFlag,
   ]) {
     try {
       fs.unlinkSync(f);
