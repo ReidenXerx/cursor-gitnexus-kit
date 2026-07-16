@@ -170,7 +170,7 @@ On recovery **READ the task-core FIRST** and reconstruct from it — it's the on
 
 **Stale index** → run `agent-refresh` first; classical Grep/Read stay denied until it succeeds. **If refresh fails** (or MCP down): classical Grep/Read OK — one-sentence why.
 
-**GitNexus fresh but wrong / suspicious / incomplete?** Don't silently fight the gate — take the escape hatch: `npm run gitnexus:fallback -- "<why>"` opens ~15 min where classical Grep/Read/shell are allowed (auto-resumes; end early with `npm run gitnexus:fallback:off`). It is logged to telemetry and shown in `gitnexus:status` + the session brief — re-confirm findings with the graph once GN is reliable. Repeated grants signal a genuine GitNexus problem worth reporting.
+**GitNexus fresh but wrong / suspicious / incomplete?** Don't silently fight the gate — take the escape hatch: `npm run gitnexus:fallback -- "<why>"`, which opens ~15 min where classical Grep/Read/shell are allowed (auto-resumes; end early with `npm run gitnexus:fallback:off`). **Make `<why>` specific and actionable** — which GN tool, expected vs actual (e.g. `impact returned 0 callers for OrderService but grep finds 3`) — because it's appended as a **GitNexus failure report** (`npm run gitnexus:fallback-log`), captured with the graph state, for the GitNexus developers. Re-confirm findings with the graph once GN is reliable; repeated reports pinpoint where GN needs fixing.
 
 Optional: `GITNEXUS_MODE=guide` (nudge-only). Paths: `.gnkit/gitnexus-hooks.json`. Playbooks: `gitnexus-enforcement` skill.
 

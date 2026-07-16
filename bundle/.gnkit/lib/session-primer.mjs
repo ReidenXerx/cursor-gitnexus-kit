@@ -98,6 +98,77 @@ export function grantClassicalFallback(root, reason = '', ttlMs = FALLBACK_TTL_M
   );
 }
 
+// ── Fallback → telemetry bridge (a "where did GitNexus fail" report log) ──────
+// The grant flag is transient (expires/clears). To see WHERE GitNexus fell short and
+// report it upstream, every fallback also appends a durable record — the reason plus the
+// graph state it distrusted (version, size, index commit/age) — to an append-only log.
+// Read via `gitnexus:fallback-log` (+ `--json` to export for the GitNexus developers).
+
+const FALLBACK_LOG_FILE = '.gitnexus-fallback-log.jsonl';
+
+/** @param {string} root — append-only fallback-report log (gitignored, never cleared). */
+export function fallbackLogPath(root) {
+  return path.join(root, '.gnkit', FALLBACK_LOG_FILE);
+}
+
+/**
+ * Append a fallback report: the agent's stated reason + the graph state it distrusted, so
+ * the user can review where GitNexus fell short and report it to the GN developers.
+ * @param {string} root @param {string} reason @returns {boolean} written?
+ */
+export function appendFallbackReport(root, reason) {
+  let meta = {};
+  try {
+    meta = JSON.parse(fs.readFileSync(path.join(root, '.gitnexus/meta.json'), 'utf8'));
+  } catch {
+    /* index may be missing — that itself is context */
+  }
+  const s = meta.stats || {};
+  const rec = {
+    at: new Date().toISOString(),
+    repo: repoName(root),
+    reason: String(reason || '').slice(0, 1000),
+    gitnexusVersion: meta.version ?? meta.gitnexusVersion ?? null,
+    index: {
+      files: s.files ?? null,
+      nodes: s.nodes ?? null,
+      edges: s.edges ?? null,
+      embeddings: s.embeddings ?? null,
+      processes: s.processes ?? null,
+    },
+    indexedCommit: meta.lastCommit ?? null,
+    indexedAt: meta.indexedAt ?? null,
+  };
+  try {
+    fs.mkdirSync(path.join(root, '.gnkit'), { recursive: true });
+    fs.appendFileSync(fallbackLogPath(root), JSON.stringify(rec) + '\n');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Parse the fallback-report log into records (skips blank/malformed lines). */
+export function readFallbackReports(root) {
+  let text = '';
+  try {
+    text = fs.readFileSync(fallbackLogPath(root), 'utf8');
+  } catch {
+    return [];
+  }
+  const out = [];
+  for (const line of text.split('\n')) {
+    const t = line.trim();
+    if (!t) continue;
+    try {
+      out.push(JSON.parse(t));
+    } catch {
+      /* skip malformed line */
+    }
+  }
+  return out;
+}
+
 /** @param {string} root */
 export function revokeClassicalFallback(root) {
   try {
