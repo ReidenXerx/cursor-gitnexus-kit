@@ -34,6 +34,7 @@ HOOK_LIBS=(
   ".gnkit/lib/cursor-emit.mjs"
   ".gnkit/lib/claude-emit.mjs"
   ".gnkit/lib/session-primer.mjs"
+  ".gnkit/lib/context-pressure.mjs"
   ".gnkit/lib/first-nudge.mjs"
   ".gnkit/lib/clear-session.mjs"
   ".gnkit/lib/set-refresh-pending.mjs"

@@ -92,6 +92,11 @@ export function loadHookConfig(root) {
     // Working-tree drift: after this many uncommitted source edits since the index,
     // graph query tools require a fast incremental refresh. 0 disables the drift gate.
     driftRefreshThreshold: 3,
+    // TASK-CORE compaction migration: nudge the agent to refresh its task-core once context
+    // reaches contextPressureThreshold of contextWindowTokens. Set contextWindowTokens to your
+    // model's window (200k default; 1M-context sessions → 1000000). 0 threshold disables.
+    contextWindowTokens: 200000,
+    contextPressureThreshold: 0.9,
   };
 
   const cfgPath = path.join(root, CONFIG_FILE);
@@ -106,6 +111,10 @@ export function loadHookConfig(root) {
       cfg.stalenessCacheTtlMs = file.stalenessCacheTtlMs;
     if (typeof file.driftRefreshThreshold === "number")
       cfg.driftRefreshThreshold = file.driftRefreshThreshold;
+    if (typeof file.contextWindowTokens === "number")
+      cfg.contextWindowTokens = file.contextWindowTokens;
+    if (typeof file.contextPressureThreshold === "number")
+      cfg.contextPressureThreshold = file.contextPressureThreshold;
     if (Array.isArray(file.sourceGlobs) && file.sourceGlobs.length) {
       cfg.sourcePathRes = file.sourceGlobs.map((g) => globToRegExp(g));
     }

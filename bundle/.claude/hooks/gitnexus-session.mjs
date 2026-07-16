@@ -24,6 +24,8 @@ const {
   isDetectUsed,
   memoryPath,
   fallbackGrant,
+  taskCorePath,
+  taskCoreExists,
 } = await lib("session-primer.mjs");
 
 const source = input.source || "startup";
@@ -43,8 +45,13 @@ const staleLine = grant
 let lines;
 if (recovering) {
   const hasMem = existsSync(memoryPath(root));
+  const hasCore = taskCoreExists(root);
+  const tcp = taskCorePath(root);
   lines = [
     `GitNexus: context was ${source === "compact" ? "COMPACTED" : "resumed"} — the task CONTINUES; enforcement and this session's satisfied gates are PRESERVED.`,
+    hasCore
+      ? `READ your TASK-CORE FIRST — \`${tcp}\`: a dense save-state of THIS task (goal/constraints/decisions/state/anchors/gotchas/next). Reconstruct from it, verify against reality, then continue — do not re-derive what it already settles.`
+      : `No TASK-CORE saved — reconstruct THIS task (goal/decisions/state/next) from your memory + the code before acting, and write \`.gnkit/.gitnexus-task-core.md\` next time so compaction can't drift you.`,
     // Graph-first discipline MUST be re-stated here, not only on fresh start: post-compaction is
     // exactly where agents drift back to grep/blind-read. "Gates preserved" ≠ "stop using the graph".
     "Graph-first STILL applies — do NOT fall back to grep or blind Read: orient with gitnexus_query, drill with gitnexus_context, cypher for structure, impact before edits, detect_changes before commit.",

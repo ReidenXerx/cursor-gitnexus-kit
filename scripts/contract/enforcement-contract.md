@@ -150,6 +150,18 @@ At a **milestone** — feature done / big-task checkpoint / shared-code refactor
 
 Maintain your **Claude Code project memory** — `~/.claude/projects/<this-project>/memory/MEMORY.md` (Claude Code's native memory; **all agents share this one file** — Claude refers to its own, other agents mirror it). Record task, key decisions, findings, open items, important `file:line`. Update it at milestones and whenever you conclude something that must outlive the current transcript. Context compaction and new sessions drop the conversation; this file does not. On recovery (post-compaction/resume) READ it first and reconcile it with reality — **nothing important may be lost.**
 
+## Task-core (survive compaction without drift)
+
+Long tasks get **compacted** — the transcript is summarized and dropped, and detail drifts. Keep a **task-core**: a dense, **AI-facing** save-state of the CURRENT TASK at **`.gnkit/.gitnexus-task-core.md`**. When a PostToolUse nudge says context is filling (~90%), or at a milestone / before a risky pivot, **write or refresh it** — terse, for *you* not humans, no prose tax:
+
+```
+GOAL <what "done" is> · CONSTRAINTS <must/never> · DECISIONS <choice→why (settled)>
+STATE done<✓+anchor> / now / NEXT<exact> / todo<ordered> · ANCHORS <file:line→what/why>
+GOTCHAS <failed approaches, traps, non-obvious> · OPEN-Qs · USER-PREFS(this task)
+```
+
+On recovery **READ the task-core FIRST** and reconstruct from it — it's the one thing guaranteed to survive with full detail. It's distinct from `MEMORY.md` (durable, cross-session, human-shared): the task-core is the *hot working-set for THIS task*, overwritten when the task changes. Full routine: the **`gitnexus-taskcore`** skill.
+
 ## Fallback
 
 **Stale index** → run `agent-refresh` first; classical Grep/Read stay denied until it succeeds. **If refresh fails** (or MCP down): classical Grep/Read OK — one-sentence why.
