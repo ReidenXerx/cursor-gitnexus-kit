@@ -42,6 +42,10 @@ export {
 } from "./rename-helpers.mjs";
 
 export const CONFIG_FILE = ".gnkit/gitnexus-hooks.json";
+// Gitignored per-machine override — same shape as CONFIG_FILE, wins over it. Lets one dev tune the
+// window / mode / thresholds (e.g. contextWindowTokens for a 1M session) without editing the
+// team-shared file. Precedence: defaults < CONFIG_FILE < LOCAL_CONFIG_FILE < env.
+export const LOCAL_CONFIG_FILE = ".gnkit/gitnexus-hooks.local.json";
 
 /** @typedef {'enforce' | 'guide'} HookMode */
 /** @typedef {'none' | 'light' | 'medium' | 'full'} EditSensitivity */
@@ -94,16 +98,35 @@ export function loadHookConfig(root) {
     driftRefreshThreshold: 3,
     // TASK-CORE compaction migration: nudge the agent to refresh its task-core once context
     // reaches contextPressureThreshold of contextWindowTokens. The window is model-specific, so
-    // prefer the per-machine env var GITNEXUS_CONTEXT_WINDOW=1000000 (wins over this file) rather
-    // than committing 1000000 to a shared repo where teammates run a 200k model. 0 threshold disables.
+    // scope 1000000 per-machine — a gitignored .gnkit/gitnexus-hooks.local.json (repo-scoped) or the
+    // GITNEXUS_CONTEXT_WINDOW env — instead of committing it to a repo where teammates run a 200k
+    // model. Precedence: this default < gitnexus-hooks.json < .local.json < env. 0 threshold disables.
     contextWindowTokens: 200000,
     contextPressureThreshold: 0.9,
   };
 
-  const cfgPath = path.join(root, CONFIG_FILE);
+  // Shared team config first, then the gitignored per-machine override (each present file wins over
+  // the prior). A missing file is a no-op — readFileSync throws inside the helper and is swallowed.
+  applyHookConfigFile(cfg, path.join(root, CONFIG_FILE));
+  applyHookConfigFile(cfg, path.join(root, LOCAL_CONFIG_FILE));
 
+  // Per-machine env override wins over both files (handy for CI / ad-hoc). The context window is
+  // model-specific — a 1M-context session and a teammate's 200k model can't share one committed
+  // value — so scope it via GITNEXUS_CONTEXT_WINDOW or gitnexus-hooks.local.json, not the shared file.
+  const envWindow = Number(process.env.GITNEXUS_CONTEXT_WINDOW);
+  if (Number.isFinite(envWindow) && envWindow > 0) cfg.contextWindowTokens = envWindow;
+
+  return cfg;
+}
+
+/**
+ * Merge one hook-config JSON file into cfg (mutates). Missing/invalid file → no-op (keeps prior
+ * values), so it's safe to layer several files by precedence. Shared by CONFIG_FILE + LOCAL_CONFIG_FILE.
+ * @param {Record<string, any>} cfg
+ * @param {string} cfgPath
+ */
+function applyHookConfigFile(cfg, cfgPath) {
   try {
-    // Missing file → readFileSync throws → caught below → defaults kept, then env override runs.
     const file = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
     if (file.mode) cfg.mode = file.mode === "guide" ? "guide" : "enforce";
     if (typeof file.readLineThreshold === "number")
@@ -123,16 +146,8 @@ export function loadHookConfig(root) {
       cfg.sourceExtRe = buildExtRe(file.sourceExts);
     }
   } catch {
-    /* keep defaults */
+    /* missing or invalid → keep prior values */
   }
-
-  // Per-machine env override wins over the (team-shared) config file. The context window is
-  // model-specific — a 1M-context session and a teammate's 200k model can't share one committed
-  // value — so set GITNEXUS_CONTEXT_WINDOW=1000000 in your shell rather than in gitnexus-hooks.json.
-  const envWindow = Number(process.env.GITNEXUS_CONTEXT_WINDOW);
-  if (Number.isFinite(envWindow) && envWindow > 0) cfg.contextWindowTokens = envWindow;
-
-  return cfg;
 }
 
 function hookModeFromEnv() {
