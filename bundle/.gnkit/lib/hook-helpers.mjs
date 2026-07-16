@@ -93,16 +93,17 @@ export function loadHookConfig(root) {
     // graph query tools require a fast incremental refresh. 0 disables the drift gate.
     driftRefreshThreshold: 3,
     // TASK-CORE compaction migration: nudge the agent to refresh its task-core once context
-    // reaches contextPressureThreshold of contextWindowTokens. Set contextWindowTokens to your
-    // model's window (200k default; 1M-context sessions → 1000000). 0 threshold disables.
+    // reaches contextPressureThreshold of contextWindowTokens. The window is model-specific, so
+    // prefer the per-machine env var GITNEXUS_CONTEXT_WINDOW=1000000 (wins over this file) rather
+    // than committing 1000000 to a shared repo where teammates run a 200k model. 0 threshold disables.
     contextWindowTokens: 200000,
     contextPressureThreshold: 0.9,
   };
 
   const cfgPath = path.join(root, CONFIG_FILE);
-  if (!fs.existsSync(cfgPath)) return cfg;
 
   try {
+    // Missing file → readFileSync throws → caught below → defaults kept, then env override runs.
     const file = JSON.parse(fs.readFileSync(cfgPath, "utf8"));
     if (file.mode) cfg.mode = file.mode === "guide" ? "guide" : "enforce";
     if (typeof file.readLineThreshold === "number")
@@ -124,6 +125,12 @@ export function loadHookConfig(root) {
   } catch {
     /* keep defaults */
   }
+
+  // Per-machine env override wins over the (team-shared) config file. The context window is
+  // model-specific — a 1M-context session and a teammate's 200k model can't share one committed
+  // value — so set GITNEXUS_CONTEXT_WINDOW=1000000 in your shell rather than in gitnexus-hooks.json.
+  const envWindow = Number(process.env.GITNEXUS_CONTEXT_WINDOW);
+  if (Number.isFinite(envWindow) && envWindow > 0) cfg.contextWindowTokens = envWindow;
 
   return cfg;
 }
