@@ -14,10 +14,19 @@
  */
 import fs from "node:fs";
 
-const TAIL_BYTES = 131072; // 128 KB tail — enough to hold the last usage record
+// Widen the tail read until a usage record appears. A single huge tool-result line (a big file
+// read / grep / command dump can be MBs) sits at the very end at PostToolUse time and pushes the
+// preceding assistant usage out of a small tail — so 128 KB alone often misses it. Cap the widen
+// so the hook stays cheap; past the cap we report "unknown" rather than guessing.
+const TAIL_STEPS = [131072, 2097152, 8388608]; // 128 KB → 2 MB → 8 MB
 
 /**
  * Estimate the current context size in tokens from a Claude Code transcript (JSONL).
+ * The signal is the LAST assistant message's usage (non-cached input + cache read + cache creation
+ * = everything sent to the model). We deliberately DO NOT fall back to a byte-count of the file:
+ * the transcript is an unbounded append-only log (it keeps already-compacted turns), so its size
+ * has no relation to current window occupancy — a byte estimate reads as "always full" and would
+ * fire the compaction nudge spuriously. Unknown → 0, which the caller treats as "not full".
  * @param {string} transcriptPath
  * @returns {number} estimated context tokens (0 if unknown/unreadable)
  */
@@ -30,23 +39,38 @@ export function estimateContextTokens(transcriptPath) {
   }
   if (!size) return 0;
 
-  let text = "";
-  try {
-    const readBytes = Math.min(size, TAIL_BYTES);
-    const fd = fs.openSync(transcriptPath, "r");
+  let prevRead = 0;
+  for (const step of TAIL_STEPS) {
+    const readBytes = Math.min(size, step);
+    if (readBytes <= prevRead) break; // whole file already scanned
+    let text;
     try {
-      const buf = Buffer.alloc(readBytes);
-      fs.readSync(fd, buf, 0, readBytes, size - readBytes);
-      text = buf.toString("utf8");
-    } finally {
-      fs.closeSync(fd);
+      const fd = fs.openSync(transcriptPath, "r");
+      try {
+        const buf = Buffer.alloc(readBytes);
+        fs.readSync(fd, buf, 0, readBytes, size - readBytes);
+        text = buf.toString("utf8");
+      } finally {
+        fs.closeSync(fd);
+      }
+    } catch {
+      return 0; // unreadable → unknown, never nudge on a guess
     }
-  } catch {
-    return Math.round(size / 3.5); // couldn't read tail → byte estimate
+    const tokens = lastUsageTokens(text);
+    if (tokens != null) return tokens;
+    if (readBytes >= size) break; // scanned the entire file, no usage present
+    prevRead = readBytes;
   }
+  return 0; // no usage record found → unknown (not "full")
+}
 
-  // Accurate: the LAST assistant message's usage is the prompt size in the window
-  // (non-cached input + cache read + cache creation = everything sent to the model).
+/**
+ * Sum the LAST assistant-message usage in a JSONL chunk, scanning from the end. A leading partial
+ * line (the tail cut mid-record) simply fails to parse and is skipped.
+ * @param {string} text
+ * @returns {number | null} token total, or null if no usage record present
+ */
+function lastUsageTokens(text) {
   const lines = text.split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
@@ -55,7 +79,7 @@ export function estimateContextTokens(transcriptPath) {
     try {
       obj = JSON.parse(line);
     } catch {
-      continue; // partial line (tail cut mid-record) or non-JSON — skip
+      continue; // partial line or non-JSON — skip
     }
     const u = obj?.message?.usage || obj?.usage;
     if (u && typeof u.input_tokens === "number") {
@@ -66,8 +90,7 @@ export function estimateContextTokens(transcriptPath) {
       );
     }
   }
-  // No usage record in the tail → rough byte estimate (JSONL overhead ~3.5 bytes/token).
-  return Math.round(size / 3.5);
+  return null;
 }
 
 /**
