@@ -11,7 +11,7 @@ Install **gitnexus-agent-kit** into any git repo. The kit copies hooks, rules, s
 | Node.js ≥ 22.9.0 | `node -v` |
 | git | Target must be a worktree |
 | bash | macOS / Linux / WSL |
-| Cursor and/or Zed | Pick runtime at install (default: both) |
+| Cursor / Zed / Claude Code | Pick runtime at install: `cursor` · `zed` · `claude` · `both` (=cursor+zed, default) · `all` (=cursor+zed+claude) |
 
 After `--quick` install, run `npm run gitnexus:agent-refresh` in the **target repo** before graph tools work.
 
@@ -33,6 +33,12 @@ cd gitnexus-agent-kit
 # Zed + Ollama profile only
 ./bin/install.sh /path/to/your-repo --runtime zed
 
+# Everything — Cursor + Zed + Claude Code
+./bin/install.sh /path/to/your-repo --runtime all
+
+# Claude Code only (hooks + MCP + CLAUDE.md)
+./bin/install.sh /path/to/your-repo --runtime claude
+
 # Hooks/skills only — index later
 ./bin/install.sh /path/to/your-repo --quick
 
@@ -48,7 +54,7 @@ Custom GitNexus registry name (when folder basename ≠ indexed repo name):
 
 ## After install (target repo)
 
-1. **Restart your IDE** on the target project — MCP + hooks (Cursor) or agent profile (Zed) load on restart.
+1. **Restart your IDE** on the target project — MCP + hooks (Cursor), agent profile (Zed), or hooks + MCP + `CLAUDE.md` (Claude Code) load on restart.
 2. `npm run gitnexus:verify` — runtime-aware kit audit (also runs at end of install).
 3. `npm run gitnexus:health` — human-friendly status for your team.
 4. Open a **new Agent chat** and describe your task.
@@ -76,11 +82,13 @@ Skills live once in `.gnkit/skills/` and are **symlinked** — not copied — in
 ## Update
 
 ```bash
-./bin/update.sh /path/to/your-repo
-./bin/update.sh /path/to/your-repo --runtime both   # ensure Cursor + Zed after old Cursor-only install
+./bin/update.sh /path/to/your-repo                  # keeps the installed runtime (read from the manifest)
+./bin/update.sh /path/to/your-repo --runtime all    # CHANGE runtime, e.g. add Claude Code to an old install
 ```
 
-Default: `--quick` (skips full re-index). **Migration runs on every update** — old rsync'd `.cursor/skills/*`, `.claude/skills/*`, legacy manifest, and Zed profile key `gitnexus` are cleaned automatically.
+`update` reads the runtime from the manifest, so you only pass `--runtime` to **change** it. Default: `--quick` (skips full re-index). **Migration runs on every update** — old rsync'd `.cursor/skills/*`, `.claude/skills/*`, legacy manifest, and Zed profile key `gitnexus` are cleaned automatically.
+
+> **Fresh clone of an already-installed repo?** The manifest (`.gitnexus/agent-kit-manifest.json`) is **gitignored**, so it isn't in a new clone — `update` will stop with *"Not installed. Run install first."* That's expected: run **`./bin/install.sh /path/to/repo --runtime all --no-setup`** instead. Install is idempotent — it re-materializes the current bundle and rewrites the manifest without touching your code.
 
 Bulk update every installed repo under a workspace root:
 
