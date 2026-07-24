@@ -31,9 +31,10 @@ Battle-tested across real production repositories; examples below use neutral pl
 ```bash
 git clone https://github.com/ReidenXerx/gitnexus-agent-kit.git
 cd gitnexus-agent-kit
-./bin/install.sh                    # interactive — pick Cursor, Zed, or both
-./bin/install.sh /path/to/repo --runtime zed   # Zed + Ollama profile
-./bin/install.sh /path/to/repo --runtime both  # Cursor hooks + Zed profile
+./bin/install.sh                    # interactive — pick Cursor, Zed, Claude Code, or all
+./bin/install.sh /path/to/repo --runtime all    # Cursor + Zed + Claude Code
+./bin/install.sh /path/to/repo --runtime claude # Claude Code hooks + MCP + CLAUDE.md
+./bin/install.sh /path/to/repo --runtime zed    # Zed + Ollama profile
 # → restart your IDE → npm run gitnexus:health → new Agent chat
 ```
 

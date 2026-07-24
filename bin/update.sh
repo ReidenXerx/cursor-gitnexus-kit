@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# Update gitnexus-agent-kit in a target repo.
-# Usage: ./bin/update.sh /path/to/repo [--runtime cursor|zed|both] [--full] [--no-setup] [--skip-verify]
-#        ./bin/update.sh --all [search-root] [--runtime cursor|zed|both] [--no-setup] [--skip-verify]
+# Update gitnexus-agent-kit in a target repo. Reads the runtime from the manifest — pass
+# --runtime only to CHANGE it (cursor|zed|claude|both|all, comma-list allowed).
+# Fresh clone? The manifest (.gitnexus/agent-kit-manifest.json) is gitignored, so it's absent and
+# update prints "Not installed. Run install first." — use ./bin/install.sh <repo> --runtime <rt> instead.
+# Usage: ./bin/update.sh /path/to/repo [--runtime ...] [--full] [--no-setup] [--skip-verify]
+#        ./bin/update.sh --all [search-root] [--runtime ...] [--no-setup] [--skip-verify]
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="${1:-}"
 
 if [[ -z "$TARGET" ]] || [[ "$TARGET" == "-h" ]] || [[ "$TARGET" == "--help" ]]; then
-  sed -n '2,4p' "$0" | sed 's/^# *//'
+  sed -n '2,7p' "$0" | sed 's/^# *//'
   exit 0
 fi
 
